@@ -1,13 +1,22 @@
 # Privacy Policy
 
-This privacy policy applies to the **LeetCode VS Code Auth Sync** browser extension.
+This privacy policy applies to the **Unofficial LeetCode Auth Sync** VS Code
+extension and its separately packaged companion browser extension.
 
 ## Data Collection and Usage
-The LeetCode VS Code Auth Sync extension is designed to synchronize your LeetCode authentication cookies securely between your browser and the VS Code LeetCode extension running locally on your machine.
+Unofficial LeetCode Auth Sync is designed to synchronize your LeetCode
+authentication cookies between your browser and the VS Code extension running
+locally on your machine.
 
-**We do not collect, transmit, distribute, or sell your data.** 
+**This fork does not collect, transmit, distribute, sell, or report telemetry or
+usage analytics.**
 
-All authentication data (such as session cookies) accessed by the extension is strictly kept locally and is only transmitted to the local proxy server (running on `127.0.0.1` / `localhost`) created by the VS Code extension. No data is sent to any external or third-party servers.
+Authentication data accessed by the companion browser extension is sent only to
+the local listener created by the VS Code extension on `127.0.0.1` /
+`localhost`. The VS Code extension then uses that session to make user-requested
+requests to the selected LeetCode endpoint (`leetcode.com` or `leetcode.cn`) for
+features such as listing problems, fetching problem content, running tests, and
+submitting solutions.
 
 ## Permissions Required
 To function correctly, the extension requires the following permissions:
@@ -20,4 +29,4 @@ To function correctly, the extension requires the following permissions:
 We may update this Privacy Policy from time to time. Any changes will be reflected in this document within the GitHub repository.
 
 ## Contact
-If you have any questions or concerns regarding this privacy policy, please open an issue in the [GitHub repository](https://github.com/LeetCode-OpenSource/vscode-leetcode).
+If you have any questions or concerns regarding this privacy policy, please open an issue in the [GitHub repository](https://github.com/wilmtang/vscode-leetcode).

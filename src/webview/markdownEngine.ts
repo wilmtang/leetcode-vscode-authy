@@ -9,6 +9,8 @@ import * as vscode from "vscode";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { isWindows } from "../utils/osUtils";
 
+type RenderRule = (tokens: any[], idx: number, options: any, env: any, self: any) => string;
+
 class MarkdownEngine implements vscode.Disposable {
 
     private engine: MarkdownIt;
@@ -100,7 +102,8 @@ class MarkdownEngine implements vscode.Disposable {
     }
 
     private addCodeBlockHighlight(md: MarkdownIt): void {
-        const codeBlock: MarkdownIt.TokenRender = md.renderer.rules["code_block"];
+        const codeBlock: RenderRule = md.renderer.rules["code_block"] ||
+            ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options));
         // tslint:disable-next-line:typedef
         md.renderer.rules["code_block"] = (tokens, idx, options, env, self) => {
             // if any token uses lang-specified code fence, then do not highlight code block
@@ -108,7 +111,7 @@ class MarkdownEngine implements vscode.Disposable {
                 return codeBlock(tokens, idx, options, env, self);
             }
             // otherwise, highlight with default lang in env object.
-            const highlighted: string = options.highlight(tokens[idx].content, env.lang);
+            const highlighted: string = options.highlight!(tokens[idx].content, env.lang, "");
             return [
                 `<pre><code ${self.renderAttrs(tokens[idx])} >`,
                 highlighted || md.utils.escapeHtml(tokens[idx].content),
@@ -118,10 +121,11 @@ class MarkdownEngine implements vscode.Disposable {
     }
 
     private addImageUrlCompletion(md: MarkdownIt): void {
-        const image: MarkdownIt.TokenRender = md.renderer.rules["image"];
+        const image: RenderRule = md.renderer.rules["image"] ||
+            ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options));
         // tslint:disable-next-line:typedef
         md.renderer.rules["image"] = (tokens, idx, options, env, self) => {
-            const imageSrc: string[] | undefined = tokens[idx].attrs.find((value: string[]) => value[0] === "src");
+            const imageSrc: string[] | undefined = tokens[idx].attrs?.find((value: string[]) => value[0] === "src");
             if (env.host && imageSrc && imageSrc[1].startsWith("/")) {
                 imageSrc[1] = `${env.host}${imageSrc[1]}`;
             }

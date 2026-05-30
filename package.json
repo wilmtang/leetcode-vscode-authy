@@ -1,20 +1,20 @@
 {
     "name": "vscode-leetcode-auth-sync",
-    "displayName": "LeetCode with Auth Sync",
-    "description": "Solve LeetCode problems in VS Code with browser auth sync",
+    "displayName": "Unofficial LeetCode Auth Sync",
+    "description": "Unofficial VS Code extension for solving LeetCode problems with browser auth sync",
     "version": "0.18.4",
-    "author": "LeetCode",
+    "author": "wilmtang",
     "publisher": "wilmtang",
     "license": "MIT",
-    "icon": "resources/LeetCode.png",
+    "icon": "resources/auth-sync.png",
     "engines": {
         "vscode": "^1.57.0"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/LeetCode-OpenSource/vscode-leetcode"
+        "url": "https://github.com/wilmtang/vscode-leetcode"
     },
-    "homepage": "https://github.com/LeetCode-OpenSource/vscode-leetcode/blob/master/README.md",
+    "homepage": "https://github.com/wilmtang/vscode-leetcode/blob/master/README.md",
     "categories": [
         "Other",
         "Snippets"
@@ -50,76 +50,76 @@
             {
                 "command": "leetcode.deleteCache",
                 "title": "Delete Cache",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.toggleLeetCodeCn",
                 "title": "Switch Endpoint",
-                "category": "LeetCode",
+                "category": "Unofficial LeetCode",
                 "icon": "$(globe)"
             },
             {
                 "command": "leetcode.signin",
                 "title": "Sign In",
-                "category": "LeetCode",
+                "category": "Unofficial LeetCode",
                 "icon": "$(sign-in)"
             },
             {
                 "command": "leetcode.signout",
                 "title": "Sign Out",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.manageSessions",
                 "title": "Manage Sessions",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.refreshExplorer",
                 "title": "Refresh",
-                "category": "LeetCode",
+                "category": "Unofficial LeetCode",
                 "icon": "$(refresh)"
             },
             {
                 "command": "leetcode.pickOne",
                 "title": "Pick One",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.showProblem",
                 "title": "Show Problem",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.previewProblem",
                 "title": "Preview Problem",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.searchProblem",
                 "title": "Search Problem",
-                "category": "LeetCode",
+                "category": "Unofficial LeetCode",
                 "icon": "$(search)"
             },
             {
                 "command": "leetcode.showSolution",
                 "title": "Show Top Voted Solution",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.testSolution",
                 "title": "Test in LeetCode",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.submitSolution",
                 "title": "Submit to LeetCode",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.addFavorite",
                 "title": "Add to Favorite List",
-                "category": "LeetCode",
+                "category": "Unofficial LeetCode",
                 "icon": {
                     "light": "resources/light/like.png",
                     "dark": "resources/dark/like.png"
@@ -128,7 +128,7 @@
             {
                 "command": "leetcode.removeFavorite",
                 "title": "Remove from Favorite List",
-                "category": "LeetCode",
+                "category": "Unofficial LeetCode",
                 "icon": {
                     "light": "resources/light/dislike.png",
                     "dark": "resources/dark/dislike.png"
@@ -137,31 +137,31 @@
             {
                 "command": "leetcode.switchDefaultLanguage",
                 "title": "Switch Default Language",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.problems.sort",
                 "title": "Sort Problems",
-                "category": "LeetCode",
+                "category": "Unofficial LeetCode",
                 "icon": "$(sort-precedence)"
             },
             {
                 "command": "leetcode.authSync.status",
                 "title": "Show Browser Auth Sync Status",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             },
             {
                 "command": "leetcode.authSync.restart",
                 "title": "Restart Browser Auth Sync Server",
-                "category": "LeetCode"
+                "category": "Unofficial LeetCode"
             }
         ],
         "viewsContainers": {
             "activitybar": [
                 {
                     "id": "leetcode",
-                    "title": "LeetCode with Auth Sync",
-                    "icon": "resources/LeetCode.svg"
+                    "title": "Unofficial LeetCode Auth Sync",
+                    "icon": "resources/auth-sync.svg"
                 }
             ]
         },
@@ -713,12 +713,6 @@
                         ],
                         "description": "Sorting strategy for problems list."
                     },
-                    "leetcode.allowReportData": {
-                        "type": "boolean",
-                        "default": true,
-                        "scope": "application",
-                        "description": "Allow LeetCode to report anonymous usage data to improve the product."
-                    },
                     "leetcode.authSync.enabled": {
                         "type": "boolean",
                         "default": true,
@@ -765,7 +759,7 @@
     "devDependencies": {
         "@types/fs-extra": "^9.0.11",
         "@types/lodash": "^4.14.170",
-        "@types/markdown-it": "0.0.7",
+        "@types/markdown-it": "^14.1.2",
         "@types/mocha": "^2.2.42",
         "@types/node": "^14.14.33",
         "@types/require-from-string": "^1.2.0",
@@ -776,11 +770,11 @@
         "web-ext": "^10.3.0"
     },
     "dependencies": {
-        "axios": "^1.6.8",
+        "axios": "^1.16.1",
         "fs-extra": "^10.0.0",
         "highlight.js": "^10.7.2",
-        "lodash": "^4.17.21",
-        "markdown-it": "^8.4.2",
+        "lodash": "^4.18.1",
+        "markdown-it": "^14.2.0",
         "require-from-string": "^2.0.2",
         "unescape-js": "^1.1.4",
         "vsc-leetcode-cli": "2.8.1"

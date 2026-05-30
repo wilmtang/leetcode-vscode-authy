@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "LeetCode VS Code Auth Sync",
+    "name": "Unofficial LeetCode Auth Sync",
     "version": "0.1.2",
-    "description": "Syncs LeetCode browser cookies to the VS Code LeetCode extension running on localhost.",
+    "description": "Syncs LeetCode browser cookies to the unofficial VS Code auth-sync extension running on localhost.",
     "permissions": [
         "cookies",
         "storage",
@@ -27,7 +27,7 @@
         "open_in_tab": false
     },
     "action": {
-        "default_title": "LeetCode Auth Sync",
+        "default_title": "Unofficial LeetCode Auth Sync",
         "default_popup": "popup.html",
         "default_icon": {
             "16": "icons/icon-16.png",
@@ -38,7 +38,7 @@
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "leetcode-vscode-auth-sync@leetcode-open-source",
+            "id": "leetcode-vscode-auth-sync@wilmtang",
             "strict_min_version": "140.0",
             "data_collection_permissions": {
                 "required": [
