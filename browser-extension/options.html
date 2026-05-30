@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
     <title>LeetCode Auth Sync Options</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,32 +15,32 @@
             <label class="check-row">
                 <input id="enabled" type="checkbox">
                 <span>
-                    <strong>Enable auth sync</strong>
-                    <small>When enabled, this extension reads your LeetCode browser cookies and sends them to the local VS Code LeetCode extension.</small>
+                    <strong>Enable browser auth sync</strong>
+                    <small>Send your signed-in LeetCode session to the local VS Code LeetCode extension.</small>
                 </span>
             </label>
 
             <label>
-                <span>Local server port</span>
+                <span>VS Code server port</span>
                 <input id="port" type="number" min="1024" max="65535" inputmode="numeric">
-                <small>The local port where the VS Code extension listens for auth updates. Default: 17899. This must match the VS Code setting leetcode.authSync.port.</small>
+                <small>Must match the VS Code setting leetcode.authSync.port. Default: 17899.</small>
             </label>
 
             <label>
-                <span>Optional shared secret</span>
+                <span>Shared secret</span>
                 <input id="secret" type="password" autocomplete="off">
-                <small>Optional safety check. Leave empty for zero-config local sync. If you set a value here, set the same value in VS Code setting leetcode.authSync.secret.</small>
+                <small>Optional. If set, use the same value in VS Code setting leetcode.authSync.secret.</small>
             </label>
 
             <label>
-                <span>Successful sync cooldown</span>
+                <span>Sync cooldown</span>
                 <input id="cooldown-minutes" type="number" min="1" max="1440" inputmode="numeric">
-                <small>Minimum minutes between successful cookie sends. Default: 30.</small>
+                <small>Minimum minutes between successful session sends. Default: 30.</small>
             </label>
 
             <div class="actions">
                 <button type="submit">Save</button>
-                <button id="sync-now" type="button" class="secondary">Sync Now</button>
+                <button id="sync-now" type="button" class="secondary">Sync now</button>
             </div>
 
             <p id="status" class="status" role="status"></p>

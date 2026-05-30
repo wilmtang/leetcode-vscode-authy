@@ -3,16 +3,37 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
     <title>LeetCode Auth Sync</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="popup">
     <main class="panel">
         <h1>LeetCode Auth Sync</h1>
-        <p id="summary" class="summary"></p>
+        <p class="summary">Syncs your signed-in LeetCode session to the VS Code extension on this machine.</p>
+
+        <dl class="sync-details">
+            <div>
+                <dt>Connection</dt>
+                <dd id="summary"></dd>
+            </div>
+            <div>
+                <dt>Last synced</dt>
+                <dd id="last-sync"></dd>
+            </div>
+            <div>
+                <dt>Next sync</dt>
+                <dd id="next-sync"></dd>
+            </div>
+            <div id="last-issue-row" class="issue-row" hidden>
+                <dt>Last issue</dt>
+                <dd id="last-issue"></dd>
+            </div>
+        </dl>
+
         <div class="actions">
-            <button id="sync-now" type="button">Sync Now</button>
-            <button id="open-options" type="button" class="secondary">Options</button>
+            <button id="sync-now" type="button">Sync now</button>
+            <button id="open-options" type="button" class="secondary">Settings</button>
         </div>
         <p id="status" class="status" role="status"></p>
     </main>

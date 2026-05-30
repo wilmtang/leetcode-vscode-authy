@@ -11,12 +11,6 @@ const HOST: string = "127.0.0.1";
 const MAX_BODY_BYTES: number = 64 * 1024;
 const SECRET_HEADER: string = "x-leetcode-authsync-secret";
 
-class AuthSyncRequestError extends Error {
-    constructor(public readonly statusCode: number, message: string) {
-        super(message);
-    }
-}
-
 class AuthSyncServer implements vscode.Disposable {
     private server: http.Server | undefined;
     private port: number | undefined;
@@ -64,7 +58,7 @@ class AuthSyncServer implements vscode.Disposable {
 
         const server: http.Server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
             this.handleRequest(req, res).catch((error: Error) => {
-                if (error instanceof AuthSyncRequestError) {
+                if (isAuthSyncRequestError(error)) {
                     this.sendJson(res, error.statusCode, { ok: false, error: error.message });
                     return;
                 }
@@ -135,11 +129,11 @@ class AuthSyncServer implements vscode.Disposable {
             }
         }
 
-        const body: AuthSyncRequestBody = await this.readJsonBody(req);
+        const body: IAuthSyncRequestBody = await this.readJsonBody(req);
         const cookie: string = typeof body.cookie === "string" ? body.cookie.trim() : "";
 
-        if (!this.isLikelyLeetCodeCookie(cookie)) {
-            this.sendJson(res, 400, { ok: false, error: "Request did not include a valid LeetCode cookie." });
+        if (!this.hasLeetCodeSessionCookie(cookie)) {
+            this.sendJson(res, 400, { ok: false, error: "Request did not include a valid LeetCode login session cookie." });
             return;
         }
 
@@ -155,8 +149,8 @@ class AuthSyncServer implements vscode.Disposable {
         res.end();
     }
 
-    private readJsonBody(req: http.IncomingMessage): Promise<AuthSyncRequestBody> {
-        return new Promise<AuthSyncRequestBody>((resolve: (body: AuthSyncRequestBody) => void, reject: (error: Error) => void) => {
+    private readJsonBody(req: http.IncomingMessage): Promise<IAuthSyncRequestBody> {
+        return new Promise<IAuthSyncRequestBody>((resolve: (body: IAuthSyncRequestBody) => void, reject: (error: Error) => void) => {
             let size: number = 0;
             let data: string = "";
             let rejected: boolean = false;
@@ -169,7 +163,7 @@ class AuthSyncServer implements vscode.Disposable {
                 size += chunk.length;
                 if (size > MAX_BODY_BYTES) {
                     rejected = true;
-                    reject(new AuthSyncRequestError(413, "Request body too large."));
+                    reject(createAuthSyncRequestError(413, "Request body too large."));
                     req.resume();
                     return;
                 }
@@ -183,9 +177,9 @@ class AuthSyncServer implements vscode.Disposable {
                 }
 
                 try {
-                    resolve(JSON.parse(data || "{}") as AuthSyncRequestBody);
+                    resolve(JSON.parse(data || "{}") as IAuthSyncRequestBody);
                 } catch (error) {
-                    reject(new AuthSyncRequestError(400, "Invalid JSON request body."));
+                    reject(createAuthSyncRequestError(400, "Invalid JSON request body."));
                 }
             });
 
@@ -193,12 +187,39 @@ class AuthSyncServer implements vscode.Disposable {
         });
     }
 
-    private isLikelyLeetCodeCookie(cookie: string): boolean {
+    private hasLeetCodeSessionCookie(cookie: string): boolean {
         if (!cookie) {
             return false;
         }
 
-        return cookie.includes("LEETCODE_SESSION=") || cookie.includes("csrftoken=");
+        const sessionCookie: string | undefined = this.getCookieValue(cookie, "LEETCODE_SESSION");
+        return this.hasUsableCookieToken(sessionCookie);
+    }
+
+    private getCookieValue(cookie: string, name: string): string | undefined {
+        for (const part of cookie.split(";")) {
+            const trimmed: string = part.trim();
+            const separatorIndex: number = trimmed.indexOf("=");
+
+            if (separatorIndex <= 0) {
+                continue;
+            }
+
+            if (trimmed.slice(0, separatorIndex) === name) {
+                return trimmed.slice(separatorIndex + 1);
+            }
+        }
+
+        return undefined;
+    }
+
+    private hasUsableCookieToken(value: string | undefined): boolean {
+        if (!value) {
+            return false;
+        }
+
+        const token: string = value.trim();
+        return !!token && token !== "null" && token !== "undefined" && token !== "deleted";
     }
 
     private logCookieUpdate(cookie: string, reason: string | undefined): void {
@@ -238,7 +259,21 @@ class AuthSyncServer implements vscode.Disposable {
     }
 }
 
-interface AuthSyncRequestBody {
+function createAuthSyncRequestError(statusCode: number, message: string): IAuthSyncRequestError {
+    const error: IAuthSyncRequestError = new Error(message) as IAuthSyncRequestError;
+    error.statusCode = statusCode;
+    return error;
+}
+
+function isAuthSyncRequestError(error: Error): error is IAuthSyncRequestError {
+    return typeof (error as IAuthSyncRequestError).statusCode === "number";
+}
+
+interface IAuthSyncRequestError extends Error {
+    statusCode: number;
+}
+
+interface IAuthSyncRequestBody {
     cookie?: unknown;
     reason?: string;
 }

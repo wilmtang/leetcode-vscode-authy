@@ -17,7 +17,7 @@ syncButton.addEventListener("click", async () => {
     await saveSettings(false);
     setStatus("Syncing...", "");
     const result = await sendMessage({ type: "syncNow", reason: "options" });
-    setStatus(result.ok ? result.message || "LeetCode cookie synced." : result.error, result.ok ? "success" : "error");
+    setStatus(result.ok ? result.message || "Synced your LeetCode session to VS Code." : result.error, getStatusKind(result));
 });
 
 async function loadSettings() {
@@ -61,4 +61,12 @@ function sendMessage(message) {
 function setStatus(message, kind) {
     statusElement.textContent = message || "";
     statusElement.className = `status ${kind || ""}`.trim();
+}
+
+function getStatusKind(result) {
+    if (result.ok) {
+        return "success";
+    }
+
+    return result.skipped ? "info" : "error";
 }

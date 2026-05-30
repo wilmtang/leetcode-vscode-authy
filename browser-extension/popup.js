@@ -1,22 +1,139 @@
 const summaryElement = document.getElementById("summary");
+const lastSyncElement = document.getElementById("last-sync");
+const nextSyncElement = document.getElementById("next-sync");
+const lastIssueRow = document.getElementById("last-issue-row");
+const lastIssueElement = document.getElementById("last-issue");
 const statusElement = document.getElementById("status");
 const syncButton = document.getElementById("sync-now");
 const optionsButton = document.getElementById("open-options");
 
+let currentSettings = null;
+
 document.addEventListener("DOMContentLoaded", async () => {
-    const settings = await sendMessage({ type: "getSettings" });
-    summaryElement.textContent = `${settings.enabled ? "Enabled" : "Disabled"} on port ${settings.port || 17899}. Cooldown ${settings.cooldownMinutes || 30} min. Secret ${settings.secret ? "enabled" : "disabled"}.`;
+    await refreshSettings();
+    setInterval(renderSettings, 1000);
 });
 
 syncButton.addEventListener("click", async () => {
     setStatus("Syncing...", "");
     const result = await sendMessage({ type: "syncNow", reason: "popup" });
-    setStatus(result.ok ? result.message || "LeetCode cookie synced." : result.error, result.ok ? "success" : "error");
+    setStatus(result.ok ? result.message || "Synced your LeetCode session to VS Code." : result.error, getStatusKind(result));
+    await refreshSettings();
 });
 
 optionsButton.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
 });
+
+async function refreshSettings() {
+    currentSettings = await sendMessage({ type: "getSettings" });
+    renderSettings();
+}
+
+function renderSettings() {
+    if (!currentSettings) {
+        return;
+    }
+
+    summaryElement.textContent = formatConnection(currentSettings);
+    lastSyncElement.textContent = formatTimestamp(currentSettings.lastSyncAt);
+    nextSyncElement.textContent = formatNextSync(currentSettings);
+    renderLastIssue(currentSettings);
+}
+
+function renderLastIssue(settings) {
+    if (!settings.lastSyncError || !settings.lastSyncErrorAt) {
+        lastIssueRow.hidden = true;
+        lastIssueElement.textContent = "";
+        return;
+    }
+
+    const prefix = isAutomaticSyncReason(settings.lastSyncErrorReason)
+        ? "Automatic sync failed"
+        : "Sync failed";
+    lastIssueElement.textContent = `${prefix} ${formatRelativeTime(settings.lastSyncErrorAt)}: ${settings.lastSyncError}`;
+    lastIssueRow.hidden = false;
+}
+
+function formatConnection(settings) {
+    const enabledText = settings.enabled !== false ? "Enabled" : "Disabled";
+    const secretText = settings.secret ? "shared secret set" : "no shared secret";
+    return `${enabledText}. Sending to VS Code on port ${settings.port || 17899}; ${secretText}.`;
+}
+
+function formatNextSync(settings) {
+    if (settings.enabled === false) {
+        return "Disabled";
+    }
+
+    if (!settings.lastSyncAt) {
+        return "Ready now";
+    }
+
+    const nextSyncAt = Number(settings.nextSyncAt || 0);
+    const remainingMs = nextSyncAt - Date.now();
+
+    if (nextSyncAt > 0 && remainingMs > 0) {
+        return `In ${formatDuration(remainingMs)}`;
+    }
+
+    return "Ready now";
+}
+
+function formatTimestamp(timestamp) {
+    if (!timestamp) {
+        return "Never";
+    }
+
+    return `${formatRelativeTime(timestamp)} (${new Date(timestamp).toLocaleString([], {
+        dateStyle: "medium",
+        timeStyle: "short",
+    })})`;
+}
+
+function formatRelativeTime(timestamp) {
+    const elapsedMs = Date.now() - Number(timestamp);
+
+    if (!Number.isFinite(elapsedMs)) {
+        return "";
+    }
+
+    if (elapsedMs < 45 * 1000) {
+        return "just now";
+    }
+
+    return `${formatDuration(elapsedMs)} ago`;
+}
+
+function formatDuration(milliseconds) {
+    const totalSeconds = Math.max(1, Math.ceil(milliseconds / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    if (hours > 0) {
+        return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+
+    if (minutes > 0) {
+        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    }
+
+    return `${seconds}s`;
+}
+
+function isAutomaticSyncReason(reason) {
+    return reason === "leetcode-xhr";
+}
+
+function getStatusKind(result) {
+    if (result.ok) {
+        return "success";
+    }
+
+    return result.skipped ? "info" : "error";
+}
 
 function sendMessage(message) {
     return new Promise((resolve) => {

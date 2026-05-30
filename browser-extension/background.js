@@ -4,6 +4,9 @@ const DEFAULTS = {
     secret: "",
     cooldownMinutes: 30,
     lastSyncAt: 0,
+    lastSyncError: "",
+    lastSyncErrorAt: 0,
+    lastSyncErrorReason: "",
 };
 
 const api = typeof chrome !== "undefined" ? chrome : browser;
@@ -13,13 +16,18 @@ let syncInFlight = null;
 
 async function getSettings() {
     const stored = await storageGet(DEFAULTS);
-    return {
+    const settings = {
         enabled: stored.enabled !== false,
         port: normalizePort(stored.port),
         secret: typeof stored.secret === "string" ? stored.secret : "",
         cooldownMinutes: normalizeCooldownMinutes(stored.cooldownMinutes),
         lastSyncAt: normalizeTimestamp(stored.lastSyncAt),
+        lastSyncError: typeof stored.lastSyncError === "string" ? stored.lastSyncError : "",
+        lastSyncErrorAt: normalizeTimestamp(stored.lastSyncErrorAt),
+        lastSyncErrorReason: typeof stored.lastSyncErrorReason === "string" ? stored.lastSyncErrorReason : "",
     };
+
+    return addComputedSyncStatus(settings);
 }
 
 async function saveSettings(settings) {
@@ -72,17 +80,24 @@ async function syncNow(reason = "manual", cookieOverride = "") {
 
 async function syncNowInternal(reason, cookieOverride) {
     const settings = await getSettings();
+    const syncReason = typeof reason === "string" && reason ? reason : "manual";
 
     if (!settings.enabled) {
-        return { ok: false, error: "Auth sync is disabled." };
+        return {
+            ...addComputedSyncStatus(settings),
+            ok: false,
+            skipped: true,
+            error: "Auth sync is disabled. Turn it on in the extension settings before syncing.",
+        };
     }
 
     const remainingMs = getCooldownRemainingMs(settings);
     if (remainingMs > 0) {
         return {
+            ...addComputedSyncStatus(settings),
             ok: false,
             skipped: true,
-            error: `Sync cooldown active. Try again in ${formatDuration(remainingMs)}.`,
+            error: `Sync cooldown is active. Next sync is available in ${formatDuration(remainingMs)}.`,
             nextSyncAt: settings.lastSyncAt + settings.cooldownMinutes * 60 * 1000,
         };
     }
@@ -90,9 +105,10 @@ async function syncNowInternal(reason, cookieOverride) {
     const cookie = typeof cookieOverride === "string" && cookieOverride
         ? cookieOverride
         : await getLeetCodeCookieHeader();
+    const loginCookieStatus = getLeetCodeLoginCookieStatus(cookie);
 
-    if (!cookie || !cookie.includes("LEETCODE_SESSION=")) {
-        return { ok: false, error: "No LeetCode session cookie found. Please log in to leetcode.com first." };
+    if (!loginCookieStatus.ok) {
+        return recordSyncFailure(loginCookieStatus.error, syncReason, "missing-session-cookie", settings);
     }
 
     const headers = {
@@ -103,40 +119,51 @@ async function syncNowInternal(reason, cookieOverride) {
         headers["X-LeetCode-AuthSync-Secret"] = settings.secret;
     }
 
-    const response = await fetch(`http://127.0.0.1:${settings.port}/auth/update`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-            cookie,
-            source: "browser-extension",
-            reason,
-            updatedAt: Date.now(),
-        }),
-    });
+    let response;
+
+    try {
+        response = await fetch(`http://127.0.0.1:${settings.port}/auth/update`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                cookie,
+                source: "browser-extension",
+                reason: syncReason,
+                updatedAt: Date.now(),
+            }),
+        });
+    } catch (error) {
+        return recordSyncFailure(getFetchFailureMessage(settings.port), syncReason, "vscode-unavailable", settings);
+    }
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        return {
-            ok: false,
-            error: data.error || `HTTP ${response.status}`,
-        };
+        return recordSyncFailure(getServerFailureMessage(response.status, data.error), syncReason, "server-error", settings);
     }
 
     if (data.ok === false) {
-        return {
-            ok: false,
-            error: data.error || "VS Code rejected the cookie update.",
-        };
+        return recordSyncFailure(data.error || "VS Code rejected the LeetCode session update.", syncReason, "server-rejected", settings);
     }
 
     const lastSyncAt = Date.now();
-    await storageSet({ lastSyncAt });
+    const successState = {
+        lastSyncAt,
+        lastSyncError: "",
+        lastSyncErrorAt: 0,
+        lastSyncErrorReason: "",
+    };
+
+    await storageSet(successState);
 
     return {
         ...data,
+        ...addComputedSyncStatus({
+            ...settings,
+            ...successState,
+        }),
         ok: true,
-        lastSyncAt,
+        message: data.message || "Synced your LeetCode session to VS Code.",
     };
 }
 
@@ -147,10 +174,42 @@ function scheduleSync(reason, cookie) {
 
     syncTimer = setTimeout(() => {
         syncTimer = null;
-        syncNow(reason, cookie).catch((error) => {
-            console.warn(`[leetcode-auth-sync] Sync failed: ${error.message || String(error)}`);
+        syncNow(reason, cookie).then((result) => {
+            if (result && !result.ok && !result.skipped) {
+                console.warn(`[leetcode-auth-sync] Sync failed: ${result.error}`);
+            }
+        }, (error) => {
+            const message = error.message || String(error);
+            void recordSyncFailure(message, reason, "unexpected-error").catch(() => undefined);
+            console.warn(`[leetcode-auth-sync] Sync failed: ${message}`);
         });
     }, 1000);
+}
+
+async function recordSyncFailure(error, reason, code, settings = null) {
+    const lastSyncError = error || "Sync failed.";
+    const lastSyncErrorAt = Date.now();
+    const lastSyncErrorReason = typeof reason === "string" && reason ? reason : "manual";
+
+    await storageSet({
+        lastSyncError,
+        lastSyncErrorAt,
+        lastSyncErrorReason,
+    });
+
+    const baseSettings = settings || await getSettings();
+
+    return {
+        ...addComputedSyncStatus({
+            ...baseSettings,
+            lastSyncError,
+            lastSyncErrorAt,
+            lastSyncErrorReason,
+        }),
+        ok: false,
+        error: lastSyncError,
+        code,
+    };
 }
 
 function normalizePort(port) {
@@ -176,6 +235,19 @@ function normalizeTimestamp(timestamp) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function addComputedSyncStatus(settings) {
+    const cooldownRemainingMs = getCooldownRemainingMs(settings);
+    const nextSyncAt = cooldownRemainingMs > 0
+        ? settings.lastSyncAt + settings.cooldownMinutes * 60 * 1000
+        : 0;
+
+    return {
+        ...settings,
+        cooldownRemainingMs,
+        nextSyncAt,
+    };
+}
+
 function getCooldownRemainingMs(settings) {
     if (!settings.lastSyncAt) {
         return 0;
@@ -199,6 +271,76 @@ function formatDuration(milliseconds) {
     }
 
     return `${minutes}m ${seconds}s`;
+}
+
+function getLeetCodeLoginCookieStatus(cookieHeader) {
+    if (!cookieHeader || typeof cookieHeader !== "string") {
+        return {
+            ok: false,
+            error: "No LeetCode cookies were found. Sign in to leetcode.com in this browser, then sync again.",
+        };
+    }
+
+    const cookies = parseCookieHeader(cookieHeader);
+    const sessionToken = cookies.get("LEETCODE_SESSION");
+
+    if (!hasUsableCookieToken(sessionToken)) {
+        return {
+            ok: false,
+            error: "LeetCode cookies were found, but they do not include a valid LEETCODE_SESSION login token. Sign in to leetcode.com in this browser, then sync again.",
+        };
+    }
+
+    return { ok: true };
+}
+
+function parseCookieHeader(cookieHeader) {
+    const cookies = new Map();
+
+    for (const part of cookieHeader.split(";")) {
+        const trimmed = part.trim();
+        const separatorIndex = trimmed.indexOf("=");
+
+        if (separatorIndex <= 0) {
+            continue;
+        }
+
+        cookies.set(trimmed.slice(0, separatorIndex), trimmed.slice(separatorIndex + 1));
+    }
+
+    return cookies;
+}
+
+function hasUsableCookieToken(value) {
+    if (typeof value !== "string") {
+        return false;
+    }
+
+    const token = value.trim();
+    return !!token && token !== "null" && token !== "undefined" && token !== "deleted";
+}
+
+function getFetchFailureMessage(port) {
+    return `No VS Code LeetCode auth sync server was found on port ${port}. Open VS Code with the LeetCode extension enabled, or set the same auth sync port in both places.`;
+}
+
+function getServerFailureMessage(status, error) {
+    const serverMessage = typeof error === "string" && error ? error : "";
+    const lowerServerMessage = serverMessage.toLowerCase();
+
+    if (status === 401 && lowerServerMessage.includes("secret")) {
+        return "The shared secret does not match VS Code. Update the browser extension secret or the VS Code leetcode.authSync.secret setting.";
+    }
+
+    if (status === 400 && lowerServerMessage.includes("leetcode") && lowerServerMessage.includes("cookie")) {
+        return "VS Code rejected the request because it did not include a usable LeetCode login session cookie.";
+    }
+
+    if (status === 404) {
+        return "VS Code responded, but the auth sync endpoint was not found. Make sure the VS Code LeetCode extension is up to date.";
+    }
+
+    return serverMessage || `VS Code returned HTTP ${status}.`;
 }
 
 function storageGet(defaults) {
@@ -238,7 +380,7 @@ function getCookieHeaderFromRequest(details) {
 function handleLeetCodeXhr(details) {
     const cookie = getCookieHeaderFromRequest(details);
 
-    if (cookie && cookie.includes("LEETCODE_SESSION=")) {
+    if (getLeetCodeLoginCookieStatus(cookie).ok) {
         scheduleSync("leetcode-xhr", cookie);
     }
 }
