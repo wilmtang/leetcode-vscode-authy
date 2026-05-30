@@ -13,7 +13,7 @@
         "http://127.0.0.1/*"
     ],
     "background": {
-        "service_worker": "background.js"
+        "scripts": ["background.js"]
     },
     "icons": {
         "16": "icons/icon-16.png",
