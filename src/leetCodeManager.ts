@@ -46,14 +46,16 @@ class LeetCodeManager extends EventEmitter {
     public async updateSessionFromCookie(cookie: string): Promise<void> {
         globalState.setCookie(cookie);
         const data = await queryUserData();
+        if (!data.isSignedIn || !data.username) {
+            throw new Error("LeetCode did not return a signed-in user for the synced cookie.");
+        }
+
         globalState.setUserStatus(data);
         await this.setCookieToCli(cookie, data.username);
-        if (data.username) {
-            vscode.window.showInformationMessage(`Successfully signed in as ${data.username}.`);
-            this.currentUser = data.username;
-            this.userStatus = UserStatus.SignedIn;
-            this.emit("statusChanged");
-        }
+        vscode.window.showInformationMessage(`Successfully signed in as ${data.username}.`);
+        this.currentUser = data.username;
+        this.userStatus = UserStatus.SignedIn;
+        this.emit("statusChanged");
     }
 
     public async handleUriSignIn(uri: vscode.Uri): Promise<void> {
@@ -180,14 +182,20 @@ class LeetCodeManager extends EventEmitter {
     private waitForAuthSyncSignIn(token: vscode.CancellationToken): Promise<boolean> {
         return new Promise<boolean>((resolve: (signedIn: boolean) => void) => {
             let timeout: NodeJS.Timer | undefined;
+            let pollInterval: NodeJS.Timer | undefined;
             let cancellationSubscription: vscode.Disposable | undefined;
             let resolved: boolean = false;
+            let pollInFlight: boolean = false;
 
             const cleanup = (): void => {
                 this.removeListener("statusChanged", onStatusChanged);
                 if (timeout) {
                     clearTimeout(timeout);
                     timeout = undefined;
+                }
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = undefined;
                 }
                 if (cancellationSubscription) {
                     cancellationSubscription.dispose();
@@ -210,10 +218,28 @@ class LeetCodeManager extends EventEmitter {
                 }
             };
 
+            const pollLoginStatus = async (): Promise<void> => {
+                if (resolved || pollInFlight) {
+                    return;
+                }
+
+                pollInFlight = true;
+                try {
+                    await this.getLoginStatus();
+                } finally {
+                    pollInFlight = false;
+                    onStatusChanged();
+                }
+            };
+
             this.on("statusChanged", onStatusChanged);
             cancellationSubscription = token.onCancellationRequested(() => finish(false));
             timeout = setTimeout(() => finish(false), this.authSyncSignInTimeoutMs);
+            pollInterval = setInterval(() => {
+                void pollLoginStatus();
+            }, 2000);
             onStatusChanged();
+            void pollLoginStatus();
         });
     }
 
