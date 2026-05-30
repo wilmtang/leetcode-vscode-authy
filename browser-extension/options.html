@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LeetCode Auth Sync Options</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="page">
+        <h1>LeetCode Auth Sync</h1>
+
+        <form id="options-form" class="panel">
+            <label class="check-row">
+                <input id="enabled" type="checkbox">
+                <span>
+                    <strong>Enable auth sync</strong>
+                    <small>When enabled, this extension reads your LeetCode browser cookies and sends them to the local VS Code LeetCode extension.</small>
+                </span>
+            </label>
+
+            <label>
+                <span>Local server port</span>
+                <input id="port" type="number" min="1024" max="65535" inputmode="numeric">
+                <small>The local port where the VS Code extension listens for auth updates. Default: 17899. This must match the VS Code setting leetcode.authSync.port.</small>
+            </label>
+
+            <label>
+                <span>Optional shared secret</span>
+                <input id="secret" type="password" autocomplete="off">
+                <small>Optional safety check. Leave empty for zero-config local sync. If you set a value here, set the same value in VS Code setting leetcode.authSync.secret.</small>
+            </label>
+
+            <div class="actions">
+                <button type="submit">Save</button>
+                <button id="sync-now" type="button" class="secondary">Sync Now</button>
+            </div>
+
+            <p id="status" class="status" role="status"></p>
+        </form>
+    </main>
+
+    <script src="options.js"></script>
+</body>
+</html>

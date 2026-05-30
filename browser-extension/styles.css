@@ -1,0 +1,120 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f5f5f5;
+    color: #262626;
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page {
+    width: min(680px, calc(100vw - 32px));
+    margin: 32px auto;
+}
+
+.popup {
+    width: 320px;
+    background: #fff;
+}
+
+.popup .panel {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+h1 {
+    margin: 0 0 18px;
+    font-size: 22px;
+    font-weight: 650;
+}
+
+.panel {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #d7d7d7;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+label {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+label > span {
+    font-weight: 600;
+}
+
+small,
+.summary {
+    color: #666;
+}
+
+input[type="number"],
+input[type="password"] {
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 8px;
+    border: 1px solid #c7c7c7;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.check-row input {
+    margin-top: 3px;
+}
+
+.check-row small {
+    display: block;
+    margin-top: 4px;
+    font-weight: 400;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 4px;
+}
+
+button {
+    min-height: 34px;
+    padding: 6px 12px;
+    border: 1px solid #d35400;
+    border-radius: 6px;
+    background: #e65a00;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button.secondary {
+    border-color: #bcbcbc;
+    background: #fff;
+    color: #262626;
+}
+
+.status {
+    min-height: 20px;
+    margin: 16px 0 0;
+    color: #666;
+}
+
+.status.success {
+    color: #1f7a3a;
+}
+
+.status.error {
+    color: #b00020;
+}

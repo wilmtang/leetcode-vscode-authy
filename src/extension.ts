@@ -11,6 +11,7 @@ import * as show from "./commands/show";
 import * as star from "./commands/star";
 import * as submit from "./commands/submit";
 import * as test from "./commands/test";
+import { authSyncServer } from "./auth/authSyncServer";
 import { explorerNodeManager } from "./explorer/explorerNodeManager";
 import { LeetCodeNode } from "./explorer/LeetCodeNode";
 import { leetCodeTreeDataProvider } from "./explorer/LeetCodeTreeDataProvider";
@@ -97,12 +98,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             vscode.commands.registerCommand("leetcode.switchDefaultLanguage", () => switchDefaultLanguage()),
             vscode.commands.registerCommand("leetcode.addFavorite", (node: LeetCodeNode) => star.addFavorite(node)),
             vscode.commands.registerCommand("leetcode.removeFavorite", (node: LeetCodeNode) => star.removeFavorite(node)),
-            vscode.commands.registerCommand("leetcode.problems.sort", () => plugin.switchSortingStrategy())
+            vscode.commands.registerCommand("leetcode.problems.sort", () => plugin.switchSortingStrategy()),
+            vscode.commands.registerCommand("leetcode.authSync.status", () => showAuthSyncStatus()),
+            vscode.commands.registerCommand("leetcode.authSync.restart", () => restartAuthSyncServer()),
+            vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
+                if (
+                    event.affectsConfiguration("leetcode.authSync.enabled") ||
+                    event.affectsConfiguration("leetcode.authSync.port") ||
+                    event.affectsConfiguration("leetcode.authSync.secret")
+                ) {
+                    void restartAuthSyncServer(false);
+                }
+            }),
+            authSyncServer
         );
 
         await leetCodeExecutor.switchEndpoint(plugin.getLeetCodeEndpoint());
         await leetCodeManager.getLoginStatus();
         vscode.window.registerUriHandler({ handleUri: leetCodeManager.handleUriSignIn });
+        await startAuthSyncServer();
     } catch (error) {
         leetCodeChannel.appendLine(error.toString());
         promptForOpenOutputChannel("Extension initialization failed. Please open output channel for details.", DialogType.error);
@@ -111,4 +125,41 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 export function deactivate(): void {
     // Do nothing.
+}
+
+async function startAuthSyncServer(): Promise<void> {
+    try {
+        await authSyncServer.start();
+    } catch (error) {
+        leetCodeChannel.appendLine(`[auth-sync] Failed to start server: ${String(error)}`);
+    }
+}
+
+async function restartAuthSyncServer(showMessage: boolean = true): Promise<void> {
+    try {
+        await authSyncServer.stop();
+        await authSyncServer.start();
+        if (showMessage) {
+            vscode.window.showInformationMessage("LeetCode auth sync server restarted.");
+        }
+    } catch (error) {
+        leetCodeChannel.appendLine(`[auth-sync] Failed to restart server: ${String(error)}`);
+        if (showMessage) {
+            promptForOpenOutputChannel("Failed to restart LeetCode auth sync server. Please open output channel for details.", DialogType.error);
+        }
+    }
+}
+
+function showAuthSyncStatus(): void {
+    const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration("leetcode");
+    const enabled: boolean = config.get<boolean>("authSync.enabled", true);
+    const port: number = config.get<number>("authSync.port", 17899);
+    const secret: string = config.get<string>("authSync.secret", "");
+    const running: string = authSyncServer.isRunning() ? "running" : "stopped";
+    const activePort: number | undefined = authSyncServer.getPort();
+    const portDescription: string = activePort ? `${activePort}` : `${port}`;
+
+    vscode.window.showInformationMessage(
+        `LeetCode auth sync: ${enabled ? "enabled" : "disabled"}, ${running}, port ${portDescription}, secret ${secret ? "enabled" : "disabled"}.`
+    );
 }

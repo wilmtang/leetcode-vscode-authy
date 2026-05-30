@@ -42,13 +42,13 @@ class LeetCodeManager extends EventEmitter {
         }
     }
 
-    private async updateUserStatusWithCookie(cookie: string): Promise<void> {
+    public async updateSessionFromCookie(cookie: string): Promise<void> {
         globalState.setCookie(cookie);
         const data = await queryUserData();
         globalState.setUserStatus(data);
         await this.setCookieToCli(cookie, data.username);
         if (data.username) {
-            vscode.window.showInformationMessage(`Successfully ${data.username}.`);
+            vscode.window.showInformationMessage(`Successfully signed in as ${data.username}.`);
             this.currentUser = data.username;
             this.userStatus = UserStatus.SignedIn;
             this.emit("statusChanged");
@@ -66,7 +66,7 @@ class LeetCodeManager extends EventEmitter {
                     return;
                 }
 
-                await this.updateUserStatusWithCookie(cookie)
+                await this.updateSessionFromCookie(cookie)
 
             });
         } catch (error) {
@@ -83,7 +83,7 @@ class LeetCodeManager extends EventEmitter {
                 s ? undefined : 'Cookie must not be empty',
         })
 
-        await this.updateUserStatusWithCookie(cookie || '')
+        await this.updateSessionFromCookie(cookie || '')
     }
 
     public async signIn(): Promise<void> {

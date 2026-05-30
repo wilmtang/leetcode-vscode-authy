@@ -26,9 +26,12 @@
     ],
     "preview": true,
     "activationEvents": [
+        "onStartupFinished",
         "onCommand:leetcode.toggleLeetCodeCn",
         "onCommand:leetcode.signin",
         "onCommand:leetcode.signout",
+        "onCommand:leetcode.authSync.status",
+        "onCommand:leetcode.authSync.restart",
         "onCommand:leetcode.manageSessions",
         "onCommand:leetcode.refreshExplorer",
         "onCommand:leetcode.pickOne",
@@ -141,6 +144,16 @@
                 "title": "Sort Problems",
                 "category": "LeetCode",
                 "icon": "$(sort-precedence)"
+            },
+            {
+                "command": "leetcode.authSync.status",
+                "title": "Show Browser Auth Sync Status",
+                "category": "LeetCode"
+            },
+            {
+                "command": "leetcode.authSync.restart",
+                "title": "Restart Browser Auth Sync Server",
+                "category": "LeetCode"
             }
         ],
         "viewsContainers": {
@@ -705,6 +718,26 @@
                         "default": true,
                         "scope": "application",
                         "description": "Allow LeetCode to report anonymous usage data to improve the product."
+                    },
+                    "leetcode.authSync.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "scope": "application",
+                        "description": "Enable the local browser auth sync server. When enabled, this extension listens on 127.0.0.1 for LeetCode cookies sent by the companion browser extension."
+                    },
+                    "leetcode.authSync.port": {
+                        "type": "number",
+                        "default": 17899,
+                        "minimum": 1024,
+                        "maximum": 65535,
+                        "scope": "application",
+                        "description": "Local port used by the browser auth sync server. The companion browser extension must use the same port. Default: 17899."
+                    },
+                    "leetcode.authSync.secret": {
+                        "type": "string",
+                        "default": "",
+                        "scope": "application",
+                        "description": "Optional shared secret for browser auth sync. Leave empty to allow zero-config local sync. If set, the browser extension must send the same value in the X-LeetCode-AuthSync-Secret header."
                     }
                 }
             }
