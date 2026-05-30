@@ -32,11 +32,80 @@ Thanks for [@yihong0618](https://github.com/yihong0618) provided a workaround wh
 
 > Note: If you want to use third-party login(**Recommended**), please make sure your account has been connected to the third-party. If you want to use `Cookie` login, click [here](https://github.com/LeetCode-OpenSource/vscode-leetcode/issues/478#issuecomment-564757098) to see the steps.
 
-## Browser Auth Sync Local Testing
+## Browser Auth Sync
 
 This fork includes a local browser-to-VS Code cookie sync path for `leetcode.com`. A companion browser extension can send your current LeetCode cookie header to the VS Code extension on `127.0.0.1:17899`, where the existing cookie login flow updates both VS Code state and the bundled CLI session. Automatic sync observes only LeetCode XHR/fetch requests and is throttled by a configurable cooldown.
 
-See [docs/auth-sync-local-testing.md](docs/auth-sync-local-testing.md) for what changed, how to install the browser extension for local testing, how to start the VS Code listener, how to install the VS Code extension locally, and the helper scripts for automating those steps.
+This is useful when the normal LeetCode login flow is blocked but your browser is already signed in to `leetcode.com`.
+
+### How It Works
+
+- The VS Code extension starts a local listener on `127.0.0.1:17899` by default.
+- The companion browser extension sends the full LeetCode `Cookie` header to `POST http://127.0.0.1:17899/auth/update`.
+- The VS Code extension reuses the existing cookie login path, updating VS Code state and the bundled `vsc-leetcode-cli` session/cache.
+- Automatic browser sync only observes LeetCode XHR/fetch requests, not every page asset request.
+- After a successful sync, the browser extension will not send again until its cooldown expires. The default cooldown is 30 minutes and is configurable in the browser extension options page.
+- Cookie values are not intentionally logged by either extension.
+
+### VS Code Setup
+
+The auth sync listener starts automatically when the LeetCode extension activates. You can inspect or restart it from the Command Palette:
+
+- **LeetCode: Show Browser Auth Sync Status**
+- **LeetCode: Restart Browser Auth Sync Server**
+
+Optional VS Code settings:
+
+- `leetcode.authSync.enabled`: enable or disable the local listener.
+- `leetcode.authSync.port`: local listener port. Default: `17899`.
+- `leetcode.authSync.secret`: optional shared secret. If set, the browser extension must use the same value.
+
+### Browser Extension Setup
+
+Load the unpacked extension from:
+
+```text
+browser-extension/
+```
+
+Chrome:
+
+1. Open `chrome://extensions`.
+2. Enable `Developer mode`.
+3. Click `Load unpacked`.
+4. Select the `browser-extension/` folder.
+
+Firefox:
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click `Load Temporary Add-on`.
+3. Select `browser-extension/manifest.json`.
+
+The browser extension options page controls:
+
+- Enable/disable auth sync.
+- Local server port.
+- Optional shared secret.
+- Successful sync cooldown in minutes.
+
+### Helper Scripts
+
+For local testing:
+
+```bash
+npm run auth-sync:dev:vscode
+npm run auth-sync:dev:chrome
+```
+
+To launch Chrome with your current Chrome user-data directory and the unpacked extension:
+
+```bash
+npm run auth-sync:dev:chrome:current
+```
+
+Quit Chrome first when using the current-profile script; Chrome can ignore `--load-extension` if an existing Chrome process is already running. Firefox release builds do not support a safe silent permanent install of an unsigned unpacked extension into the current profile, so use the temporary add-on flow or package/sign the extension.
+
+See [docs/auth-sync-local-testing.md](docs/auth-sync-local-testing.md) for the full local testing workflow and troubleshooting notes.
 
 ## Requirements
 
@@ -153,6 +222,9 @@ See [docs/auth-sync-local-testing.md](docs/auth-sync-local-testing.md) for what 
 | `leetcode.colorizeProblems`       | Add difficulty badge and colorize problems files in explorer tree                                                                                                                                                                                             | `true`             |
 | `leetcode.problems.sortStrategy`  | Specify sorting strategy for problems list                                                                                                                                                                                                                    | `None`             |
 | `leetcode.allowReportData`        | Allow LeetCode to report anonymous usage data to improve the product. list                                                                                                                                                                                    | `true`             |
+| `leetcode.authSync.enabled`       | Enable the local browser auth sync server on `127.0.0.1`.                                                                                                                                                                                                     | `true`             |
+| `leetcode.authSync.port`          | Local port used by the browser auth sync server. The browser extension must use the same port.                                                                                                                                                                | `17899`            |
+| `leetcode.authSync.secret`        | Optional shared secret for browser auth sync. If set, the browser extension must send the same secret.                                                                                                                                                        | `""`               |
 
 ## Want Help?
 

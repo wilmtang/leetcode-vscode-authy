@@ -13,6 +13,9 @@
         "http://127.0.0.1/*"
     ],
     "background": {
+        "scripts": [
+            "background.js"
+        ],
         "service_worker": "background.js"
     },
     "options_page": "options.html",
