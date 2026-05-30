@@ -20,6 +20,7 @@ class LeetCodeManager extends EventEmitter {
     private userStatus: UserStatus;
     private readonly successRegex: RegExp = /(?:.*)Successfully .*login as (.*)/i;
     private readonly failRegex: RegExp = /.*\[ERROR\].*/i;
+    private readonly authSyncSignInTimeoutMs: number = 2 * 60 * 1000;
 
     constructor() {
         super();
@@ -90,10 +91,15 @@ class LeetCodeManager extends EventEmitter {
         const picks: Array<IQuickItemEx<string>> = []
         picks.push(
             {
+                label: 'Auto Cookie Sync',
+                detail: 'Wait for the browser extension to send your signed-in LeetCode session',
+                value: 'AuthSync',
+                description: '[Recommended]'
+            },
+            {
                 label: 'Web Authorization',
                 detail: 'Open browser to authorize login on the website',
-                value: 'WebAuth',
-                description: '[Recommended]'
+                value: 'WebAuth'
             },
             {
                 label: 'LeetCode Cookie',
@@ -107,6 +113,11 @@ class LeetCodeManager extends EventEmitter {
             return
         }
         const loginMethod: string = choice.value
+
+        if (loginMethod === 'AuthSync') {
+            await this.handleAuthSyncSignIn()
+            return
+        }
 
         if (loginMethod === 'WebAuth') {
             openUrl(this.getAuthLoginUrl())
@@ -141,6 +152,69 @@ class LeetCodeManager extends EventEmitter {
 
     public getUser(): string | undefined {
         return this.currentUser;
+    }
+
+    private async handleAuthSyncSignIn(): Promise<void> {
+        if (this.currentUser) {
+            vscode.window.showInformationMessage(`Already signed in as ${this.currentUser}.`);
+            return;
+        }
+
+        const signedIn: boolean = await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: "Waiting for browser cookie sync...",
+                cancellable: true,
+            },
+            async (progress: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => {
+                progress.report({ message: "Click Sync now in the browser extension." });
+                return this.waitForAuthSyncSignIn(token);
+            }
+        );
+
+        if (!signedIn) {
+            vscode.window.showWarningMessage("Still waiting for browser cookie sync. Sign in to LeetCode in your browser, then click Sync now in the browser extension.");
+        }
+    }
+
+    private waitForAuthSyncSignIn(token: vscode.CancellationToken): Promise<boolean> {
+        return new Promise<boolean>((resolve: (signedIn: boolean) => void) => {
+            let timeout: NodeJS.Timer | undefined;
+            let cancellationSubscription: vscode.Disposable | undefined;
+            let resolved: boolean = false;
+
+            const cleanup = (): void => {
+                this.removeListener("statusChanged", onStatusChanged);
+                if (timeout) {
+                    clearTimeout(timeout);
+                    timeout = undefined;
+                }
+                if (cancellationSubscription) {
+                    cancellationSubscription.dispose();
+                    cancellationSubscription = undefined;
+                }
+            };
+
+            const finish = (signedIn: boolean): void => {
+                if (resolved) {
+                    return;
+                }
+                resolved = true;
+                cleanup();
+                resolve(signedIn);
+            };
+
+            const onStatusChanged = (): void => {
+                if (this.userStatus === UserStatus.SignedIn && !!this.currentUser) {
+                    finish(true);
+                }
+            };
+
+            this.on("statusChanged", onStatusChanged);
+            cancellationSubscription = token.onCancellationRequested(() => finish(false));
+            timeout = setTimeout(() => finish(false), this.authSyncSignInTimeoutMs);
+            onStatusChanged();
+        });
     }
 
     private tryParseUserName(output: string): string {

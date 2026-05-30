@@ -17,14 +17,15 @@ function commandExists(command) {
 }
 
 function run(command, args, options = {}) {
+    const { allowFailure, ...spawnOptions } = options;
     const result = spawnSync(command, args, {
         cwd: repoRoot,
         stdio: "inherit",
         shell: process.platform === "win32",
-        ...options,
+        ...spawnOptions,
     });
 
-    if (result.status !== 0) {
+    if (result.status !== 0 && !allowFailure) {
         process.exit(result.status || 1);
     }
 }

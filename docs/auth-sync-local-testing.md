@@ -28,6 +28,8 @@ VS Code extension:
 Browser extension:
 
 - Added `browser-extension/`.
+- Chrome loads `browser-extension/manifest.json` as an MV3 service worker extension.
+- MV2-only development loaders can use `browser-extension/manifest.mv2.json`.
 - Automatic sync observes only LeetCode XHR/fetch request cookie headers.
 - Sends the full LeetCode `Cookie` header to the local VS Code listener.
 - Syncs on popup/options click or eligible LeetCode XHR/fetch requests.
@@ -186,7 +188,7 @@ npm run auth-sync:paths
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click `Load Temporary Add-on`.
-3. Select `browser-extension/manifest.json`.
+3. Select `browser-extension/manifest.mv2.json` for the MV2 background-script build.
 
 Firefox release builds do not provide a safe command for silently and permanently installing an unsigned unpacked extension into the current normal profile. Use the temporary add-on flow above for development, or package/sign the extension for a persistent install.
 

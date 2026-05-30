@@ -18,6 +18,12 @@ fs.mkdirSync(distPath, { recursive: true });
 console.log("Packaging VSIX with @vscode/vsce...");
 run("npm", ["exec", "--yes", "--package", "@vscode/vsce", "--", "vsce", "package", "--out", vsixPath]);
 
+console.log("Removing the old stock LeetCode extension ID if it is installed...");
+run(codeCommand, ["--uninstall-extension", "leetcode.vscode-leetcode"], { allowFailure: true });
+
+console.log("Removing the previous local auth-sync extension ID if it is installed...");
+run(codeCommand, ["--uninstall-extension", "zihaod.vscode-leetcode-auth-sync"], { allowFailure: true });
+
 console.log("Installing packaged VS Code extension...");
 run(codeCommand, ["--install-extension", vsixPath, "--force"]);
 

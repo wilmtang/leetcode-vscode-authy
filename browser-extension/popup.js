@@ -11,7 +11,7 @@ let currentSettings = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
     await refreshSettings();
-    setInterval(renderSettings, 1000);
+    setInterval(renderSettings, 30 * 1000);
 });
 
 syncButton.addEventListener("click", async () => {
@@ -74,7 +74,7 @@ function formatNextSync(settings) {
     const remainingMs = nextSyncAt - Date.now();
 
     if (nextSyncAt > 0 && remainingMs > 0) {
-        return `In ${formatDuration(remainingMs)}`;
+        return `In ${formatDuration(remainingMs, "ceil")}`;
     }
 
     return "Ready now";
@@ -102,25 +102,24 @@ function formatRelativeTime(timestamp) {
         return "just now";
     }
 
-    return `${formatDuration(elapsedMs)} ago`;
+    return `${formatDuration(elapsedMs, "floor")} ago`;
 }
 
-function formatDuration(milliseconds) {
-    const totalSeconds = Math.max(1, Math.ceil(milliseconds / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
+function formatDuration(milliseconds, rounding) {
+    const totalMinutes = Math.max(
+        1,
+        rounding === "floor"
+            ? Math.floor(milliseconds / (60 * 1000))
+            : Math.ceil(milliseconds / (60 * 1000))
+    );
+    const hours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
 
     if (hours > 0) {
         return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
     }
 
-    if (minutes > 0) {
-        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-    }
-
-    return `${seconds}s`;
+    return `${totalMinutes}m`;
 }
 
 function isAutomaticSyncReason(reason) {

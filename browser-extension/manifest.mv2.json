@@ -1,19 +1,19 @@
 {
-    "manifest_version": 3,
+    "manifest_version": 2,
     "name": "LeetCode VS Code Auth Sync",
     "version": "0.1.0",
     "description": "Syncs LeetCode browser cookies to the VS Code LeetCode extension running on localhost.",
     "permissions": [
         "cookies",
         "storage",
-        "webRequest"
-    ],
-    "host_permissions": [
+        "webRequest",
         "https://leetcode.com/*",
         "http://127.0.0.1/*"
     ],
     "background": {
-        "service_worker": "background.js"
+        "scripts": [
+            "background.js"
+        ]
     },
     "icons": {
         "16": "icons/icon-16.png",
@@ -25,7 +25,7 @@
         "page": "options.html",
         "open_in_tab": false
     },
-    "action": {
+    "browser_action": {
         "default_title": "LeetCode Auth Sync",
         "default_popup": "popup.html",
         "default_icon": {

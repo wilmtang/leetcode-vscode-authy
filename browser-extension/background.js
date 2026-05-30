@@ -13,6 +13,7 @@ const api = typeof chrome !== "undefined" ? chrome : browser;
 
 let syncTimer = null;
 let syncInFlight = null;
+let lastAutomaticCookieProbeAt = 0;
 
 async function getSettings() {
     const stored = await storageGet(DEFAULTS);
@@ -91,7 +92,7 @@ async function syncNowInternal(reason, cookieOverride) {
         };
     }
 
-    const remainingMs = getCooldownRemainingMs(settings);
+    const remainingMs = shouldRespectCooldown(syncReason) ? getCooldownRemainingMs(settings) : 0;
     if (remainingMs > 0) {
         return {
             ...addComputedSyncStatus(settings),
@@ -108,6 +109,16 @@ async function syncNowInternal(reason, cookieOverride) {
     const loginCookieStatus = getLeetCodeLoginCookieStatus(cookie);
 
     if (!loginCookieStatus.ok) {
+        if (isAutomaticSyncReason(syncReason)) {
+            return {
+                ...addComputedSyncStatus(settings),
+                ok: false,
+                skipped: true,
+                error: loginCookieStatus.error,
+                code: "missing-session-cookie",
+            };
+        }
+
         return recordSyncFailure(loginCookieStatus.error, syncReason, "missing-session-cookie", settings);
     }
 
@@ -294,6 +305,14 @@ function getLeetCodeLoginCookieStatus(cookieHeader) {
     return { ok: true };
 }
 
+function isAutomaticSyncReason(reason) {
+    return reason === "leetcode-xhr";
+}
+
+function shouldRespectCooldown(reason) {
+    return isAutomaticSyncReason(reason);
+}
+
 function parseCookieHeader(cookieHeader) {
     const cookies = new Map();
 
@@ -380,8 +399,15 @@ function getCookieHeaderFromRequest(details) {
 function handleLeetCodeXhr(details) {
     const cookie = getCookieHeaderFromRequest(details);
 
-    if (getLeetCodeLoginCookieStatus(cookie).ok) {
+    if (cookie && getLeetCodeLoginCookieStatus(cookie).ok) {
         scheduleSync("leetcode-xhr", cookie);
+        return;
+    }
+
+    const now = Date.now();
+    if (!cookie && now - lastAutomaticCookieProbeAt > 60 * 1000) {
+        lastAutomaticCookieProbeAt = now;
+        scheduleSync("leetcode-xhr", "");
     }
 }
 

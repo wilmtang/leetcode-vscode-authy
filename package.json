@@ -1,10 +1,10 @@
 {
-    "name": "vscode-leetcode",
-    "displayName": "LeetCode",
-    "description": "Solve LeetCode problems in VS Code",
+    "name": "vscode-leetcode-auth-sync",
+    "displayName": "LeetCode with Auth Sync",
+    "description": "Solve LeetCode problems in VS Code with browser auth sync",
     "version": "0.18.4",
     "author": "LeetCode",
-    "publisher": "LeetCode",
+    "publisher": "wilmtang",
     "license": "MIT",
     "icon": "resources/LeetCode.png",
     "engines": {
@@ -160,7 +160,7 @@
             "activitybar": [
                 {
                     "id": "leetcode",
-                    "title": "LeetCode",
+                    "title": "LeetCode with Auth Sync",
                     "icon": "resources/LeetCode.svg"
                 }
             ]
@@ -753,6 +753,7 @@
         "auth-sync:dev:chrome": "node scripts/start-chrome-auth-sync-extension.js",
         "auth-sync:dev:chrome:current": "node scripts/start-chrome-auth-sync-extension.js --profile=current",
         "auth-sync:paths": "node scripts/print-auth-sync-paths.js",
+        "auth-sync:icons": "node scripts/generate-browser-extension-icons.js",
         "build": "vsce package",
         "vs-publish": "vsce publish"
     },
