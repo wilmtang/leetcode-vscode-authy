@@ -1,4 +1,4 @@
-// Copyright (c) jdneo. All rights reserved.
+// Copyright (c) wilmtang. All rights reserved.
 // Licensed under the MIT license.
 
 const { browserExtensionPath, repoRoot, vsixPath } = require("./auth-sync-utils");
