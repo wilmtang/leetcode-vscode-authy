@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "LeetCode VS Code Auth Sync",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Syncs LeetCode browser cookies to the VS Code LeetCode extension running on localhost.",
     "permissions": [
         "cookies",
@@ -46,9 +46,6 @@
                     "websiteContent"
                 ]
             }
-        },
-        "gecko_android": {
-            "strict_min_version": "142.0"
         }
     }
 }

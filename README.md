@@ -134,8 +134,8 @@ Publication is handled by `.github/workflows/firefox-extension.yml`. Add these G
 Create those credentials from the addons.mozilla.org API credentials page, then publish a browser extension release by bumping `browser-extension/manifest.json` and pushing a matching tag:
 
 ```bash
-git tag browser-extension-v0.1.1
-git push origin browser-extension-v0.1.1
+git tag browser-extension-v0.1.2
+git push origin browser-extension-v0.1.2
 ```
 
 The workflow verifies that the tag matches the manifest version before uploading the listed add-on to Firefox Add-ons. It can also be run manually with `publish=true`.
