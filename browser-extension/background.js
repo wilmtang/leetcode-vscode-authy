@@ -2,12 +2,14 @@ const DEFAULTS = {
     enabled: true,
     port: 17899,
     secret: "",
+    cooldownMinutes: 30,
+    lastSyncAt: 0,
 };
 
-const COOKIE_NAMES = ["LEETCODE_SESSION", "csrftoken", "cf_clearance", "__cf_bm"];
 const api = typeof chrome !== "undefined" ? chrome : browser;
 
 let syncTimer = null;
+let syncInFlight = null;
 
 async function getSettings() {
     const stored = await storageGet(DEFAULTS);
@@ -15,6 +17,8 @@ async function getSettings() {
         enabled: stored.enabled !== false,
         port: normalizePort(stored.port),
         secret: typeof stored.secret === "string" ? stored.secret : "",
+        cooldownMinutes: normalizeCooldownMinutes(stored.cooldownMinutes),
+        lastSyncAt: normalizeTimestamp(stored.lastSyncAt),
     };
 }
 
@@ -23,6 +27,7 @@ async function saveSettings(settings) {
         enabled: settings.enabled !== false,
         port: normalizePort(settings.port),
         secret: typeof settings.secret === "string" ? settings.secret : "",
+        cooldownMinutes: normalizeCooldownMinutes(settings.cooldownMinutes),
     });
 }
 
@@ -31,10 +36,6 @@ async function getLeetCodeCookieHeader() {
     const uniqueCookies = new Map();
 
     for (const cookie of cookies) {
-        if (!COOKIE_NAMES.includes(cookie.name)) {
-            continue;
-        }
-
         uniqueCookies.set(`${cookie.name}:${cookie.domain}:${cookie.path}`, cookie);
     }
 
@@ -55,14 +56,40 @@ async function getCookiesForLeetCode() {
     return Array.from(uniqueCookies.values());
 }
 
-async function syncNow(reason = "manual") {
+async function syncNow(reason = "manual", cookieOverride = "") {
+    if (syncInFlight) {
+        return { ok: false, skipped: true, error: "Sync already in progress." };
+    }
+
+    syncInFlight = syncNowInternal(reason, cookieOverride);
+
+    try {
+        return await syncInFlight;
+    } finally {
+        syncInFlight = null;
+    }
+}
+
+async function syncNowInternal(reason, cookieOverride) {
     const settings = await getSettings();
 
     if (!settings.enabled) {
         return { ok: false, error: "Auth sync is disabled." };
     }
 
-    const cookie = await getLeetCodeCookieHeader();
+    const remainingMs = getCooldownRemainingMs(settings);
+    if (remainingMs > 0) {
+        return {
+            ok: false,
+            skipped: true,
+            error: `Sync cooldown active. Try again in ${formatDuration(remainingMs)}.`,
+            nextSyncAt: settings.lastSyncAt + settings.cooldownMinutes * 60 * 1000,
+        };
+    }
+
+    const cookie = typeof cookieOverride === "string" && cookieOverride
+        ? cookieOverride
+        : await getLeetCodeCookieHeader();
 
     if (!cookie || !cookie.includes("LEETCODE_SESSION=")) {
         return { ok: false, error: "No LeetCode session cookie found. Please log in to leetcode.com first." };
@@ -96,16 +123,31 @@ async function syncNow(reason = "manual") {
         };
     }
 
-    return data;
+    if (data.ok === false) {
+        return {
+            ok: false,
+            error: data.error || "VS Code rejected the cookie update.",
+        };
+    }
+
+    const lastSyncAt = Date.now();
+    await storageSet({ lastSyncAt });
+
+    return {
+        ...data,
+        ok: true,
+        lastSyncAt,
+    };
 }
 
-function scheduleSync(reason) {
+function scheduleSync(reason, cookie) {
     if (syncTimer) {
         clearTimeout(syncTimer);
     }
 
     syncTimer = setTimeout(() => {
-        syncNow(reason).catch((error) => {
+        syncTimer = null;
+        syncNow(reason, cookie).catch((error) => {
             console.warn(`[leetcode-auth-sync] Sync failed: ${error.message || String(error)}`);
         });
     }, 1000);
@@ -118,6 +160,45 @@ function normalizePort(port) {
     }
 
     return DEFAULTS.port;
+}
+
+function normalizeCooldownMinutes(minutes) {
+    const parsed = Number(minutes);
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 1440) {
+        return Math.round(parsed);
+    }
+
+    return DEFAULTS.cooldownMinutes;
+}
+
+function normalizeTimestamp(timestamp) {
+    const parsed = Number(timestamp);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function getCooldownRemainingMs(settings) {
+    if (!settings.lastSyncAt) {
+        return 0;
+    }
+
+    const cooldownMs = settings.cooldownMinutes * 60 * 1000;
+    return Math.max(0, settings.lastSyncAt + cooldownMs - Date.now());
+}
+
+function formatDuration(milliseconds) {
+    const totalSeconds = Math.ceil(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes <= 0) {
+        return `${seconds}s`;
+    }
+
+    if (seconds === 0) {
+        return `${minutes}m`;
+    }
+
+    return `${minutes}m ${seconds}s`;
 }
 
 function storageGet(defaults) {
@@ -144,38 +225,43 @@ function cookiesGetAll(query) {
     return new Promise((resolve) => chrome.cookies.getAll(query, resolve));
 }
 
-function createAlarm() {
-    api.alarms.create("periodic-sync", { periodInMinutes: 5 });
+function getCookieHeaderFromRequest(details) {
+    for (const header of details.requestHeaders || []) {
+        if (typeof header.name === "string" && header.name.toLowerCase() === "cookie") {
+            return typeof header.value === "string" ? header.value : "";
+        }
+    }
+
+    return "";
 }
 
-api.runtime.onInstalled.addListener(() => {
-    createAlarm();
-    scheduleSync("install");
-});
+function handleLeetCodeXhr(details) {
+    const cookie = getCookieHeaderFromRequest(details);
 
-api.runtime.onStartup.addListener(() => {
-    createAlarm();
-    scheduleSync("startup");
-});
-
-api.cookies.onChanged.addListener((changeInfo) => {
-    const cookie = changeInfo.cookie;
-    if (cookie.domain.includes("leetcode.com") && COOKIE_NAMES.includes(cookie.name)) {
-        scheduleSync("cookie-change");
+    if (cookie && cookie.includes("LEETCODE_SESSION=")) {
+        scheduleSync("leetcode-xhr", cookie);
     }
-});
+}
 
-api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === "complete" && tab.url && tab.url.startsWith("https://leetcode.com/")) {
-        scheduleSync("leetcode-page-load");
+function registerLeetCodeXhrListener() {
+    if (!api.webRequest || !api.webRequest.onBeforeSendHeaders) {
+        console.warn("[leetcode-auth-sync] webRequest is unavailable; automatic XHR sync is disabled.");
+        return;
     }
-});
 
-api.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === "periodic-sync") {
-        scheduleSync("periodic");
+    const filter = {
+        urls: ["https://leetcode.com/*"],
+        types: ["xmlhttprequest"],
+    };
+
+    try {
+        api.webRequest.onBeforeSendHeaders.addListener(handleLeetCodeXhr, filter, ["requestHeaders", "extraHeaders"]);
+    } catch (error) {
+        api.webRequest.onBeforeSendHeaders.addListener(handleLeetCodeXhr, filter, ["requestHeaders"]);
     }
-});
+}
+
+registerLeetCodeXhrListener();
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || typeof message.type !== "string") {

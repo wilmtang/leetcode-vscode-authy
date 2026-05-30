@@ -28,9 +28,11 @@ VS Code extension:
 Browser extension:
 
 - Added `browser-extension/`.
-- Reads useful LeetCode cookies: `LEETCODE_SESSION`, `csrftoken`, `cf_clearance`, `__cf_bm`.
-- Syncs on popup click, install/startup, LeetCode page load, relevant cookie changes, and a periodic alarm.
-- Exposes options for enabled state, port, and optional shared secret.
+- Automatic sync observes only LeetCode XHR/fetch request cookie headers.
+- Sends the full LeetCode `Cookie` header to the local VS Code listener.
+- Syncs on popup/options click or eligible LeetCode XHR/fetch requests.
+- Applies a configurable cooldown after each successful sync. Default: 30 minutes.
+- Exposes options for enabled state, port, optional shared secret, and cooldown.
 
 ## Quick Local Test
 
@@ -151,6 +153,18 @@ If Chrome cannot be found, pass its path explicitly:
 CHROME_BIN="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm run auth-sync:dev:chrome
 ```
 
+### Automated Chrome Current Profile
+
+For local convenience, you can launch Chrome with your existing user-data directory and the unpacked extension:
+
+```bash
+npm run auth-sync:dev:chrome:current
+```
+
+This uses Chrome's last-used profile from the local `Local State` file when possible. If Chrome is already running, quit Chrome first; Chrome may route the command to the existing process and ignore `--load-extension`.
+
+This is not a silent permanent install. Chrome intentionally requires user action, enterprise policy, or startup flags for unpacked extensions in normal profiles.
+
 ### Manual Chrome Install
 
 1. Open `chrome://extensions`.
@@ -174,7 +188,7 @@ npm run auth-sync:paths
 2. Click `Load Temporary Add-on`.
 3. Select `browser-extension/manifest.json`.
 
-Firefox support may depend on the local Firefox version's Manifest V3 support.
+Firefox release builds do not provide a safe command for silently and permanently installing an unsigned unpacked extension into the current normal profile. Use the temporary add-on flow above for development, or package/sign the extension for a persistent install.
 
 ## Shared Secret Testing
 
@@ -217,6 +231,12 @@ npm run auth-sync:dev:chrome
 Open Chrome or Chromium with the unpacked browser extension loaded in a disposable profile.
 
 ```bash
+npm run auth-sync:dev:chrome:current
+```
+
+Open Chrome or Chromium with the unpacked browser extension loaded against the current Chrome user-data directory. Quit Chrome first for the flag to take effect.
+
+```bash
 npm run auth-sync:paths
 ```
 
@@ -239,5 +259,7 @@ Use the browser extension for an end-to-end test with real browser cookies.
 ## Privacy Notes
 
 Cookie values are never intentionally logged by the VS Code extension or browser extension.
+
+Automatic browser sync observes only `xmlhttprequest`/fetch requests to `https://leetcode.com/*`, sends only to `http://127.0.0.1:<port>/auth/update`, and will not send again until the configured cooldown has elapsed after the last successful sync.
 
 The VS Code listener binds only to `127.0.0.1`, not `0.0.0.0`, so it is not reachable from other devices on the local network.

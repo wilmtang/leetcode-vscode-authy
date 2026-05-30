@@ -1,6 +1,7 @@
 const enabledInput = document.getElementById("enabled");
 const portInput = document.getElementById("port");
 const secretInput = document.getElementById("secret");
+const cooldownMinutesInput = document.getElementById("cooldown-minutes");
 const statusElement = document.getElementById("status");
 const form = document.getElementById("options-form");
 const syncButton = document.getElementById("sync-now");
@@ -24,6 +25,7 @@ async function loadSettings() {
     enabledInput.checked = settings.enabled !== false;
     portInput.value = settings.port || 17899;
     secretInput.value = settings.secret || "";
+    cooldownMinutesInput.value = settings.cooldownMinutes || 30;
 }
 
 async function saveSettings(showSaved = true) {
@@ -33,6 +35,7 @@ async function saveSettings(showSaved = true) {
             enabled: enabledInput.checked,
             port: portInput.value,
             secret: secretInput.value,
+            cooldownMinutes: cooldownMinutesInput.value,
         },
     });
 

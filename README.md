@@ -34,7 +34,7 @@ Thanks for [@yihong0618](https://github.com/yihong0618) provided a workaround wh
 
 ## Browser Auth Sync Local Testing
 
-This fork includes a local browser-to-VS Code cookie sync path for `leetcode.com`. A companion browser extension can read your current LeetCode browser cookies and send them to the VS Code extension on `127.0.0.1:17899`, where the existing cookie login flow updates both VS Code state and the bundled CLI session.
+This fork includes a local browser-to-VS Code cookie sync path for `leetcode.com`. A companion browser extension can send your current LeetCode cookie header to the VS Code extension on `127.0.0.1:17899`, where the existing cookie login flow updates both VS Code state and the bundled CLI session. Automatic sync observes only LeetCode XHR/fetch requests and is throttled by a configurable cooldown.
 
 See [docs/auth-sync-local-testing.md](docs/auth-sync-local-testing.md) for what changed, how to install the browser extension for local testing, how to start the VS Code listener, how to install the VS Code extension locally, and the helper scripts for automating those steps.
 

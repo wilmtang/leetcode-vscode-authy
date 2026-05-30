@@ -751,6 +751,7 @@
         "auth-sync:dev:vscode": "npm run compile && node scripts/start-vscode-auth-sync-dev.js",
         "auth-sync:install:vscode": "npm run compile && node scripts/install-vscode-auth-sync-extension.js",
         "auth-sync:dev:chrome": "node scripts/start-chrome-auth-sync-extension.js",
+        "auth-sync:dev:chrome:current": "node scripts/start-chrome-auth-sync-extension.js --profile=current",
         "auth-sync:paths": "node scripts/print-auth-sync-paths.js",
         "build": "vsce package",
         "vs-publish": "vsce publish"

@@ -5,7 +5,7 @@ const optionsButton = document.getElementById("open-options");
 
 document.addEventListener("DOMContentLoaded", async () => {
     const settings = await sendMessage({ type: "getSettings" });
-    summaryElement.textContent = `${settings.enabled ? "Enabled" : "Disabled"} on port ${settings.port || 17899}. Secret ${settings.secret ? "enabled" : "disabled"}.`;
+    summaryElement.textContent = `${settings.enabled ? "Enabled" : "Disabled"} on port ${settings.port || 17899}. Cooldown ${settings.cooldownMinutes || 30} min. Secret ${settings.secret ? "enabled" : "disabled"}.`;
 });
 
 syncButton.addEventListener("click", async () => {

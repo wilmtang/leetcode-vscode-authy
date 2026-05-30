@@ -69,11 +69,51 @@ function findChromeBinary() {
     });
 }
 
+function getDefaultChromeUserDataDir() {
+    if (process.env.CHROME_USER_DATA_DIR) {
+        return process.env.CHROME_USER_DATA_DIR;
+    }
+
+    if (process.env.AUTH_SYNC_CHROME_USER_DATA_DIR) {
+        return process.env.AUTH_SYNC_CHROME_USER_DATA_DIR;
+    }
+
+    if (process.platform === "darwin") {
+        return path.join(os.homedir(), "Library", "Application Support", "Google", "Chrome");
+    }
+
+    if (process.platform === "win32") {
+        return path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "User Data");
+    }
+
+    return path.join(os.homedir(), ".config", "google-chrome");
+}
+
+function getLastUsedChromeProfileDirectory(userDataDir) {
+    if (process.env.CHROME_PROFILE_DIRECTORY) {
+        return process.env.CHROME_PROFILE_DIRECTORY;
+    }
+
+    const localStatePath = path.join(userDataDir, "Local State");
+    try {
+        const localState = JSON.parse(fs.readFileSync(localStatePath, "utf8"));
+        if (typeof localState.profile?.last_used === "string") {
+            return localState.profile.last_used;
+        }
+    } catch (error) {
+        return "Default";
+    }
+
+    return "Default";
+}
+
 module.exports = {
     browserExtensionPath,
     commandExists,
     distPath,
     findChromeBinary,
+    getDefaultChromeUserDataDir,
+    getLastUsedChromeProfileDirectory,
     getCodeCommand,
     repoRoot,
     run,

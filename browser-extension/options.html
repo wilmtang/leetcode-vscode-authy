@@ -31,6 +31,12 @@
                 <small>Optional safety check. Leave empty for zero-config local sync. If you set a value here, set the same value in VS Code setting leetcode.authSync.secret.</small>
             </label>
 
+            <label>
+                <span>Successful sync cooldown</span>
+                <input id="cooldown-minutes" type="number" min="1" max="1440" inputmode="numeric">
+                <small>Minimum minutes between successful cookie sends. Default: 30.</small>
+            </label>
+
             <div class="actions">
                 <button type="submit">Save</button>
                 <button id="sync-now" type="button" class="secondary">Sync Now</button>
