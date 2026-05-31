@@ -1,5 +1,13 @@
 # LeetCode with Auth Sync
 
+[![VS Code Marketplace Version](https://vsmarketplacebadges.dev/version/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync)
+[![VS Code Marketplace Installs](https://vsmarketplacebadges.dev/installs-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync)
+[![VS Code Marketplace Downloads](https://vsmarketplacebadges.dev/downloads-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-review%20pending-orange?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck)
+[![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-review%20pending-orange?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/)
+[![Build](https://img.shields.io/github/actions/workflow/status/wilmtang/vscode-leetcode/build.yml?branch=master&label=build)](https://github.com/wilmtang/vscode-leetcode/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 > Solve LeetCode problems in VS Code with browser auth sync.
 
 **Unofficial fork notice:** this extension is maintained by `wilmtang` at
@@ -8,9 +16,9 @@ It is not affiliated with, endorsed by, sponsored by, or published by LeetCode.
 The original project's MIT license and copyright notices are preserved in
 [LICENSE](LICENSE), with additional fork attribution in [NOTICE.md](NOTICE.md).
 
-## ❗️ Attention ❗️- Workaround to login to LeetCode endpoint
+## Login Workaround for leetcode.com
 
-> Note: If you are using `leetcode.cn`, you can just ignore this section.
+> Note: If you are using `leetcode.cn`, you can ignore this section.
 
 Recently we observed that [the extension cannot login to leetcode.com endpoint anymore](https://github.com/wilmtang/vscode-leetcode/issues/478). The root cause of this issue is that leetcode.com changed its login mechanism and so far there is no ideal way to fix that issue.
 
@@ -20,24 +28,34 @@ This fork adds a browser auth sync workaround. Click the `Sign In` button and se
 
 ## Browser Auth Sync
 
-This fork includes a local browser-to-VS Code cookie sync path for `leetcode.com`. A companion browser extension can send your current LeetCode cookie header to the VS Code extension on `127.0.0.1:17899`, where the existing cookie login flow updates both VS Code state and the bundled CLI session. Automatic sync observes only LeetCode XHR/fetch requests and is throttled by a configurable cooldown.
+This fork includes a local browser-to-VS Code cookie sync path for `leetcode.com`. It is useful when the normal VS Code login flow is blocked but your browser is already signed in to LeetCode.
 
-This is useful when the normal LeetCode login flow is blocked but your browser is already signed in to `leetcode.com`.
+### Install
+
+Install both pieces on the same machine:
+
+1. Install the VS Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync).
+2. Install one browser extension:
+   - Firefox: [LeetCode VS Code Auth Sync on Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/) (review may still be pending).
+   - Chrome: after Chrome Web Store approval, the public listing should be [LeetCode VS Code Auth Sync on Chrome Web Store](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck). Until then, use the local unpacked install steps below if you are testing from this repository.
+3. Sign in to [leetcode.com](https://leetcode.com/) in the same browser.
+4. In VS Code, open the LeetCode side bar, click `Sign In`, and choose `Auto Cookie Sync`.
+5. Click `Sync now` in the browser extension popup, or use LeetCode normally and wait for automatic sync.
+
+When sync succeeds, VS Code refreshes the LeetCode side bar and uses the same signed-in session as your browser.
 
 ### How It Works
 
 - The VS Code extension starts a local listener on `127.0.0.1:17899` by default.
-- The companion browser extension sends the full LeetCode `Cookie` header to `POST http://127.0.0.1:17899/auth/update`.
-- The VS Code extension reuses the existing cookie login path, updating VS Code state and the bundled `vsc-leetcode-cli` session/cache.
-- Automatic browser sync only observes LeetCode XHR/fetch requests, not every page asset request.
-- Automatic sync waits until its cooldown expires after a successful sync. The default cooldown is 30 minutes and is configurable in the browser extension options page.
+- The companion browser extension reads your `leetcode.com` cookies and sends the LeetCode `Cookie` header to `POST http://127.0.0.1:17899/auth/update`.
+- The VS Code extension reuses its existing cookie login path, updating VS Code state and the bundled `vsc-leetcode-cli` session/cache.
+- Automatic browser sync only observes LeetCode XHR/fetch requests, not every page asset request, and waits for a configurable cooldown after a successful sync. The default cooldown is 30 minutes.
 - Manual `Sync now` from the popup or options page ignores the cooldown.
-- The popup shows last/next sync timers at minute granularity.
-- Cookie values are not intentionally logged by either extension.
+- Cookie values are sent only to the local VS Code listener and are not intentionally logged by either extension.
 
 ### VS Code Setup
 
-The auth sync listener starts automatically when the LeetCode extension activates. You can inspect or restart it from the Command Palette:
+Install [LeetCode with Auth Sync from the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync). The auth sync listener starts automatically when the extension activates. You can inspect or restart it from the Command Palette:
 
 - **LeetCode: Show Browser Auth Sync Status**
 - **LeetCode: Restart Browser Auth Sync Server**
@@ -52,9 +70,12 @@ To sign in from VS Code, choose `Auto Cookie Sync` from the login picker. VS Cod
 
 ### Browser Extension Setup
 
-The companion browser extension is distributed from this repository and is
-packaged separately. It is intentionally excluded from the VS Code Marketplace
-VSIX package.
+The companion browser extension is packaged separately and is intentionally excluded from the VS Code Marketplace VSIX package.
+
+Store links:
+
+- Firefox: [https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/) (review may still be pending).
+- Chrome: [https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck) once Chrome Web Store approval is complete.
 
 Load the unpacked extension from:
 
