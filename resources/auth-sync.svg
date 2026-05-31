@@ -1,8 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="28" fill="#1f232d"/>
-  <path d="M71 17 34 56c-12 13-11 33 2 45l20 19c8 8 22 8 31 0l17-17" fill="none" stroke="#f89f1b" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M61 42c11-6 24-5 34 3l20 16" fill="none" stroke="#eef2f7" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M54 76h42" fill="none" stroke="#eef2f7" stroke-width="13" stroke-linecap="round"/>
-  <circle cx="94" cy="95" r="20" fill="#2563eb"/>
-  <path d="M86 95h17m-7-7 7 7-7 7" fill="none" stroke="#eef2f7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <g fill="#C5C5C5" fill-rule="nonzero">
+    <!-- LeetCode bracket shape (based on upstream, slightly simplified) -->
+    <path d="M6.89 15.97c-.94 0-1.84-.35-2.5-1.01L1.39 12c-.1-.1-.21-.21-.28-.31A3.76 3.76 0 0 1 .38 8.66c.07-.24.14-.45.24-.66l.04-.1.03-.07.04-.07c.07-.1.14-.25.24-.35.07-.07.14-.17.21-.24L7.62.24a.56.56 0 0 1 .42-.17c.14 0 .28.07.38.14.25.21.25.59.04.8L6.54 3.06l.73.1c.66.1 1.25.35 1.74.77l2.43 1.98c.25.21.28.56.07.8a.53.53 0 0 1-.45.21.56.56 0 0 1-.35-.14L8.28 4.8a2.78 2.78 0 0 0-1.67-.56c-.77 0-1.5.28-1.95.77L1.98 7.86a2.16 2.16 0 0 0-.42 2.33l.04.1c.14.31.35.63.59.87l2.99 2.92c.45.45 1.08.7 1.74.7.66 0 1.29-.25 1.74-.73l1.67-1.67c.1-.1.25-.17.42-.17.14 0 .28.07.42.17.21.21.21.59 0 .8l-1.67 1.67c-.73.73-1.63 1.12-2.6 1.12z"/>
+    <!-- Horizontal bar -->
+    <path d="M5.98 10.09a.56.56 0 0 1-.56-.56c0-.31.25-.56.56-.56h7.06c.31 0 .56.25.56.56 0 .31-.21.56-.52.56H5.98z"/>
+    <!-- Sync arrow badge -->
+    <circle cx="13" cy="13" r="2.8" fill="none" stroke="#C5C5C5" stroke-width="1.1"/>
+    <path d="M11.8 13h2.7m-1.1-1.1 1.1 1.1-1.1 1.1" fill="none" stroke="#C5C5C5" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
 </svg>
