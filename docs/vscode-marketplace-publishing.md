@@ -33,6 +33,12 @@ Create that token from Azure DevOps with these values:
 - Scopes: `Custom defined`
 - Marketplace: `Manage`
 
+Azure DevOps requires an active Azure subscription before it can create new
+organizations. If the PAT page is unavailable and Azure DevOps asks you to
+create an organization first, attach an Azure subscription to the Microsoft
+account, create an organization such as `wilmtang`, then return to the PAT
+creation page.
+
 Then create or verify the publisher in the Visual Studio Marketplace publisher
 management page:
 
@@ -92,3 +98,22 @@ If the version and tag do not match, the job fails before publishing.
 You can also run the workflow manually from GitHub Actions with `publish=true`.
 Manual publishing uses the current checked-out `package.json` version and does
 not require a tag.
+
+## Manual Upload Fallback
+
+The Visual Studio Marketplace publisher hub can upload a packaged VSIX directly
+from the publisher page:
+
+```bash
+npm run build -- --out dist/vscode-leetcode-auth-sync.vsix
+```
+
+Then open:
+
+```text
+https://marketplace.visualstudio.com/manage/publishers/wilmtang
+```
+
+Choose `New extension > Visual Studio Code`, select the VSIX, and upload it.
+This can publish a release without a PAT, but it does not replace the PAT for
+GitHub Actions automation. Automated release tags still need `VSCE_PAT`.
