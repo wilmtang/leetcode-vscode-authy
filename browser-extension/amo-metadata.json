@@ -1,17 +1,17 @@
 {
     "name": {
-        "en-US": "Unofficial LeetCode Auth Sync"
+        "en-US": "LeetCode VS Code Auth Sync"
     },
     "summary": {
-        "en-US": "Syncs LeetCode browser cookies to the unofficial VS Code auth-sync extension running on localhost."
+        "en-US": "Unofficial companion that syncs LeetCode browser cookies to the VS Code auth-sync extension running on localhost."
     },
     "description": {
-        "en-US": "Companion browser extension for the unofficial LeetCode Auth Sync VS Code extension. It sends your signed-in leetcode.com session cookie to the local VS Code extension listener on 127.0.0.1 so VS Code can reuse your browser session."
+        "en-US": "Unofficial companion browser extension for LeetCode with Auth Sync. It is not affiliated with, endorsed by, sponsored by, or published by LeetCode. It sends your signed-in leetcode.com session cookie to the local VS Code extension listener on 127.0.0.1 so VS Code can reuse your browser session."
     },
     "version": {
         "license": "MIT",
         "release_notes": {
-                "en-US": "Updates the unofficial LeetCode Auth Sync browser extension."
+                "en-US": "Updates the LeetCode VS Code Auth Sync browser extension."
         }
     },
     "categories": {

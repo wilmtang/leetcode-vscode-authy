@@ -1,7 +1,7 @@
 {
     "name": "vscode-leetcode-auth-sync",
-    "displayName": "Unofficial LeetCode Auth Sync",
-    "description": "Unofficial VS Code extension for solving LeetCode problems with browser auth sync",
+    "displayName": "LeetCode with Auth Sync",
+    "description": "Unofficial VS Code extension for solving LeetCode problems with browser auth sync; not affiliated with LeetCode",
     "version": "0.18.4",
     "author": "wilmtang",
     "publisher": "wilmtang",
@@ -50,76 +50,76 @@
             {
                 "command": "leetcode.deleteCache",
                 "title": "Delete Cache",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.toggleLeetCodeCn",
                 "title": "Switch Endpoint",
-                "category": "Unofficial LeetCode",
+                "category": "LeetCode",
                 "icon": "$(globe)"
             },
             {
                 "command": "leetcode.signin",
                 "title": "Sign In",
-                "category": "Unofficial LeetCode",
+                "category": "LeetCode",
                 "icon": "$(sign-in)"
             },
             {
                 "command": "leetcode.signout",
                 "title": "Sign Out",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.manageSessions",
                 "title": "Manage Sessions",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.refreshExplorer",
                 "title": "Refresh",
-                "category": "Unofficial LeetCode",
+                "category": "LeetCode",
                 "icon": "$(refresh)"
             },
             {
                 "command": "leetcode.pickOne",
                 "title": "Pick One",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.showProblem",
                 "title": "Show Problem",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.previewProblem",
                 "title": "Preview Problem",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.searchProblem",
                 "title": "Search Problem",
-                "category": "Unofficial LeetCode",
+                "category": "LeetCode",
                 "icon": "$(search)"
             },
             {
                 "command": "leetcode.showSolution",
                 "title": "Show Top Voted Solution",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.testSolution",
                 "title": "Test in LeetCode",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.submitSolution",
                 "title": "Submit to LeetCode",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.addFavorite",
                 "title": "Add to Favorite List",
-                "category": "Unofficial LeetCode",
+                "category": "LeetCode",
                 "icon": {
                     "light": "resources/light/like.png",
                     "dark": "resources/dark/like.png"
@@ -128,7 +128,7 @@
             {
                 "command": "leetcode.removeFavorite",
                 "title": "Remove from Favorite List",
-                "category": "Unofficial LeetCode",
+                "category": "LeetCode",
                 "icon": {
                     "light": "resources/light/dislike.png",
                     "dark": "resources/dark/dislike.png"
@@ -137,30 +137,30 @@
             {
                 "command": "leetcode.switchDefaultLanguage",
                 "title": "Switch Default Language",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.problems.sort",
                 "title": "Sort Problems",
-                "category": "Unofficial LeetCode",
+                "category": "LeetCode",
                 "icon": "$(sort-precedence)"
             },
             {
                 "command": "leetcode.authSync.status",
                 "title": "Show Browser Auth Sync Status",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             },
             {
                 "command": "leetcode.authSync.restart",
                 "title": "Restart Browser Auth Sync Server",
-                "category": "Unofficial LeetCode"
+                "category": "LeetCode"
             }
         ],
         "viewsContainers": {
             "activitybar": [
                 {
                     "id": "leetcode",
-                    "title": "Unofficial LeetCode Auth Sync",
+                    "title": "LeetCode with Auth Sync",
                     "icon": "resources/auth-sync.svg"
                 }
             ]
@@ -712,6 +712,12 @@
                             "Acceptance Rate (Descending)"
                         ],
                         "description": "Sorting strategy for problems list."
+                    },
+                    "leetcode.allowReportData": {
+                        "type": "boolean",
+                        "default": false,
+                        "scope": "application",
+                        "description": "Opt in to anonymous usage telemetry for this unofficial fork. Telemetry is disabled by default."
                     },
                     "leetcode.authSync.enabled": {
                         "type": "boolean",

@@ -1,14 +1,12 @@
-# Unofficial LeetCode Auth Sync
+# LeetCode with Auth Sync
 
-> Unofficial VS Code extension for solving LeetCode problems with browser auth sync.
+> Solve LeetCode problems in VS Code with browser auth sync.
 
-This is an unofficial fork maintained by `wilmtang` at
+**Unofficial fork notice:** this extension is maintained by `wilmtang` at
 [wilmtang/vscode-leetcode](https://github.com/wilmtang/vscode-leetcode).
-It is not affiliated with, endorsed by, or sponsored by LeetCode. The original
-project's MIT license and copyright notices are preserved in [LICENSE](LICENSE),
-with additional fork attribution in [NOTICE.md](NOTICE.md).
-
-- English Document | [中文文档](https://github.com/wilmtang/vscode-leetcode/blob/master/docs/README_zh-CN.md)
+It is not affiliated with, endorsed by, sponsored by, or published by LeetCode.
+The original project's MIT license and copyright notices are preserved in
+[LICENSE](LICENSE), with additional fork attribution in [NOTICE.md](NOTICE.md).
 
 ## ❗️ Attention ❗️- Workaround to login to LeetCode endpoint
 
@@ -270,6 +268,7 @@ See [docs/auth-sync-local-testing.md](docs/auth-sync-local-testing.md) for the f
 | `leetcode.useEndpointTranslation` | Use endpoint's translation (if available)                                                                                                                                                                                                                     | `true`             |
 | `leetcode.colorizeProblems`       | Add difficulty badge and colorize problems files in explorer tree                                                                                                                                                                                             | `true`             |
 | `leetcode.problems.sortStrategy`  | Specify sorting strategy for problems list                                                                                                                                                                                                                    | `None`             |
+| `leetcode.allowReportData`        | Opt in to anonymous usage telemetry for this unofficial fork. Telemetry is disabled by default.                                                                                                                                                               | `false`            |
 | `leetcode.authSync.enabled`       | Enable the local browser auth sync server on `127.0.0.1`.                                                                                                                                                                                                     | `true`             |
 | `leetcode.authSync.port`          | Local port used by the browser auth sync server. The browser extension must use the same port.                                                                                                                                                                | `17899`            |
 | `leetcode.authSync.secret`        | Optional shared secret for browser auth sync. If set, the browser extension must send the same secret.                                                                                                                                                        | `""`               |
