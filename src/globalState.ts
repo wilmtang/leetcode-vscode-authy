@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 
 const CookieKey = "leetcode-cookie";
 const UserStatusKey = "leetcode-user-status";
+const AuthSyncLastSyncedAtKey = "leetcode-auth-sync-last-synced-at";
 
 export type UserDataType = {
     isSignedIn: boolean;
@@ -19,6 +20,7 @@ class GlobalState {
     private _state: vscode.Memento;
     private _cookie: string;
     private _userStatus: UserDataType;
+    private _authSyncLastSyncedAt: number | undefined;
 
     public initialize(context: vscode.ExtensionContext): void {
         this.context = context;
@@ -31,6 +33,16 @@ class GlobalState {
     }
     public getCookie(): string | undefined {
         return this._cookie ?? this._state.get(CookieKey);
+    }
+
+    public setAuthSyncLastSyncedAt(timestamp: number): Thenable<void> {
+        this._authSyncLastSyncedAt = timestamp;
+        return this._state.update(AuthSyncLastSyncedAtKey, this._authSyncLastSyncedAt);
+    }
+
+    public getAuthSyncLastSyncedAt(): number | undefined {
+        const timestamp: number | undefined = this._authSyncLastSyncedAt ?? this._state.get(AuthSyncLastSyncedAtKey);
+        return typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : undefined;
     }
 
     public setUserStatus(userStatus: UserDataType): any {
@@ -49,6 +61,7 @@ class GlobalState {
     public removeAll(): void {
         this._state.update(CookieKey, undefined);
         this._state.update(UserStatusKey, undefined);
+        this._state.update(AuthSyncLastSyncedAtKey, undefined);
     }
 }
 

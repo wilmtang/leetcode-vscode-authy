@@ -3,6 +3,10 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.18.6]
+### Added
+- Show the last successful browser cookie sync time first in the auth sync status command.
+
 ## [0.18.4]
 ### Added
 - change graphql path

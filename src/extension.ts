@@ -152,8 +152,10 @@ function showAuthSyncStatus(): void {
     const running: string = authSyncServer.isRunning() ? "running" : "stopped";
     const activePort: number | undefined = authSyncServer.getPort();
     const portDescription: string = activePort ? `${activePort}` : `${port}`;
+    const lastSyncedAt: number | undefined = globalState.getAuthSyncLastSyncedAt();
+    const lastSyncedDescription: string = lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : "never";
 
     vscode.window.showInformationMessage(
-        `LeetCode auth sync: ${enabled ? "enabled" : "disabled"}, ${running}, port ${portDescription}, secret ${secret ? "enabled" : "disabled"}.`
+        `Last cookie sync: ${lastSyncedDescription}. LeetCode auth sync: ${enabled ? "enabled" : "disabled"}, ${running}, port ${portDescription}, secret ${secret ? "enabled" : "disabled"}.`
     );
 }

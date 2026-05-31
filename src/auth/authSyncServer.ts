@@ -3,6 +3,7 @@
 
 import * as http from "http";
 import * as vscode from "vscode";
+import { globalState } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { leetCodeManager } from "../leetCodeManager";
 
@@ -139,6 +140,7 @@ class AuthSyncServer implements vscode.Disposable {
 
         this.logCookieUpdate(cookie, body.reason);
         await leetCodeManager.updateSessionFromCookie(cookie);
+        await globalState.setAuthSyncLastSyncedAt(Date.now());
 
         this.sendJson(res, 200, { ok: true, message: "LeetCode cookie synced." });
     }
