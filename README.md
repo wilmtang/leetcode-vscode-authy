@@ -216,8 +216,8 @@ The VS Code extension and browser extension use separate release lanes.
 VS Code Marketplace releases are handled by `.github/workflows/vscode-extension.yml` and use `vscode-extension-v*` tags:
 
 ```bash
-git tag vscode-extension-v0.18.7
-git push origin vscode-extension-v0.18.7
+git tag vscode-extension-v0.18.8
+git push origin vscode-extension-v0.18.8
 ```
 
 The workflow verifies that the tag matches `package.json`. Add `VSCE_PAT` to the `vscode-marketplace` GitHub Actions environment; the token must be an Azure DevOps Personal Access Token with Marketplace `Manage` scope for the publisher in `package.json`. See [docs/vscode-marketplace-publishing.md](docs/vscode-marketplace-publishing.md).

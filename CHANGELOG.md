@@ -3,6 +3,10 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.18.8]
+### Fixed
+- Keep multiline testcase examples fully commented in generated problem files.
+
 ## [0.18.7]
 ### Added
 - Coordinate browser auth sync ownership across multiple VS Code windows with configurable heartbeat, observer check, and stale-owner timings.
