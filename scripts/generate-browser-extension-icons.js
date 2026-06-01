@@ -11,7 +11,7 @@ const sizes = [16, 32, 48, 128];
 
 fs.mkdirSync(iconDir, { recursive: true });
 
-const masterSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+const sourceSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <rect width="128" height="128" rx="28" fill="#1f232d"/>
   <path d="M71 17 34 56c-12 13-11 33 2 45l20 19c8 8 22 8 31 0l17-17" fill="none" stroke="#f89f1b" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M61 42c11-6 24-5 34 3l20 16" fill="none" stroke="#eef2f7" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
@@ -21,7 +21,7 @@ const masterSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"
 </svg>
 `;
 
-fs.writeFileSync(path.join(iconDir, "icon.svg"), masterSvg);
+fs.writeFileSync(path.join(iconDir, "icon.svg"), sourceSvg);
 
 for (const size of sizes) {
     fs.writeFileSync(path.join(iconDir, `icon-${size}.png`), createIconPng(size));

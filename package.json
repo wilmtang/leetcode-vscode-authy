@@ -14,7 +14,7 @@
         "type": "git",
         "url": "https://github.com/wilmtang/vscode-leetcode"
     },
-    "homepage": "https://github.com/wilmtang/vscode-leetcode/blob/master/README.md",
+    "homepage": "https://github.com/wilmtang/vscode-leetcode/blob/main/README.md",
     "categories": [
         "Other",
         "Snippets"
@@ -789,8 +789,8 @@
         "auth-sync:publish:firefox": "web-ext sign --source-dir browser-extension --artifacts-dir web-ext-artifacts --channel=listed --amo-metadata browser-extension/amo-metadata.json --approval-timeout=0",
         "auth-sync:build:chrome": "node scripts/build-browser-extension-package.js --browser chrome",
         "auth-sync:publish:chrome": "node scripts/publish-chrome-web-store.js",
-        "build": "vsce package --githubBranch master",
-        "vs-publish": "vsce publish --githubBranch master"
+        "build": "vsce package --githubBranch main",
+        "vs-publish": "vsce publish --githubBranch main"
     },
     "devDependencies": {
         "@types/fs-extra": "^9.0.11",

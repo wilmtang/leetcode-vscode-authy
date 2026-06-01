@@ -2,14 +2,14 @@ name: Firefox Extension
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
     paths:
       - browser-extension/**
       - package.json
       - package-lock.json
       - .github/workflows/firefox-extension.yml
   push:
-    branches: [master]
+    branches: [main]
     tags:
       - browser-extension-v*
     paths:

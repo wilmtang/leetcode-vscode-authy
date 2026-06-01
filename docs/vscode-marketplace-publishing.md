@@ -88,7 +88,7 @@ workflow still validates and uploads a VSIX artifact without that approval.
 ## Release Flow
 
 1. Update `package.json` version and `CHANGELOG.md`.
-2. Merge the release commit to `master`.
+2. Merge the release commit to `main`.
 3. Push a matching VS Code extension tag:
 
 ```bash

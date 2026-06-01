@@ -2,7 +2,7 @@ name: Chrome Extension
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
     paths:
       - browser-extension/**
       - scripts/build-browser-extension-package.js
@@ -11,7 +11,7 @@ on:
       - package-lock.json
       - .github/workflows/chrome-extension.yml
   push:
-    branches: [master]
+    branches: [main]
     tags:
       - browser-extension-v*
     paths:

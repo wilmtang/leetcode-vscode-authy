@@ -1,6 +1,6 @@
 # LeetCode with Auth Sync
 
-**VS Code extension:** [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-open-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Version](https://vsmarketplacebadges.dev/version-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Downloads](https://vsmarketplacebadges.dev/downloads/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Installs](https://vsmarketplacebadges.dev/installs/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Rating](https://vsmarketplacebadges.dev/rating-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![Build](https://img.shields.io/github/actions/workflow/status/wilmtang/vscode-leetcode/build.yml?branch=master&label=build)](https://github.com/wilmtang/vscode-leetcode/actions/workflows/build.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+**VS Code extension:** [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-open-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Version](https://vsmarketplacebadges.dev/version-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Downloads](https://vsmarketplacebadges.dev/downloads/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Installs](https://vsmarketplacebadges.dev/installs/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Rating](https://vsmarketplacebadges.dev/rating-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![Build](https://img.shields.io/github/actions/workflow/status/wilmtang/vscode-leetcode/build.yml?branch=main&label=build)](https://github.com/wilmtang/vscode-leetcode/actions/workflows/build.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Firefox extension:** [![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-open-FF7139?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/) [![Firefox Extension Version](https://img.shields.io/badge/version-v0.1.3-FF7139?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/) [![Firefox Add-ons Downloads](https://img.shields.io/badge/downloads-unavailable-lightgrey?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/) [![Firefox Add-ons Users](https://img.shields.io/badge/users-unavailable-lightgrey?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/)
 
@@ -241,14 +241,14 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 
 ## Quick Start
 
-![demo](https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/gifs/demo.gif)
+![demo](https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/gifs/demo.gif)
 
 ## Features
 
 ### Sign In/Out
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/sign_in.png" alt="Sign in" />
+  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/sign_in.png" alt="Sign in" />
 </p>
 
 - Simply click `Sign in to LeetCode` in the `LeetCode Explorer` will let you **sign in** with your LeetCode account.
@@ -262,10 +262,10 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 ### Switch Endpoint
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/endpoint.png" alt="Switch Endpoint" />
+  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/endpoint.png" alt="Switch Endpoint" />
 </p>
 
-- By clicking the button ![btn_endpoint](https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/btn_endpoint.png) at the **explorer's navigation bar**, you can switch between different endpoints.
+- By clicking the button ![btn_endpoint](https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/btn_endpoint.png) at the **explorer's navigation bar**, you can switch between different endpoints.
 
 - The supported endpoints are:
 
@@ -279,7 +279,7 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 ### Pick a Problem
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/pick_problem.png" alt="Pick a Problem" />
+  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/pick_problem.png" alt="Pick a Problem" />
 </p>
 
 - Directly click on the problem or right click the problem in the `LeetCode Explorer` and select `Preview Problem` to see the problem description.
@@ -296,7 +296,7 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 ### Editor Shortcuts
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/shortcuts.png" alt="Editor Shortcuts" />
+  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/shortcuts.png" alt="Editor Shortcuts" />
 </p>
 
 - The extension supports 5 editor shortcuts (aka Code Lens):
@@ -314,17 +314,17 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 ### Search problems by Keywords
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/search.png" alt="Search problems by Keywords" />
+  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/search.png" alt="Search problems by Keywords" />
 </p>
 
-- By clicking the button ![btn_search](https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/btn_search.png) at the **explorer's navigation bar**, you can search the problems by keywords.
+- By clicking the button ![btn_search](https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/btn_search.png) at the **explorer's navigation bar**, you can search the problems by keywords.
 
 ---
 
 ### Manage Session
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/master/docs/imgs/session.png" alt="Manage Session" />
+  <img src="https://raw.githubusercontent.com/wilmtang/vscode-leetcode/main/docs/imgs/session.png" alt="Manage Session" />
 </p>
 
 - To manage your LeetCode sessions, just clicking the `LeetCode: ***` at the bottom of the status bar. You can **switch** between sessions or **create**, **delete** a session.
@@ -363,9 +363,9 @@ If your problem still cannot be addressed, please [file an issue](https://github
 
 ## Release Notes
 
-Refer to [CHANGELOG](https://github.com/wilmtang/vscode-leetcode/blob/master/CHANGELOG.md)
+Refer to [CHANGELOG](https://github.com/wilmtang/vscode-leetcode/blob/main/CHANGELOG.md)
 
 ## Acknowledgement
 
 - This extension is based on [@skygragon](https://github.com/skygragon)'s [leetcode-cli](https://github.com/skygragon/leetcode-cli) open source project.
-- Special thanks to our [contributors](https://github.com/wilmtang/vscode-leetcode/blob/master/ACKNOWLEDGEMENTS.md).
+- Special thanks to our [contributors](https://github.com/wilmtang/vscode-leetcode/blob/main/ACKNOWLEDGEMENTS.md).
