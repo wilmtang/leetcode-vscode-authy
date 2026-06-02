@@ -75,7 +75,7 @@ Important details:
 
 - The VS Code extension listens on `127.0.0.1` only, not on your network interface. Default endpoint: `POST http://127.0.0.1:17899/auth/update`.
 - The health endpoint is `GET http://127.0.0.1:17899/health`.
-- If several VS Code windows are open, only one owns the listener. Other windows observe the shared owner state and can take over after the owner heartbeat becomes stale.
+- If several VS Code windows are open, only one owns the listener. Other windows verify the live owner through the local `/health` endpoint and can take over when that listener is gone.
 - The browser extension reads `leetcode.com` cookies and sends a LeetCode `Cookie` header to the local listener.
 - Automatic sync observes only LeetCode XHR/fetch requests and waits for the configured cooldown after a successful automatic sync.
 - Manual `Sync now` from the popup or options page bypasses the cooldown.
@@ -351,8 +351,8 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 | `leetcode.authSync.enabled`       | Enable the local browser auth sync server on `127.0.0.1`.                                                                                                                                                                                                     | `true`             |
 | `leetcode.authSync.port`          | Local port used by the browser auth sync server. The browser extension must use the same port.                                                                                                                                                                | `17899`            |
 | `leetcode.authSync.ownerHeartbeatIntervalSeconds` | How often the VS Code window that owns the browser auth sync listener writes its heartbeat.                                                                                                                                             | `30`               |
-| `leetcode.authSync.observerCheckIntervalSeconds` | How often observer windows check shared auth sync ownership state.                                                                                                                                                                      | `60`               |
-| `leetcode.authSync.ownerStaleAfterSeconds` | How long an owner heartbeat can be missing before another VS Code window may take over.                                                                                                                                                         | `120`              |
+| `leetcode.authSync.observerCheckIntervalSeconds` | How often observer windows verify the auth sync listener through `/health`.                                                                                                                                                                      | `60`               |
+| `leetcode.authSync.ownerStaleAfterSeconds` | Legacy compatibility setting. Owner liveness is verified through the local `/health` endpoint.                                                                                                                                                         | `120`              |
 | `leetcode.authSync.secret`        | Optional shared secret for browser auth sync. If set, the browser extension must send the same secret.                                                                                                                                                        | `""`               |
 
 ## Want Help?

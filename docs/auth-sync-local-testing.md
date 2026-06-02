@@ -27,7 +27,7 @@ VS Code extension:
   - `LeetCode: Show Browser Auth Sync Status`
   - `LeetCode: Restart Browser Auth Sync Server`
   - `LeetCode: Force Start Browser Auth Sync Server`
-- Added single-owner coordination for multiple VS Code windows. The owner window listens on the configured port and writes a heartbeat to VS Code global state; other windows observe shared auth sync state and can take over after a stale heartbeat.
+- Added single-owner coordination for multiple VS Code windows. The owner window listens on the configured port, exposes `/health`, and writes metadata to VS Code global state for diagnostics and force-release. Other windows use `/health` to verify live ownership and can take over when the listener is gone.
 - Added `Auto Cookie Sync` to the login picker as the recommended sign-in path.
 - Refactored cookie login into `leetCodeManager.updateSessionFromCookie(cookie)` so manual cookie login, URI login, and browser sync all update the same session path.
 
@@ -121,7 +121,7 @@ To make the current VS Code window take ownership of the configured port:
 LeetCode: Force Start Browser Auth Sync Server
 ```
 
-If another VS Code window owns the listener, that command asks the owner to release the listener and then starts the server in the current window. If another program owns the port, the command does not kill it; it reports the process it found and writes copyable inspect/stop commands to the LeetCode output channel.
+If another VS Code window owns the listener, that command verifies the owner through `/health`, asks it to release the listener, and then starts the server in the current window. If another program owns the port, the command does not kill it; it reports the process it found and writes copyable inspect/stop commands to the LeetCode output channel.
 
 If you need another port, set `leetcode.authSync.port` in VS Code settings. The server restarts when the setting changes.
 
@@ -129,7 +129,8 @@ For multi-window timing, these settings default to conservative values:
 
 - `leetcode.authSync.ownerHeartbeatIntervalSeconds`: `30`
 - `leetcode.authSync.observerCheckIntervalSeconds`: `60`
-- `leetcode.authSync.ownerStaleAfterSeconds`: `120`
+
+Owner liveness is decided by `GET /health`, not by the shared heartbeat record alone. If a stale owner record remains after VS Code exits but the port is free, status reports that no live owner is present and an observer can claim the listener on its next check.
 
 ## Install the VS Code Extension Locally
 

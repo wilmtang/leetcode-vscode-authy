@@ -20,15 +20,13 @@ const HEALTH_PATH: string = "/health";
 const RELEASE_PATH: string = "/auth/release";
 const DEFAULT_HEARTBEAT_SECONDS: number = 30;
 const DEFAULT_OBSERVER_CHECK_SECONDS: number = 60;
-const DEFAULT_OWNER_STALE_SECONDS: number = 120;
 const FORCE_RELEASE_TIMEOUT_MS: number = 10 * 1000;
 
-export type AuthSyncServerMode = "disabled" | "stopped" | "local" | "observer" | "conflict";
+export type AuthSyncServerMode = "disabled" | "stopped" | "local" | "observer" | "conflict" | "vacant";
 
 export interface IAuthSyncOwnershipSettings {
     heartbeatMs: number;
     observerCheckMs: number;
-    ownerStaleMs: number;
 }
 
 export type AuthSyncOwnerInfo = Omit<IAuthSyncOwnerRecord, "controlToken">;
@@ -72,7 +70,7 @@ class AuthSyncServer implements vscode.Disposable {
     private readonly controlToken: string = crypto.randomBytes(24).toString("hex");
 
     public start(): Promise<void> {
-        return this.enqueue(() => this.startInternal(false));
+        return this.enqueue(() => this.startInternal());
     }
 
     public stop(): Promise<void> {
@@ -91,13 +89,16 @@ class AuthSyncServer implements vscode.Disposable {
         return this.port;
     }
 
+    public refreshStatus(): Promise<void> {
+        return this.enqueue(() => this.refreshStatusInternal());
+    }
+
     public getStatusSnapshot(): IAuthSyncStatusSnapshot {
-        const owner: IAuthSyncOwnerRecord | undefined = globalState.getAuthSyncOwner();
         return {
             mode: this.mode,
             port: this.port,
             currentWindow: this.getCurrentWindowIdentity(),
-            owner: owner ? this.toPublicOwnerRecord(owner) : this.observedOwner,
+            owner: this.getSnapshotOwner(),
             conflict: this.lastConflict,
             ownershipSettings: this.getOwnershipSettings(),
         };
@@ -113,7 +114,7 @@ class AuthSyncServer implements vscode.Disposable {
         return next;
     }
 
-    private async startInternal(force: boolean): Promise<void> {
+    private async startInternal(): Promise<void> {
         const serverSettings: IAuthSyncServerSettings = this.getServerSettings();
 
         if (!serverSettings.enabled) {
@@ -126,20 +127,6 @@ class AuthSyncServer implements vscode.Disposable {
         if (this.server && this.port === serverSettings.port) {
             this.mode = "local";
             this.startHeartbeatTimer();
-            return;
-        }
-
-        const owner: IAuthSyncOwnerRecord | undefined = globalState.getAuthSyncOwner();
-        if (!force && owner && owner.windowId !== this.windowId && owner.port === serverSettings.port && this.isOwnerFresh(owner)) {
-            await this.stopInternal();
-            this.mode = "observer";
-            this.port = serverSettings.port;
-            this.lastConflict = undefined;
-            this.observedOwner = owner ? this.toPublicOwnerRecord(owner) : undefined;
-            this.startObserverTimer();
-            this.observeSharedAuthSyncState();
-
-            leetCodeChannel.appendLine(`[auth-sync] Observing owner window: ${this.describeOwner(owner)}.`);
             return;
         }
 
@@ -195,7 +182,7 @@ class AuthSyncServer implements vscode.Disposable {
 
         const probe: AuthSyncPortProbe = await this.probePort(serverSettings.port);
         if (probe.kind === "free") {
-            await this.startInternal(true);
+            await this.startInternal();
             if (this.isRunning()) {
                 return { kind: "started", port: serverSettings.port };
             }
@@ -245,7 +232,7 @@ class AuthSyncServer implements vscode.Disposable {
                 };
             }
 
-            await this.startInternal(true);
+            await this.startInternal();
             if (!this.isRunning()) {
                 const claimConflict: IAuthSyncPortConflict = await describePortOwner(serverSettings.port);
                 return { kind: "portConflict", port: serverSettings.port, conflict: claimConflict };
@@ -321,6 +308,51 @@ class AuthSyncServer implements vscode.Disposable {
         this.lastConflict = await describePortOwner(port);
         this.startObserverTimer();
         leetCodeChannel.appendLine(`[auth-sync] Port ${port} is already in use by another program.`);
+    }
+
+    private async refreshStatusInternal(): Promise<void> {
+        const serverSettings: IAuthSyncServerSettings = this.getServerSettings();
+
+        if (!serverSettings.enabled) {
+            if (this.server) {
+                await this.stopInternal();
+            }
+            this.mode = "disabled";
+            this.port = serverSettings.port;
+            this.lastConflict = undefined;
+            this.observedOwner = undefined;
+            return;
+        }
+
+        if (this.mode === "local" && this.server && this.port === serverSettings.port) {
+            return;
+        }
+
+        const probe: AuthSyncPortProbe = await this.probePort(serverSettings.port);
+        if (probe.kind === "authSync") {
+            this.mode = "observer";
+            this.port = serverSettings.port;
+            this.lastConflict = undefined;
+            this.observedOwner = probe.health.owner;
+            this.startObserverTimer();
+            this.observeSharedAuthSyncState();
+            return;
+        }
+
+        if (probe.kind === "free") {
+            this.mode = "vacant";
+            this.port = serverSettings.port;
+            this.lastConflict = undefined;
+            this.observedOwner = undefined;
+            this.startObserverTimer();
+            return;
+        }
+
+        this.mode = "conflict";
+        this.port = serverSettings.port;
+        this.observedOwner = undefined;
+        this.lastConflict = await describePortOwner(serverSettings.port);
+        this.startObserverTimer();
     }
 
     private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -554,19 +586,10 @@ class AuthSyncServer implements vscode.Disposable {
                 return;
             }
 
-            if (this.hasFreshExternalOwner(serverSettings.port)) {
-                this.mode = "observer";
-                this.port = serverSettings.port;
-                this.lastConflict = undefined;
-                const owner: IAuthSyncOwnerRecord | undefined = globalState.getAuthSyncOwner();
-                this.observedOwner = owner ? this.toPublicOwnerRecord(owner) : this.observedOwner;
-                return;
-            }
-
             const probe: AuthSyncPortProbe = await this.probePort(serverSettings.port);
             if (probe.kind === "free") {
-                leetCodeChannel.appendLine(`[auth-sync] No fresh owner heartbeat found. Trying to become owner on port ${serverSettings.port}.`);
-                await this.enqueue(() => this.startInternal(true));
+                leetCodeChannel.appendLine(`[auth-sync] No live auth sync owner found. Trying to become owner on port ${serverSettings.port}.`);
+                await this.enqueue(() => this.startInternal());
             } else if (probe.kind === "authSync") {
                 this.mode = "observer";
                 this.port = serverSettings.port;
@@ -575,6 +598,7 @@ class AuthSyncServer implements vscode.Disposable {
             } else {
                 this.mode = "conflict";
                 this.port = serverSettings.port;
+                this.observedOwner = undefined;
             }
         } finally {
             this.observerCheckInFlight = false;
@@ -662,16 +686,6 @@ class AuthSyncServer implements vscode.Disposable {
         return "Untitled VS Code window";
     }
 
-    private hasFreshExternalOwner(port: number): boolean {
-        const owner: IAuthSyncOwnerRecord | undefined = globalState.getAuthSyncOwner();
-        return !!owner && owner.windowId !== this.windowId && owner.port === port && this.isOwnerFresh(owner);
-    }
-
-    private isOwnerFresh(owner: IAuthSyncOwnerRecord): boolean {
-        const settings: IAuthSyncOwnershipSettings = this.getOwnershipSettings();
-        return Date.now() - owner.heartbeatAt <= settings.ownerStaleMs;
-    }
-
     private getServerSettings(): IAuthSyncServerSettings {
         const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration("leetcode");
         const enabled: boolean = config.get<boolean>("authSync.enabled", true);
@@ -696,18 +710,10 @@ class AuthSyncServer implements vscode.Disposable {
             15,
             3600
         );
-        const configuredStaleSeconds: number = this.normalizeSeconds(
-            config.get<number>("authSync.ownerStaleAfterSeconds", DEFAULT_OWNER_STALE_SECONDS),
-            DEFAULT_OWNER_STALE_SECONDS,
-            30,
-            86400
-        );
         const heartbeatMs: number = heartbeatSeconds * 1000;
         const observerCheckMs: number = observerCheckSeconds * 1000;
-        const configuredStaleMs: number = configuredStaleSeconds * 1000;
-        const ownerStaleMs: number = Math.max(configuredStaleMs, heartbeatMs * 2, observerCheckMs + heartbeatMs);
 
-        return { heartbeatMs, observerCheckMs, ownerStaleMs };
+        return { heartbeatMs, observerCheckMs };
     }
 
     private normalizeSeconds(value: number | undefined, defaultValue: number, min: number, max: number): number {
@@ -869,6 +875,14 @@ class AuthSyncServer implements vscode.Disposable {
         }
 
         return `${owner.windowLabel} (PID ${owner.pid}, window ${owner.windowId})`;
+    }
+
+    private getSnapshotOwner(): AuthSyncOwnerInfo | undefined {
+        if (this.mode === "local" && this.server) {
+            return this.toPublicOwnerRecord(this.getCurrentOwnerRecord(Date.now()));
+        }
+
+        return this.observedOwner;
     }
 
     private toPublicOwnerRecord(owner: IAuthSyncOwnerRecord): AuthSyncOwnerInfo {

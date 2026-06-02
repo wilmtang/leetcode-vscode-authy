@@ -3,6 +3,10 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.18.10]
+### Fixed
+- Treat the auth sync `/health` endpoint as the source of truth for listener ownership so stale VS Code global state cannot block a reopened window from claiming a free port.
+
 ## [0.18.8]
 ### Fixed
 - Keep multiline testcase examples fully commented in generated problem files.

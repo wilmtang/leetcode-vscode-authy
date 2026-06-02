@@ -2,7 +2,7 @@
     "name": "vscode-leetcode-auth-sync",
     "displayName": "LeetCode with Auth Sync",
     "description": "Unofficial VS Code extension for solving LeetCode problems with browser auth sync; not affiliated with LeetCode",
-    "version": "0.18.9",
+    "version": "0.18.10",
     "author": "wilmtang",
     "publisher": "wilmtang",
     "license": "MIT",
@@ -753,7 +753,7 @@
                         "minimum": 15,
                         "maximum": 3600,
                         "scope": "application",
-                        "description": "How often observer windows check shared auth sync ownership state and try to take over after the owner is stale. Default: 60 seconds."
+                        "description": "How often observer windows verify the auth sync listener through /health and try to take over when no live owner is present. Default: 60 seconds."
                     },
                     "leetcode.authSync.ownerStaleAfterSeconds": {
                         "type": "number",
@@ -761,7 +761,7 @@
                         "minimum": 30,
                         "maximum": 86400,
                         "scope": "application",
-                        "description": "How long an auth sync owner heartbeat can be missing before another VS Code window may take over. The extension may raise the effective value to keep it above the heartbeat and observer-check intervals. Default: 120 seconds."
+                        "description": "Legacy compatibility setting. Auth sync owner liveness is now verified through the local /health endpoint instead of this stale-heartbeat timeout."
                     },
                     "leetcode.authSync.secret": {
                         "type": "string",

@@ -108,8 +108,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                     event.affectsConfiguration("leetcode.authSync.port") ||
                     event.affectsConfiguration("leetcode.authSync.secret") ||
                     event.affectsConfiguration("leetcode.authSync.ownerHeartbeatIntervalSeconds") ||
-                    event.affectsConfiguration("leetcode.authSync.observerCheckIntervalSeconds") ||
-                    event.affectsConfiguration("leetcode.authSync.ownerStaleAfterSeconds")
+                    event.affectsConfiguration("leetcode.authSync.observerCheckIntervalSeconds")
                 ) {
                     void restartAuthSyncServer(false);
                 }
@@ -154,11 +153,12 @@ async function restartAuthSyncServer(showMessage: boolean = true): Promise<void>
     }
 }
 
-function showAuthSyncStatus(): void {
+async function showAuthSyncStatus(): Promise<void> {
     const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration("leetcode");
     const enabled: boolean = config.get<boolean>("authSync.enabled", true);
     const port: number = config.get<number>("authSync.port", 17899);
     const secret: string = config.get<string>("authSync.secret", "");
+    await authSyncServer.refreshStatus();
     const snapshot: IAuthSyncStatusSnapshot = authSyncServer.getStatusSnapshot();
     const activePort: number | undefined = snapshot.port ?? authSyncServer.getPort();
     const lastSyncedAt: number | undefined = globalState.getAuthSyncLastSyncedAt();
@@ -173,6 +173,8 @@ function showAuthSyncStatus(): void {
     } else if (snapshot.mode === "conflict") {
         const conflict: string = snapshot.conflict ? ` Used by ${snapshot.conflict.summary}.` : "";
         serverStatus = `Not running because port ${activePort ?? port} is used by another program.${conflict}`;
+    } else if (snapshot.mode === "vacant") {
+        serverStatus = `No live owner on port ${activePort ?? port}. This window will try to claim the listener on the next observer check.`;
     } else {
         serverStatus = `Not running on port ${port}`;
     }
@@ -181,7 +183,7 @@ function showAuthSyncStatus(): void {
         ? new Date(lastSyncedAt).toLocaleString()
         : "No cookies synced yet";
     const secretStatus: string = secret ? "configured" : "none";
-    const timing: string = `heartbeat ${formatDuration(snapshot.ownershipSettings.heartbeatMs)}, observer check ${formatDuration(snapshot.ownershipSettings.observerCheckMs)}, stale after ${formatDuration(snapshot.ownershipSettings.ownerStaleMs)}`;
+    const timing: string = `heartbeat ${formatDuration(snapshot.ownershipSettings.heartbeatMs)}, observer check ${formatDuration(snapshot.ownershipSettings.observerCheckMs)}`;
 
     vscode.window.showInformationMessage(
         `Last sync: ${lastSync}. Auth Sync: ${serverStatus}. Secret: ${secretStatus}. Timing: ${timing}.`
