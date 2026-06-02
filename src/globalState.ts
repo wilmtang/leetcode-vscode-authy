@@ -4,6 +4,8 @@
 import * as vscode from "vscode";
 
 const CookieKey = "leetcode-cookie";
+const BrowserUserAgentKey = "leetcode-browser-user-agent";
+const BrowserRequestHeadersKey = "leetcode-browser-request-headers";
 const UserStatusKey = "leetcode-user-status";
 const AuthSyncLastSyncedAtKey = "leetcode-auth-sync-last-synced-at";
 const AuthSyncOwnerKey = "leetcode-auth-sync-owner";
@@ -27,6 +29,10 @@ export interface IAuthSyncOwnerRecord {
     controlToken: string;
 }
 
+export interface IBrowserRequestHeaders {
+    [key: string]: string;
+}
+
 class GlobalState {
     private context: vscode.ExtensionContext;
     private _state: vscode.Memento;
@@ -41,6 +47,20 @@ class GlobalState {
     }
     public getCookie(): string | undefined {
         return this._state.get(CookieKey);
+    }
+
+    public setBrowserUserAgent(userAgent: string): any {
+        return this._state.update(BrowserUserAgentKey, userAgent);
+    }
+    public getBrowserUserAgent(): string | undefined {
+        return this._state.get(BrowserUserAgentKey);
+    }
+
+    public setBrowserRequestHeaders(headers: IBrowserRequestHeaders): any {
+        return this._state.update(BrowserRequestHeadersKey, headers);
+    }
+    public getBrowserRequestHeaders(): IBrowserRequestHeaders | undefined {
+        return this._state.get(BrowserRequestHeadersKey);
     }
 
     public setAuthSyncLastSyncedAt(timestamp: number): Thenable<void> {
@@ -84,10 +104,14 @@ class GlobalState {
 
     public removeCookie(): void {
         this._state.update(CookieKey, undefined);
+        this._state.update(BrowserUserAgentKey, undefined);
+        this._state.update(BrowserRequestHeadersKey, undefined);
     }
 
     public removeAll(): void {
         this._state.update(CookieKey, undefined);
+        this._state.update(BrowserUserAgentKey, undefined);
+        this._state.update(BrowserRequestHeadersKey, undefined);
         this._state.update(UserStatusKey, undefined);
         this._state.update(AuthSyncLastSyncedAtKey, undefined);
     }

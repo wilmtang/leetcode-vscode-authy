@@ -65,12 +65,12 @@ async function getCookiesForLeetCode() {
     return Array.from(uniqueCookies.values());
 }
 
-async function syncNow(reason = "manual", cookieOverride = "") {
+async function syncNow(reason = "manual", cookieOverride = "", requestHeadersOverride = null) {
     if (syncInFlight) {
         return { ok: false, skipped: true, error: "Sync already in progress." };
     }
 
-    syncInFlight = syncNowInternal(reason, cookieOverride);
+    syncInFlight = syncNowInternal(reason, cookieOverride, requestHeadersOverride);
 
     try {
         return await syncInFlight;
@@ -79,7 +79,7 @@ async function syncNow(reason = "manual", cookieOverride = "") {
     }
 }
 
-async function syncNowInternal(reason, cookieOverride) {
+async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
     const settings = await getSettings();
     const syncReason = typeof reason === "string" && reason ? reason : "manual";
 
@@ -92,7 +92,7 @@ async function syncNowInternal(reason, cookieOverride) {
         };
     }
 
-    const remainingMs = shouldRespectCooldown(syncReason) ? getCooldownRemainingMs(settings) : 0;
+    const remainingMs = shouldRespectCooldown(syncReason, requestHeadersOverride) ? getCooldownRemainingMs(settings) : 0;
     if (remainingMs > 0) {
         return {
             ...addComputedSyncStatus(settings),
@@ -138,8 +138,10 @@ async function syncNowInternal(reason, cookieOverride) {
             headers,
             body: JSON.stringify({
                 cookie,
+                requestHeaders: getReplayableRequestHeaders(requestHeadersOverride),
                 source: "browser-extension",
                 reason: syncReason,
+                userAgent: getBrowserUserAgent(),
                 updatedAt: Date.now(),
             }),
         });
@@ -178,14 +180,14 @@ async function syncNowInternal(reason, cookieOverride) {
     };
 }
 
-function scheduleSync(reason, cookie) {
+function scheduleSync(reason, cookie, requestHeaders = null) {
     if (syncTimer) {
         clearTimeout(syncTimer);
     }
 
     syncTimer = setTimeout(() => {
         syncTimer = null;
-        syncNow(reason, cookie).then((result) => {
+        syncNow(reason, cookie, requestHeaders).then((result) => {
             if (result && !result.ok && !result.skipped) {
                 console.warn(`[leetcode-auth-sync] Sync failed: ${result.error}`);
             }
@@ -309,8 +311,8 @@ function isAutomaticSyncReason(reason) {
     return reason === "leetcode-xhr";
 }
 
-function shouldRespectCooldown(reason) {
-    return isAutomaticSyncReason(reason);
+function shouldRespectCooldown(reason, requestHeaders = null) {
+    return isAutomaticSyncReason(reason) && Object.keys(getReplayableRequestHeaders(requestHeaders)).length === 0;
 }
 
 function parseCookieHeader(cookieHeader) {
@@ -386,6 +388,52 @@ function cookiesGetAll(query) {
     return new Promise((resolve) => chrome.cookies.getAll(query, resolve));
 }
 
+function getBrowserUserAgent() {
+    return typeof navigator !== "undefined" && typeof navigator.userAgent === "string"
+        ? navigator.userAgent
+        : "";
+}
+
+function getReplayableRequestHeaders(requestHeaders) {
+    const headers = {};
+
+    for (const header of requestHeaders || []) {
+        if (!header || typeof header.name !== "string" || typeof header.value !== "string") {
+            continue;
+        }
+
+        const name = header.name.toLowerCase();
+        if (isReplayableLeetCodeHeader(name)) {
+            headers[name] = header.value;
+        }
+    }
+
+    return headers;
+}
+
+function isReplayableLeetCodeHeader(name) {
+    return [
+        "accept",
+        "accept-language",
+        "authorization",
+        "dnt",
+        "priority",
+        "sec-ch-ua",
+        "sec-ch-ua-arch",
+        "sec-ch-ua-bitness",
+        "sec-ch-ua-full-version",
+        "sec-ch-ua-full-version-list",
+        "sec-ch-ua-mobile",
+        "sec-ch-ua-model",
+        "sec-ch-ua-platform",
+        "sec-ch-ua-platform-version",
+        "sec-fetch-dest",
+        "sec-fetch-mode",
+        "sec-fetch-site",
+        "user-agent",
+    ].includes(name);
+}
+
 function getCookieHeaderFromRequest(details) {
     for (const header of details.requestHeaders || []) {
         if (typeof header.name === "string" && header.name.toLowerCase() === "cookie") {
@@ -398,9 +446,10 @@ function getCookieHeaderFromRequest(details) {
 
 function handleLeetCodeXhr(details) {
     const cookie = getCookieHeaderFromRequest(details);
+    const requestHeaders = details.requestHeaders || [];
 
     if (cookie && getLeetCodeLoginCookieStatus(cookie).ok) {
-        scheduleSync("leetcode-xhr", cookie);
+        scheduleSync("leetcode-xhr", cookie, requestHeaders);
         return;
     }
 

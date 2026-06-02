@@ -1,15 +1,20 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import * as cp from "child_process";
 import * as fse from "fs-extra";
 import * as path from "path";
-import { globalState } from "../globalState";
+import { globalState, IBrowserRequestHeaders } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { getUrl } from "../shared";
 import { sleep } from "../utils/toolUtils";
 
 const MAX_VERIFY_ATTEMPTS: number = 60;
-const TEST_JUDGER_QUEUE_NAME: string = "lc-judger-do1";
+const CURL_STATUS_MARKER: string = "\n__LEETCODE_HTTP_STATUS__:";
 
-export class DirectTestUnsupportedError extends Error { }
+export class DirectTestUnsupportedError extends Error {
+    constructor(message: string, public readonly allowCliFallback: boolean = true) {
+        super(message);
+    }
+}
 
 interface ISolutionFileMeta {
     code: string;
@@ -69,7 +74,7 @@ export async function testSolutionWithSyncedCookie(filePath: string, testString?
     }
 
     const meta: ISolutionFileMeta = await parseSolutionFile(filePath);
-    const referer: string = `${getUrl("base")}/problems/${meta.slug}/description/`;
+    const referer: string = `${getUrl("base")}/problems/${meta.slug}/`;
     const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer);
     const testcase: string = normalizeTestcase(testString || question.sampleTestCase);
 
@@ -182,9 +187,7 @@ async function runCode(meta: ISolutionFileMeta, question: IQuestionDetail, testc
             data: {
                 data_input: testcase,
                 lang: meta.lang,
-                question_id: parseInt(question.questionId, 10),
-                queue_name: TEST_JUDGER_QUEUE_NAME,
-                test_mode: true,
+                question_id: question.questionId,
                 typed_code: meta.code,
             },
         });
@@ -193,7 +196,7 @@ async function runCode(meta: ISolutionFileMeta, question: IQuestionDetail, testc
             return task;
         }
         if (/session expired/i.test(task.error)) {
-            throw new DirectTestUnsupportedError("Direct LeetCode test request was rejected by the judge endpoint.");
+            throw new DirectTestUnsupportedError("Direct LeetCode run-code request returned: session expired.", false);
         }
         if (task.error.indexOf("too soon") < 0) {
             throw new Error(task.error);
@@ -231,13 +234,85 @@ async function requestJson<T>(config: AxiosRequestConfig): Promise<T> {
     });
 
     if (response.status === 401 || response.status === 403) {
-        throw new DirectTestUnsupportedError("Direct LeetCode test request was rejected by the judge endpoint.");
+        if (isCloudflareChallenge(response.data)) {
+            leetCodeChannel.appendLine("[test] Node HTTP was challenged by Cloudflare; retrying judge request with curl.");
+            return requestJsonWithCurl<T>(config);
+        }
+
+        throw new DirectTestUnsupportedError(`Direct LeetCode request was rejected: HTTP ${response.status}${summarizeResponseData(response.data)}.`, false);
     }
     if (response.status !== 200) {
         throw new Error(`http error [code=${response.status}]`);
     }
 
     return response.data;
+}
+
+async function requestJsonWithCurl<T>(config: AxiosRequestConfig): Promise<T> {
+    const response: ICurlResponse = await executeCurl(config);
+    if (response.status === 401 || response.status === 403) {
+        throw new DirectTestUnsupportedError(`Direct LeetCode curl request was rejected: HTTP ${response.status}${summarizeResponseData(response.body)}.`, false);
+    }
+    if (response.status !== 200) {
+        throw new Error(`curl http error [code=${response.status}]`);
+    }
+
+    try {
+        return JSON.parse(response.body) as T;
+    } catch (error) {
+        throw new Error(`curl JSON parse failed. Response: ${response.body.slice(0, 200)}`);
+    }
+}
+
+function executeCurl(config: AxiosRequestConfig): Promise<ICurlResponse> {
+    return new Promise<ICurlResponse>((resolve: (response: ICurlResponse) => void, reject: (error: Error) => void): void => {
+        const url: string | undefined = config.url;
+        if (!url) {
+            reject(new Error("Cannot execute curl request without a URL."));
+            return;
+        }
+
+        const method: string = (config.method || "GET").toString().toUpperCase();
+        const args: string[] = ["-sS", "-L", "--compressed", "-w", `${CURL_STATUS_MARKER}%{http_code}`, "-X", method, url];
+        const headers: { [key: string]: unknown } = (config.headers || {}) as { [key: string]: unknown };
+
+        for (const key of Object.keys(headers)) {
+            const value: unknown = headers[key];
+            if (typeof value !== "string") {
+                continue;
+            }
+
+            if (key.toLowerCase() === "cookie") {
+                args.push("-b", value);
+            } else if (value === "") {
+                args.push("-H", `${key};`);
+            } else {
+                args.push("-H", `${key}: ${value}`);
+            }
+        }
+
+        if (config.data !== undefined && method !== "GET") {
+            const body: string = typeof config.data === "string" ? config.data : JSON.stringify(config.data);
+            args.push("--data-raw", body);
+        }
+
+        cp.execFile("curl", args, { maxBuffer: 10 * 1024 * 1024 }, (error: cp.ExecException | null, stdout: string, stderr: string) => {
+            if (error) {
+                reject(new Error(`curl request failed: ${stderr || error.message}`));
+                return;
+            }
+
+            const markerIndex: number = stdout.lastIndexOf(CURL_STATUS_MARKER);
+            if (markerIndex < 0) {
+                reject(new Error("curl response did not include an HTTP status code."));
+                return;
+            }
+
+            const body: string = stdout.slice(0, markerIndex);
+            const status: number = parseInt(stdout.slice(markerIndex + CURL_STATUS_MARKER.length).trim(), 10);
+            resolve({ body, status });
+        });
+    });
 }
 
 function createHeaders(cookie: string, referer: string): { [key: string]: string } {
@@ -248,15 +323,92 @@ function createHeaders(cookie: string, referer: string): { [key: string]: string
     }
 
     const headers: { [key: string]: string } = {
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Authorization": "",
         "Content-Type": "application/json",
         "Cookie": cookie,
         "Origin": getUrl("base"),
         "Referer": referer,
-        "X-Requested-With": "XMLHttpRequest",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
         "X-CSRFToken": csrfToken,
     };
 
+    const browserUserAgent: string | undefined = globalState.getBrowserUserAgent();
+    if (browserUserAgent) {
+        headers["User-Agent"] = browserUserAgent;
+    }
+
+    const browserRequestHeaders: IBrowserRequestHeaders | undefined = globalState.getBrowserRequestHeaders();
+    if (browserRequestHeaders) {
+        mergeBrowserRequestHeaders(headers, browserRequestHeaders);
+    }
+
+    headers["Content-Type"] = "application/json";
+    headers["Cookie"] = cookie;
+    headers["Origin"] = getUrl("base");
+    headers["Referer"] = referer;
+    headers["X-CSRFToken"] = csrfToken;
+
     return headers;
+}
+
+function mergeBrowserRequestHeaders(headers: { [key: string]: string }, browserRequestHeaders: IBrowserRequestHeaders): void {
+    for (const key of Object.keys(browserRequestHeaders)) {
+        const canonicalKey: string | undefined = canonicalHeaderName(key);
+        if (!canonicalKey) {
+            continue;
+        }
+
+        headers[canonicalKey] = browserRequestHeaders[key];
+    }
+}
+
+function canonicalHeaderName(name: string): string | undefined {
+    const names: { [key: string]: string } = {
+        "accept": "Accept",
+        "accept-language": "Accept-Language",
+        "authorization": "Authorization",
+        "dnt": "DNT",
+        "priority": "Priority",
+        "sec-ch-ua": "Sec-CH-UA",
+        "sec-ch-ua-arch": "Sec-CH-UA-Arch",
+        "sec-ch-ua-bitness": "Sec-CH-UA-Bitness",
+        "sec-ch-ua-full-version": "Sec-CH-UA-Full-Version",
+        "sec-ch-ua-full-version-list": "Sec-CH-UA-Full-Version-List",
+        "sec-ch-ua-mobile": "Sec-CH-UA-Mobile",
+        "sec-ch-ua-model": "Sec-CH-UA-Model",
+        "sec-ch-ua-platform": "Sec-CH-UA-Platform",
+        "sec-ch-ua-platform-version": "Sec-CH-UA-Platform-Version",
+        "sec-fetch-dest": "Sec-Fetch-Dest",
+        "sec-fetch-mode": "Sec-Fetch-Mode",
+        "sec-fetch-site": "Sec-Fetch-Site",
+        "user-agent": "User-Agent",
+    };
+
+    return names[name.toLowerCase()];
+}
+
+function isCloudflareChallenge(data: unknown): boolean {
+    const text: string = typeof data === "string" ? data : JSON.stringify(data || "");
+    return /<title>Just a moment\.\.\.<\/title>/i.test(text) || /cf-mitigated/i.test(text);
+}
+
+function summarizeResponseData(data: unknown): string {
+    if (!data) {
+        return "";
+    }
+
+    const text: string = typeof data === "string" ? data : JSON.stringify(data);
+    const trimmed: string = text.replace(/\s+/g, " ").trim();
+    return trimmed ? ` (${trimmed.slice(0, 200)})` : "";
+}
+
+interface ICurlResponse {
+    body: string;
+    status: number;
 }
 
 function getCookieValue(cookie: string, name: string): string | undefined {

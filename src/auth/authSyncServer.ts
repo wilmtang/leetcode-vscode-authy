@@ -5,7 +5,7 @@ import * as crypto from "crypto";
 import * as http from "http";
 import * as path from "path";
 import * as vscode from "vscode";
-import { globalState, IAuthSyncOwnerRecord } from "../globalState";
+import { globalState, IAuthSyncOwnerRecord, IBrowserRequestHeaders } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { leetCodeManager } from "../leetCodeManager";
 import { describePortOwner, IAuthSyncPortConflict } from "./authSyncPortInspector";
@@ -392,6 +392,8 @@ class AuthSyncServer implements vscode.Disposable {
 
         const body: IAuthSyncRequestBody = await this.readJsonBody(req);
         const cookie: string = typeof body.cookie === "string" ? body.cookie.trim() : "";
+        const browserUserAgent: string | undefined = this.getBrowserUserAgent(req, body);
+        const browserRequestHeaders: IBrowserRequestHeaders | undefined = this.getBrowserRequestHeaders(body);
 
         if (!this.hasLeetCodeSessionCookie(cookie)) {
             this.sendJson(res, 400, { ok: false, error: "Request did not include a valid LeetCode login session cookie." });
@@ -399,7 +401,13 @@ class AuthSyncServer implements vscode.Disposable {
         }
 
         this.logCookieUpdate(cookie, body.reason);
-        await leetCodeManager.updateSessionFromCookie(cookie);
+        if (browserUserAgent) {
+            leetCodeChannel.appendLine("[auth-sync] Captured browser user agent for direct judge requests.");
+        }
+        if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
+            leetCodeChannel.appendLine(`[auth-sync] Captured ${Object.keys(browserRequestHeaders).length} browser request headers for direct judge requests.`);
+        }
+        await leetCodeManager.updateSessionFromCookie(cookie, browserUserAgent, browserRequestHeaders);
         await globalState.setAuthSyncLastSyncedAt(Date.now());
 
         this.sendJson(res, 200, { ok: true, message: "LeetCode cookie synced." });
@@ -497,6 +505,59 @@ class AuthSyncServer implements vscode.Disposable {
         }
 
         return undefined;
+    }
+
+    private getBrowserUserAgent(req: http.IncomingMessage, body: IAuthSyncRequestBody): string | undefined {
+        if (typeof body.userAgent === "string" && body.userAgent.trim()) {
+            return body.userAgent.trim();
+        }
+
+        const headerValue: string | string[] | undefined = req.headers["user-agent"];
+        const userAgent: string | undefined = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+        return userAgent && userAgent.trim() ? userAgent.trim() : undefined;
+    }
+
+    private getBrowserRequestHeaders(body: IAuthSyncRequestBody): IBrowserRequestHeaders | undefined {
+        if (!body.requestHeaders || typeof body.requestHeaders !== "object" || Array.isArray(body.requestHeaders)) {
+            return undefined;
+        }
+
+        const headers: IBrowserRequestHeaders = {};
+        const rawHeaders: { [key: string]: unknown } = body.requestHeaders as { [key: string]: unknown };
+        for (const key of Object.keys(rawHeaders)) {
+            const normalizedKey: string = key.toLowerCase();
+            const value: unknown = rawHeaders[key];
+            if (!this.isReplayableLeetCodeHeader(normalizedKey) || typeof value !== "string") {
+                continue;
+            }
+
+            headers[normalizedKey] = value;
+        }
+
+        return Object.keys(headers).length > 0 ? headers : undefined;
+    }
+
+    private isReplayableLeetCodeHeader(name: string): boolean {
+        return [
+            "accept",
+            "accept-language",
+            "authorization",
+            "dnt",
+            "priority",
+            "sec-ch-ua",
+            "sec-ch-ua-arch",
+            "sec-ch-ua-bitness",
+            "sec-ch-ua-full-version",
+            "sec-ch-ua-full-version-list",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua-model",
+            "sec-ch-ua-platform",
+            "sec-ch-ua-platform-version",
+            "sec-fetch-dest",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "user-agent",
+        ].indexOf(name) >= 0;
     }
 
     private hasUsableCookieToken(value: string | undefined): boolean {
@@ -920,6 +981,8 @@ interface IAuthSyncRequestError extends Error {
 interface IAuthSyncRequestBody {
     cookie?: unknown;
     reason?: string;
+    requestHeaders?: unknown;
+    userAgent?: unknown;
 }
 
 interface IAuthSyncHealthResponse {

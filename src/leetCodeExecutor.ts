@@ -8,6 +8,7 @@ import * as path from "path";
 import * as requireFromString from "require-from-string";
 import { ExtensionContext } from "vscode";
 import { ConfigurationChangeEvent, Disposable, MessageItem, ProgressLocation, window, workspace, WorkspaceConfiguration } from "vscode";
+import { leetCodeChannel } from "./leetCodeChannel";
 import { DirectTestUnsupportedError, testSolutionWithSyncedCookie } from "./request/test-solution";
 import { Endpoint, IProblem, leetcodeHasInited, supportedPlugins } from "./shared";
 import { executeCommand, executeCommandWithProgress } from "./utils/cpUtils";
@@ -184,6 +185,10 @@ class LeetCodeExecutor implements Disposable {
             });
         } catch (error) {
             if (!(error instanceof DirectTestUnsupportedError)) {
+                throw error;
+            }
+            leetCodeChannel.appendLine(`[test] ${error.message}`);
+            if (!error.allowCliFallback) {
                 throw error;
             }
         }

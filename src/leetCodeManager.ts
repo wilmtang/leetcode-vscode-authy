@@ -11,7 +11,7 @@ import { createEnvOption } from "./utils/cpUtils";
 import { DialogType, openUrl, promptForOpenOutputChannel } from "./utils/uiUtils";
 import * as wsl from "./utils/wslUtils";
 import { getLeetCodeEndpoint } from "./commands/plugin";
-import { globalState } from "./globalState";
+import { globalState, IBrowserRequestHeaders } from "./globalState";
 import { queryUserData } from "./request/query-user-data";
 import { parseQuery } from "./utils/toolUtils";
 
@@ -43,8 +43,14 @@ class LeetCodeManager extends EventEmitter {
         }
     }
 
-    public async updateSessionFromCookie(cookie: string): Promise<void> {
+    public async updateSessionFromCookie(cookie: string, browserUserAgent?: string, browserRequestHeaders?: IBrowserRequestHeaders): Promise<void> {
         globalState.setCookie(cookie);
+        if (browserUserAgent) {
+            globalState.setBrowserUserAgent(browserUserAgent);
+        }
+        if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
+            globalState.setBrowserRequestHeaders(browserRequestHeaders);
+        }
         const data = await queryUserData();
         if (!data.isSignedIn || !data.username) {
             throw new Error("LeetCode did not return a signed-in user for the synced cookie.");
