@@ -547,6 +547,7 @@ class AuthSyncServer implements vscode.Disposable {
             "accept",
             "accept-language",
             "authorization",
+            "connection",
             "dnt",
             "priority",
             "sec-ch-ua",
@@ -561,6 +562,8 @@ class AuthSyncServer implements vscode.Disposable {
             "sec-fetch-dest",
             "sec-fetch-mode",
             "sec-fetch-site",
+            "sec-gpc",
+            "te",
             "user-agent",
         ].indexOf(name) >= 0;
     }

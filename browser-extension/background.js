@@ -416,6 +416,7 @@ function isReplayableLeetCodeHeader(name) {
         "accept",
         "accept-language",
         "authorization",
+        "connection",
         "dnt",
         "priority",
         "sec-ch-ua",
@@ -430,6 +431,8 @@ function isReplayableLeetCodeHeader(name) {
         "sec-fetch-dest",
         "sec-fetch-mode",
         "sec-fetch-site",
+        "sec-gpc",
+        "te",
         "user-agent",
     ].includes(name);
 }

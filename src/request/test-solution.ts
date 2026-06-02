@@ -416,6 +416,7 @@ function canonicalHeaderName(name: string): string | undefined {
         "accept": "Accept",
         "accept-language": "Accept-Language",
         "authorization": "Authorization",
+        "connection": "Connection",
         "dnt": "DNT",
         "priority": "Priority",
         "sec-ch-ua": "Sec-CH-UA",
@@ -430,6 +431,8 @@ function canonicalHeaderName(name: string): string | undefined {
         "sec-fetch-dest": "Sec-Fetch-Dest",
         "sec-fetch-mode": "Sec-Fetch-Mode",
         "sec-fetch-site": "Sec-Fetch-Site",
+        "sec-gpc": "Sec-GPC",
+        "te": "TE",
         "user-agent": "User-Agent",
     };
 
