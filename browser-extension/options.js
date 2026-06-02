@@ -14,6 +14,16 @@ form.addEventListener("submit", async (event) => {
     await saveSettings();
 });
 
+showCookieOnlyButtonInput.addEventListener("change", async () => {
+    await saveSettings(false);
+    setStatus(
+        showCookieOnlyButtonInput.checked
+            ? "Cookie-only sync button enabled in the popup."
+            : "Cookie-only sync button hidden from the popup.",
+        "success"
+    );
+});
+
 syncButton.addEventListener("click", async () => {
     await saveSettings(false);
     setStatus("Sending cookies only...", "");

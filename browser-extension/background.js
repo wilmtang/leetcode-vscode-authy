@@ -43,6 +43,26 @@ async function saveSettings(settings) {
     });
 }
 
+async function expireSyncCooldown(reason = "manual") {
+    const settings = await getSettings();
+    const cooldownMs = settings.cooldownMinutes * 60 * 1000;
+    const expiredState = {
+        lastSyncAt: settings.lastSyncAt ? Math.max(1, Date.now() - cooldownMs - 1000) : 0,
+    };
+
+    await storageSet(expiredState);
+
+    return {
+        ...addComputedSyncStatus({
+            ...settings,
+            ...expiredState,
+        }),
+        ok: true,
+        message: "Sync cooldown expired. Refresh leetcode.com, or click Run Code/Test on LeetCode, to capture cookies and browser request headers.",
+        reason,
+    };
+}
+
 async function getLeetCodeCookieHeader() {
     const cookies = await getCookiesForLeetCode();
     const uniqueCookies = new Map();
@@ -493,6 +513,13 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === "syncNow") {
         syncNow(message.reason || "manual").then(sendResponse, (error) => {
+            sendResponse({ ok: false, error: error.message || String(error) });
+        });
+        return true;
+    }
+
+    if (message.type === "expireNow") {
+        expireSyncCooldown(message.reason || "manual").then(sendResponse, (error) => {
             sendResponse({ ok: false, error: error.message || String(error) });
         });
         return true;

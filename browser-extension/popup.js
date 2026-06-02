@@ -4,6 +4,7 @@ const nextSyncElement = document.getElementById("next-sync");
 const lastIssueRow = document.getElementById("last-issue-row");
 const lastIssueElement = document.getElementById("last-issue");
 const statusElement = document.getElementById("status");
+const expireNowButton = document.getElementById("expire-now");
 const cookieOnlySection = document.getElementById("cookie-only-section");
 const cookieOnlySyncButton = document.getElementById("cookie-only-sync");
 const optionsButton = document.getElementById("open-options");
@@ -12,7 +13,14 @@ let currentSettings = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
     await refreshSettings();
-    setInterval(renderSettings, 30 * 1000);
+    setInterval(refreshSettings, 30 * 1000);
+});
+
+expireNowButton.addEventListener("click", async () => {
+    setStatus("Expiring sync cooldown...", "");
+    const result = await sendMessage({ type: "expireNow", reason: "popup-expire-now" });
+    setStatus(result.ok ? result.message || "Sync cooldown expired. Refresh leetcode.com to capture headers." : result.error, getStatusKind(result));
+    await refreshSettings();
 });
 
 cookieOnlySyncButton.addEventListener("click", async () => {
@@ -25,6 +33,14 @@ cookieOnlySyncButton.addEventListener("click", async () => {
 optionsButton.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
 });
+
+if (chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === "local" && changes.showCookieOnlyButton) {
+            refreshSettings();
+        }
+    });
+}
 
 async function refreshSettings() {
     currentSettings = await sendMessage({ type: "getSettings" });
