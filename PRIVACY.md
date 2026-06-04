@@ -33,11 +33,11 @@ machine.
 **The browser extension does not collect, transmit, distribute, or sell your
 data.**
 
-All authentication data, such as session cookies, accessed by the browser
-extension is kept local and is only transmitted to the local proxy server
-running on `127.0.0.1` / `localhost` created by the VS Code extension. No
-browser extension data is sent to any external or third-party servers by the
-browser extension.
+All authentication data, such as session cookies and LeetCode request headers,
+accessed by the browser extension is kept local and is only transmitted to the
+local proxy server running on `127.0.0.1` / `localhost` created by the VS Code
+extension. No browser extension data is sent to any external or third-party
+servers by the browser extension.
 
 ## Browser Extension Permissions
 
@@ -45,8 +45,8 @@ To function correctly, the browser extension requires the following permissions:
 
 - **Cookies**: To read authentication cookies from `leetcode.com` so they can be synced with the local VS Code extension.
 - **Storage**: To save local browser extension state and settings.
-- **Web Request**: To monitor requests to `leetcode.com` and trigger synchronization when login state changes.
-- **Host Permissions**: To access `leetcode.com` for cookies and `http://127.0.0.1/*` to send authentication data to your local VS Code extension.
+- **Web Request**: To observe LeetCode request headers needed for authenticated VS Code test requests, and to monitor requests to `leetcode.com` to trigger synchronization.
+- **Host Permissions**: To access `leetcode.com` for cookies/headers and `http://127.0.0.1/*` to send sync payload to your local VS Code extension listener.
 
 ## Changes to this Privacy Policy
 
