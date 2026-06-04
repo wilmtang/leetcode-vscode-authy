@@ -11,7 +11,7 @@
     "version": {
         "license": "MIT",
         "release_notes": {
-                "en-US": "Improves the add-on listing with clearer installation and auth-sync instructions."
+            "en-US": "Adds cookie-only sync, an expire-now action, and browser request-header syncing so VS Code can replay LeetCode test requests more reliably."
         }
     },
     "categories": {

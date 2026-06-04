@@ -3,9 +3,23 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.18.11]
+### Added
+- Replay browser-captured LeetCode request headers, including Firefox headers, when running test cases so auth-sync requests better match the signed-in browser session.
+
+### Changed
+- Store browser sync data without forcing an immediate login-state refresh, allowing cookie-only sync updates to remain lightweight.
+
+### Fixed
+- Improve authenticated LeetCode test requests for the current judger flow.
+
 ## [0.18.10]
 ### Fixed
 - Treat the auth sync `/health` endpoint as the source of truth for listener ownership so stale VS Code global state cannot block a reopened window from claiming a free port.
+
+## [0.18.9]
+### Fixed
+- Restore LeetCode test execution through the auth-sync request flow when the standard CLI test path cannot complete with the current LeetCode auth behavior.
 
 ## [0.18.8]
 ### Fixed
