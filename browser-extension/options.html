@@ -35,14 +35,14 @@
             <label>
                 <span>Sync cooldown</span>
                 <input id="cooldown-minutes" type="number" min="1" max="1440" inputmode="numeric">
-                <small>Minimum minutes between successful session sends. Default: 30.</small>
+                <small>Minimum minutes between successful automatic syncs. To sync again now, click Expire now in the popup, then open or refresh a leetcode.com page. Default: 30.</small>
             </label>
 
             <label class="check-row">
                 <input id="show-cookie-only-button" type="checkbox">
                 <span>
                     <strong>Show cookie-only sync button</strong>
-                    <small>Auto-saves this preference. Adds an optional popup button that sends cookies immediately. It cannot capture Cloudflare or browser request headers; use Expire now, then refresh LeetCode yourself, to capture headers from a real request.</small>
+                    <small>Auto-saves this preference. Adds an optional popup button that sends cookies immediately. It cannot capture Cloudflare or browser request headers; for normal sync, click Expire now, then open or refresh a leetcode.com page.</small>
                 </span>
             </label>
 

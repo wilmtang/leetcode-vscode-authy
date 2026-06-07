@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 expireNowButton.addEventListener("click", async () => {
     setStatus("Expiring sync cooldown...", "");
     const result = await sendMessage({ type: "expireNow", reason: "popup-expire-now" });
-    setStatus(result.ok ? result.message || "Sync cooldown expired. Refresh leetcode.com to capture headers." : result.error, getStatusKind(result));
+    setStatus(result.ok ? result.message || "Ready. Open or refresh a leetcode.com page to sync cookies and headers to VS Code." : result.error, getStatusKind(result));
     await refreshSettings();
 });
 

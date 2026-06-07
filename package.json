@@ -723,7 +723,7 @@
                         "type": "boolean",
                         "default": false,
                         "scope": "application",
-                        "description": "Opt in to anonymous usage telemetry for this unofficial fork. Telemetry is disabled by default."
+                        "description": "Opt in to anonymous usage telemetry. When enabled, events are sent to the official LeetCode plugin telemetry endpoint, not to an endpoint operated by this unofficial fork. Telemetry is disabled by default."
                     },
                     "leetcode.authSync.enabled": {
                         "type": "boolean",

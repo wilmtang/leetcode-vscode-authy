@@ -180,13 +180,13 @@ class LeetCodeManager extends EventEmitter {
                 cancellable: true,
             },
             async (progress: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => {
-                progress.report({ message: "Click Sync now in the browser extension." });
+                progress.report({ message: "In the browser extension, click Expire now, then open or refresh a leetcode.com page." });
                 return this.waitForAuthSyncSignIn(token);
             }
         );
 
         if (!signedIn) {
-            vscode.window.showWarningMessage("Still waiting for browser cookie sync. Sign in to LeetCode in your browser, then click Sync now in the browser extension.");
+            vscode.window.showWarningMessage("Still waiting for browser cookie sync. Sign in to LeetCode in your browser, click Expire now in the browser extension, then open or refresh a leetcode.com page.");
         }
     }
 

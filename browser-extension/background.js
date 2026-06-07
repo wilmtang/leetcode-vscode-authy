@@ -58,7 +58,7 @@ async function expireSyncCooldown(reason = "manual") {
             ...expiredState,
         }),
         ok: true,
-        message: "Sync cooldown expired. Refresh leetcode.com, or click Run Code/Test on LeetCode, to capture cookies and browser request headers.",
+        message: "Ready. Open or refresh a leetcode.com page to sync cookies and browser request headers to VS Code.",
         reason,
     };
 }

@@ -19,8 +19,11 @@ extension state so it can make those user-requested LeetCode requests.
 
 Telemetry is disabled by default. If you explicitly enable
 `leetcode.allowReportData`, the VS Code extension may send limited usage events
-such as command names and problem identifiers to the configured telemetry
-endpoint. Telemetry does not intentionally include LeetCode cookies, solution
+such as command names and problem identifiers to the official LeetCode plugin
+telemetry endpoint, not to an endpoint operated by this unofficial fork. The
+configured telemetry URLs are `https://analysis.leetcode.cn/i/event` for
+production and `https://analysis.lingkou.xyz/i/event` for non-production
+development. Telemetry does not intentionally include LeetCode cookies, solution
 source code, custom test input, or local file paths. Telemetry is also disabled
 when VS Code's global telemetry setting is disabled.
 

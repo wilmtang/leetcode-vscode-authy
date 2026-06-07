@@ -36,7 +36,7 @@ if (profileDirectory) {
 if (useCurrentProfile) {
     console.log("If Chrome is already running, quit Chrome first; existing Chrome instances can ignore --load-extension.");
 }
-console.log("Open or log in to https://leetcode.com in this profile, then click the extension's Sync Now button if needed.");
+console.log("Open or log in to https://leetcode.com in this profile. To force a fresh sync, click Expire now in the extension popup, then refresh a leetcode.com page.");
 
 const chromeArgs = [
     `--user-data-dir=${userDataDir}`,
