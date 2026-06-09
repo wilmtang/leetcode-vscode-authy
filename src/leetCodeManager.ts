@@ -15,6 +15,16 @@ import { globalState, IBrowserRequestHeaders } from "./globalState";
 import { queryUserData } from "./request/query-user-data";
 import { parseQuery } from "./utils/toolUtils";
 
+const chromeAuthSyncExtensionUrl: string = "https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck";
+const firefoxAuthSyncExtensionUrl: string = "https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/";
+const installChromeExtensionAction: string = "Install Chrome Extension";
+const installFirefoxAddOnAction: string = "Install Firefox Add-on";
+const continueWaitingAction: string = "Continue Waiting";
+const useCookieLoginAction: string = "Use Cookie Login";
+const installChromeAction: string = "Install Chrome";
+const installFirefoxAction: string = "Install Firefox";
+const showAuthSyncStatusAction: string = "Show Auth Sync Status";
+
 class LeetCodeManager extends EventEmitter {
     private currentUser: string | undefined;
     private userStatus: UserStatus;
@@ -103,8 +113,8 @@ class LeetCodeManager extends EventEmitter {
         const picks: Array<IQuickItemEx<string>> = []
         picks.push(
             {
-                label: 'Auto Cookie Sync',
-                detail: 'Wait for the browser extension to send your signed-in LeetCode session',
+                label: 'Auto Cookie Sync (requires browser extension)',
+                detail: 'Install the companion browser extension, sign in to leetcode.com, then refresh a LeetCode page',
                 value: 'AuthSync',
                 description: '[Recommended]'
             },
@@ -138,9 +148,7 @@ class LeetCodeManager extends EventEmitter {
         }
 
         try {
-            await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Fetching user data..." }, async () => {
-                await this.handleInputCookieSignIn()
-            });
+            await this.handleCookieSignInWithProgress();
         } catch (error) {
             promptForOpenOutputChannel(`Failed to log in. Please open the output channel for details`, DialogType.error);
         }
@@ -173,6 +181,13 @@ class LeetCodeManager extends EventEmitter {
             return;
         }
 
+        if (!globalState.getAuthSyncLastSyncedAt()) {
+            const shouldContinueWaiting: boolean = await this.promptForFirstAuthSyncSetup();
+            if (!shouldContinueWaiting) {
+                return;
+            }
+        }
+
         const signedIn: boolean = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -180,13 +195,81 @@ class LeetCodeManager extends EventEmitter {
                 cancellable: true,
             },
             async (progress: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => {
-                progress.report({ message: "In the browser extension, click Expire now, then open or refresh a leetcode.com page." });
+                progress.report({
+                    message: "Install or enable the browser extension, sign in to leetcode.com, click Expire now, then refresh a LeetCode page."
+                });
                 return this.waitForAuthSyncSignIn(token);
             }
         );
 
         if (!signedIn) {
-            vscode.window.showWarningMessage("Still waiting for browser cookie sync. Sign in to LeetCode in your browser, click Expire now in the browser extension, then open or refresh a leetcode.com page.");
+            await this.showAuthSyncNoSyncWarning();
+        }
+    }
+
+    private async handleCookieSignInWithProgress(): Promise<void> {
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Fetching user data..." }, async () => {
+            await this.handleInputCookieSignIn()
+        });
+    }
+
+    private async promptForFirstAuthSyncSetup(): Promise<boolean> {
+        const choice: string | undefined = await vscode.window.showInformationMessage(
+            "Auto Cookie Sync needs the LeetCode VS Code Auth Sync browser extension installed in Chrome or Firefox.",
+            installChromeExtensionAction,
+            installFirefoxAddOnAction,
+            continueWaitingAction,
+            useCookieLoginAction
+        );
+
+        switch (choice) {
+            case installChromeExtensionAction:
+                await openUrl(chromeAuthSyncExtensionUrl);
+                return true;
+            case installFirefoxAddOnAction:
+                await openUrl(firefoxAuthSyncExtensionUrl);
+                return true;
+            case useCookieLoginAction:
+                try {
+                    await this.handleCookieSignInWithProgress();
+                } catch (error) {
+                    promptForOpenOutputChannel(`Failed to log in. Please open the output channel for details`, DialogType.error);
+                }
+                return false;
+            case continueWaitingAction:
+            default:
+                return true;
+        }
+    }
+
+    private async showAuthSyncNoSyncWarning(): Promise<void> {
+        const choice: string | undefined = await vscode.window.showWarningMessage(
+            "No browser sync was received. Auto Cookie Sync only works when the companion browser extension is installed, enabled, and using the same port as VS Code.",
+            installChromeAction,
+            installFirefoxAction,
+            showAuthSyncStatusAction,
+            useCookieLoginAction
+        );
+
+        switch (choice) {
+            case installChromeAction:
+                await openUrl(chromeAuthSyncExtensionUrl);
+                break;
+            case installFirefoxAction:
+                await openUrl(firefoxAuthSyncExtensionUrl);
+                break;
+            case showAuthSyncStatusAction:
+                await vscode.commands.executeCommand("leetcode.authSync.status");
+                break;
+            case useCookieLoginAction:
+                try {
+                    await this.handleCookieSignInWithProgress();
+                } catch (error) {
+                    promptForOpenOutputChannel(`Failed to log in. Please open the output channel for details`, DialogType.error);
+                }
+                break;
+            default:
+                break;
         }
     }
 
