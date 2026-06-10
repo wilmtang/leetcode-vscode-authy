@@ -186,7 +186,8 @@ async function showAuthSyncStatus(): Promise<void> {
     const timing: string = `heartbeat ${formatDuration(snapshot.ownershipSettings.heartbeatMs)}, observer check ${formatDuration(snapshot.ownershipSettings.observerCheckMs)}`;
 
     vscode.window.showInformationMessage(
-        `Last sync: ${lastSync}. Auth Sync: ${serverStatus}. Secret: ${secretStatus}. Timing: ${timing}.`
+        `Last sync: ${lastSync}\nAuth Sync: ${serverStatus}\nSecret: ${secretStatus}\nTiming: ${timing}`,
+        { modal: true }
     );
 }
 

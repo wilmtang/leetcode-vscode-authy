@@ -9,7 +9,9 @@ import * as requireFromString from "require-from-string";
 import { ExtensionContext } from "vscode";
 import { ConfigurationChangeEvent, Disposable, MessageItem, ProgressLocation, window, workspace, WorkspaceConfiguration } from "vscode";
 import { leetCodeChannel } from "./leetCodeChannel";
-import { DirectTestUnsupportedError, testSolutionWithSyncedCookie } from "./request/test-solution";
+import { DirectApiUnsupportedError } from "./request/leetcode-http";
+import { testSolutionWithSyncedCookie } from "./request/test-solution";
+import { submitSolutionWithSyncedCookie } from "./request/submit-solution";
 import { Endpoint, IProblem, leetcodeHasInited, supportedPlugins } from "./shared";
 import { executeCommand, executeCommandWithProgress } from "./utils/cpUtils";
 import { normalizeTemplateComments } from "./utils/codeTemplateUtils";
@@ -168,6 +170,22 @@ class LeetCodeExecutor implements Disposable {
 
     public async submitSolution(filePath: string): Promise<string> {
         try {
+            return await window.withProgress({ location: ProgressLocation.Notification }, async (p) => {
+                p.report({ message: "Submitting to LeetCode..." });
+                return await submitSolutionWithSyncedCookie(filePath);
+            });
+        } catch (error) {
+            if (!(error instanceof DirectApiUnsupportedError)) {
+                throw error;
+            }
+            leetCodeChannel.appendLine(`[submit] Direct submit path unsupported: ${error.message}`);
+            if (!error.allowCliFallback) {
+                throw error;
+            }
+        }
+
+        leetCodeChannel.appendLine("[submit] Request mode: bundled vsc-leetcode-cli submit.");
+        try {
             return await this.executeCommandWithProgressEx("Submitting to LeetCode...", this.nodeExecutable, [await this.getLeetCodeBinaryPath(), "submit", `"${filePath}"`]);
         } catch (error) {
             if (error.result) {
@@ -184,7 +202,7 @@ class LeetCodeExecutor implements Disposable {
                 return await testSolutionWithSyncedCookie(filePath, testString);
             });
         } catch (error) {
-            if (!(error instanceof DirectTestUnsupportedError)) {
+            if (!(error instanceof DirectApiUnsupportedError)) {
                 throw error;
             }
             leetCodeChannel.appendLine(`[test] Direct test path unsupported: ${error.message}`);
