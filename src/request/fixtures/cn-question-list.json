@@ -1,0 +1,33 @@
+{
+  "data": {
+    "problemsetQuestionList": {
+      "hasMore": true,
+      "total": 3819,
+      "questions": [
+        {
+          "acRate": 0.5513509324867955,
+          "difficulty": "EASY",
+          "frontendQuestionId": "1",
+          "isFavor": false,
+          "paidOnly": false,
+          "status": "NOT_STARTED",
+          "title": "Two Sum",
+          "titleCn": "两数之和",
+          "titleSlug": "two-sum",
+          "topicTags": [
+            {
+              "name": "Array",
+              "nameTranslated": "数组",
+              "slug": "array"
+            },
+            {
+              "name": "Hash Table",
+              "nameTranslated": "哈希表",
+              "slug": "hash-table"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

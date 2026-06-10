@@ -1,0 +1,30 @@
+{
+  "data": {
+    "problemsetQuestionList": {
+      "total": 3540,
+      "questions": [
+        {
+          "acRate": 57.59199397996927,
+          "difficulty": "Easy",
+          "frontendQuestionId": "1",
+          "isFavor": false,
+          "paidOnly": false,
+          "questionId": "1",
+          "status": null,
+          "title": "Two Sum",
+          "titleSlug": "two-sum",
+          "topicTags": [
+            {
+              "name": "Array",
+              "slug": "array"
+            },
+            {
+              "name": "Hash Table",
+              "slug": "hash-table"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

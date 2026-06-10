@@ -1,0 +1,33 @@
+{
+  "data": {
+    "question": {
+      "codeSnippets": [
+        {
+          "code": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        \n    }\n};",
+          "lang": "C++",
+          "langSlug": "cpp"
+        }
+      ],
+      "content": "<p>Given an array of integers <code>nums</code> and an integer target...</p>",
+      "difficulty": "Easy",
+      "exampleTestcaseList": [
+        "[2,7,11,15]\n9",
+        "[3,2,4]\n6"
+      ],
+      "hints": [],
+      "questionFrontendId": "1",
+      "questionId": "1",
+      "sampleTestCase": "[2,7,11,15]\n9",
+      "stats": "{\"totalAccepted\":\"18500000\",\"totalSubmission\":\"32200000\"}",
+      "title": "Two Sum",
+      "titleSlug": "two-sum",
+      "topicTags": [
+        {
+          "name": "Array",
+          "slug": "array"
+        }
+      ],
+      "translatedContent": "<p>给定一个整数数组 <code>nums</code> 和一个整数目标值...</p>"
+    }
+  }
+}
