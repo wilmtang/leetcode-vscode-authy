@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 import { COMPANIES, TAGS } from "../data/companiesTags";
+import { leetCodeChannel } from "../leetCodeChannel";
 import { leetCodeManager } from "../leetCodeManager";
 import { formatAcceptanceRate, getFavoriteProblemSlugs, ILeetCodeProblem, listProblems as listProblemsViaApi } from "../request/leetcode-api";
 import { IProblem, UserStatus } from "../shared";
@@ -38,6 +39,10 @@ async function safeGetFavoriteSlugs(): Promise<Set<string> | undefined> {
     try {
         return await getFavoriteProblemSlugs();
     } catch (error) {
+        // Non-fatal, but log it: `isFavor` is no longer a usable fallback, so a
+        // failure here silently empties the Favorite tree. Surface it so it is
+        // diagnosable from the output channel.
+        leetCodeChannel.appendLine(`[favorites] Could not load the Favorite list; the Favorite tree may be empty: ${error}`);
         return undefined;
     }
 }

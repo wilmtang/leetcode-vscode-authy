@@ -16,7 +16,7 @@
 | 5 | Inline `$…$` math false positives (currency) | 🟡 Low | ✅ Fixed |
 | 6 | Redundant question-detail fetch when opening a problem | 🟡 Low | ✅ Fixed |
 | 7 | No HTTP request timeout | ⚪ Minor | ✅ Fixed |
-| 8 | Silent favorites degradation | ⚪ Minor | ⬜ Open |
+| 8 | Silent favorites degradation | ⚪ Minor | ✅ Fixed |
 | 9 | Empty code body when a language has no snippet | ⚪ Minor | ⬜ Open |
 | 10 | KaTeX CSS path is build-layout-relative | ⚪ Minor | ✅ Acceptable (no action) |
 
@@ -145,14 +145,15 @@ now amplified because a refresh is 30+ requests.
 `-m <seconds>` (`--max-time`). A stuck request now fails fast instead of hanging
 the whole refresh.
 
-### 8 — Silent favorites degradation ⚪ *(Open)*
+### 8 — Silent favorites degradation ⚪ *(✅ Fixed)*
 
 **Symptom.** If the favorites fetch fails, `safeGetFavoriteSlugs`
 ([list.ts](../src/commands/list.ts)) falls back to `isFavor` — which is now always
 `false` — so the Favorite tree silently empties with no signal to the user.
 
-**Fix.** Log the failure to the LeetCode output channel so it is diagnosable
-rather than silent.
+**Fix (done).** `safeGetFavoriteSlugs` now logs the failure to the LeetCode output
+channel (`[favorites] Could not load the Favorite list…`) before falling back, so
+an empty Favorite tree is diagnosable instead of silent.
 
 ### 9 — Empty code body when a language has no snippet ⚪ *(Open)*
 
@@ -184,3 +185,4 @@ fallback). No change needed — recorded for awareness.
 | 2026-06-16 | *(this branch)* | Fix #5: currency guard on the inline `$…$` math matcher (+ regression test). |
 | 2026-06-16 | *(this branch)* | Fix #6: reuse the generated file's question detail for the webview preview (one fetch, not two). |
 | 2026-06-16 | *(this branch)* | Fix #7: 30s default request timeout on axios + matching curl `--max-time`. |
+| 2026-06-16 | *(this branch)* | Fix #8: log the favorites-fetch failure so an empty Favorite tree is diagnosable. |
