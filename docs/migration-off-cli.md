@@ -35,7 +35,7 @@ requests using synced browser cookies, then remove the CLI dependency safely.
 | 6 | Sessions | ✅ Done — **removed** (feature retired by LeetCode) |
 | 7 | Favorites | ✅ Done |
 | 8 | Solutions / discussions | ✅ Done |
-| 9 | Remove the CLI | ⬜ Not started |
+| 9 | Remove the CLI | ✅ Done |
 | 10 | Docs & validation | ⬜ Not started |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started
@@ -70,8 +70,9 @@ modules. Status column updated as phases land.
 | **Solution / discussion** | ✅ Direct API | `show.ts` `showSolution` → `getTopSolutionArticle` (`ugcArticleSolutionArticles` + `ugcArticleSolutionArticle`); rendered by `leetCodeSolutionProvider` via `textRenderer`. **Phase 8 replaced `showSolution`.** |
 | **Sessions** | ⛔ Removed | The study-session feature was retired by LeetCode (REST `/session/` gone, no GraphQL equivalent surfaced). **Phase 6 deleted all session code** rather than reimplement it. |
 | **Favorites** | ✅ Direct API | `star.ts` → `add/removeFavoriteQuestion` (GraphQL **V2** mutations); the Favorite tree reads the default list's contents (`isFavor` is decoupled now). **Phase 7 replaced `toggleFavorite`.** |
-| **Switch endpoint** | ❌ CLI plugin | `switchEndpoint` enable/disables the `leetcode.cn` CLI plugin. Collapses to a settings write. → Phase 9. |
-| **`leetcode-api.ts`** (list/detail/userStatus/sessions, global+CN mappers) | ⚠️ Mostly written, wired only for `fetchUserStatus` | The rest (`listProblems`, `getQuestionDetail`, session CRUD) is verified by live tests but not yet consumed by any command. |
+| **Switch endpoint** | ✅ Settings write | `switchEndpoint` just writes `leetcode.endpoint`; `getUrl()` resolves the rest. **Phase 9 dropped the CLI plugin toggle.** |
+| **Submit / Test** | ✅ Direct API (no fallback) | `submit.ts`/`test.ts` call `submitSolutionWithSyncedCookie`/`testSolutionWithSyncedCookie` directly. **Phase 9 removed the CLI fallback and the `leetCodeExecutor` wrapper.** |
+| **`leetcode-api.ts`** | ✅ Fully consumed | `listProblems`, `getQuestionDetail`, `fetchUserStatus`, favorites + solutions are all wired into commands. Session CRUD was removed (Phase 6). |
 
 So the original Phases 3 and 6 are ~80% *coded* already; the work is to
 **consume** `leetcode-api.ts` and delete the CLI callsite, not write it.
@@ -312,13 +313,23 @@ coupling and startup dependency.
   (31 tests); live suite green (9 passing). The CLI `showSolution` is now dead
   code, removed in Phase 9.
 
-### Phase 9 — Remove the CLI ⬜
-- Drop `vsc-leetcode-cli` and `require-from-string` deps; delete
-  `leetcode.nodePath`; collapse `switchEndpoint` to a settings-only write; make
-  `deleteCache` a deprecated no-op; remove `leetCodeExecutor` shell-outs and
-  binary-path code. Keep WSL path utils only if still used for file paths.
-- **Done when:** no import/spawn of the CLI; `npm install` doesn't fetch it;
-  compiles and launches.
+### Phase 9 — Remove the CLI ✅
+- **Deleted `src/leetCodeExecutor.ts`** entirely (all callsites were migrated in
+  Phases 3–8). `submit.ts`/`test.ts` now call `submitSolutionWithSyncedCookie`/
+  `testSolutionWithSyncedCookie` directly (wrapped in the progress notification
+  the executor used to add) — **no CLI fallback**, honoring the ground rule.
+- `switchEndpoint` (plugin.ts) collapsed to a settings-only `leetcode.endpoint`
+  write; `deleteCache` is a deprecated no-op (command kept valid); `extension.ts`
+  dropped the executor import + disposal subscription.
+- Removed deps `vsc-leetcode-cli`, `require-from-string`, `unescape-js` and the
+  `@types/require-from-string` devDep; deleted the `leetcode.nodePath` setting;
+  removed the now-unused `normalizeTemplateComments` (+ helpers) and the
+  `loginArgsMapping`/`supportedPlugins`/`leetcodeHasInited` shared exports. Kept
+  `cpUtils`/`wslUtils` — still used for WSL **file-path** conversion (`wslpath`).
+- **Done:** no import/spawn of the CLI in `src` (only three vendored-data/comment
+  references remain); `npm install` no longer fetches `vsc-leetcode-cli`;
+  compiles; offline net green (31 tests). `require-from-string` lingers in
+  `node_modules` only as a transitive dep of another package, not our code.
 
 ### Phase 10 — Docs & validation ⬜
 - README auth-sync diagram (drop CLI session/cache), requirements (drop Node),
@@ -355,3 +366,4 @@ ground rules, never fall back after a confirmed Cloudflare/LeetCode rejection.
 | 2026-06-15 | *(this branch)* | Phase 6: removed the retired session feature wholesale (commands/API/executor/package.json/tests); status-bar item is now display-only. |
 | 2026-06-16 | *(this branch)* | Phase 7: favorites off the CLI via the GraphQL **V2** mutations (probed live); Favorite tree reads the default list's contents since `isFavor` is decoupled. |
 | 2026-06-16 | *(this branch)* | Phase 8: solutions off the CLI via `ugcArticleSolutionArticles`/`ugcArticleSolutionArticle` (probed live); rendered through the shared `textRenderer`; clear empty state. |
+| 2026-06-16 | *(this branch)* | Phase 9: deleted `leetCodeExecutor.ts`; submit/test call the direct path (no fallback); dropped `vsc-leetcode-cli`/`require-from-string`/`unescape-js` deps + `leetcode.nodePath`. |

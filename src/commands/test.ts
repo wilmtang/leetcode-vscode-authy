@@ -3,13 +3,23 @@
 
 import * as fse from "fs-extra";
 import * as vscode from "vscode";
-import { leetCodeExecutor } from "../leetCodeExecutor";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { leetCodeManager } from "../leetCodeManager";
+import { testSolutionWithSyncedCookie } from "../request/test-solution";
 import { IQuickItemEx, UserStatus } from "../shared";
 import { DialogType, promptForOpenOutputChannel, showFileSelectDialog } from "../utils/uiUtils";
 import { getActiveFilePath } from "../utils/workspaceUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
+
+function runTest(filePath: string, testString?: string): Thenable<string> {
+    return vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification },
+        async (p: vscode.Progress<{ message?: string }>) => {
+            p.report({ message: "Submitting to LeetCode..." });
+            return testSolutionWithSyncedCookie(filePath, testString);
+        },
+    );
+}
 
 export async function testSolution(uri?: vscode.Uri): Promise<void> {
     try {
@@ -50,7 +60,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
         let result: string | undefined;
         switch (choice.value) {
             case ":default":
-                result = await leetCodeExecutor.testSolution(filePath);
+                result = await runTest(filePath);
                 break;
             case ":direct":
                 const testString: string | undefined = await vscode.window.showInputBox({
@@ -60,7 +70,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
                     ignoreFocusOut: true,
                 });
                 if (testString) {
-                    result = await leetCodeExecutor.testSolution(filePath, testString);
+                    result = await runTest(filePath, testString);
                 }
                 break;
             case ":file":
@@ -68,7 +78,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
                 if (testFile && testFile.length) {
                     const input: string = (await fse.readFile(testFile[0].fsPath, "utf-8")).trim();
                     if (input) {
-                        result = await leetCodeExecutor.testSolution(filePath, input);
+                        result = await runTest(filePath, input);
                     } else {
                         vscode.window.showErrorMessage("The selected test file must not be empty.");
                     }

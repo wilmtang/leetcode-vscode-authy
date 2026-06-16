@@ -1,13 +1,9 @@
 // Copyright (c) jdneo. All rights reserved.
 // Licensed under the MIT license.
 
-import { leetCodeExecutor } from "../leetCodeExecutor";
-import { DialogType, promptForOpenOutputChannel } from "../utils/uiUtils";
-
+// Deprecated no-op. The extension no longer maintains a bundled-CLI cache; the
+// problem list and details are fetched directly each time. Kept so the existing
+// `leetcode.deleteCache` command and any callers stay valid.
 export async function deleteCache(): Promise<void> {
-    try {
-        await leetCodeExecutor.deleteCache();
-    } catch (error) {
-        await promptForOpenOutputChannel("Failed to delete cache. Please open the output channel for details.", DialogType.error);
-    }
+    return;
 }

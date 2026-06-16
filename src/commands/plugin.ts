@@ -3,7 +3,6 @@
 
 import * as vscode from "vscode";
 import { leetCodeTreeDataProvider } from "../explorer/LeetCodeTreeDataProvider";
-import { leetCodeExecutor } from "../leetCodeExecutor";
 import { IQuickItemEx } from "../shared";
 import { Endpoint, SortingStrategy } from "../shared";
 import { DialogType, promptForOpenOutputChannel, promptForSignIn } from "../utils/uiUtils";
@@ -32,8 +31,9 @@ export async function switchEndpoint(): Promise<void> {
     }
     const leetCodeConfig: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration("leetcode");
     try {
+        // The active endpoint is resolved purely from this setting via getUrl();
+        // there is no longer a CLI plugin to enable/disable.
         const endpoint: string = choice.value;
-        await leetCodeExecutor.switchEndpoint(endpoint);
         await leetCodeConfig.update("endpoint", endpoint, true /* UserSetting */);
         vscode.window.showInformationMessage(`Switched the endpoint to ${endpoint}`);
     } catch (error) {

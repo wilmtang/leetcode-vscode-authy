@@ -690,12 +690,6 @@
                         "scope": "application",
                         "description": "Determine whether to group all webview pages into the second editor column when solving problems."
                     },
-                    "leetcode.nodePath": {
-                        "type": "string",
-                        "default": "node",
-                        "scope": "application",
-                        "description": "The Node.js executable path. for example, C:\\Program Files\\nodejs\\node.exe"
-                    },
                     "leetcode.colorizeProblems": {
                         "type": "boolean",
                         "default": true,
@@ -796,7 +790,6 @@
         "@types/markdown-it": "^14.1.2",
         "@types/mocha": "^2.2.42",
         "@types/node": "^14.14.33",
-        "@types/require-from-string": "^1.2.0",
         "@types/vscode": "1.57.0",
         "@vscode/vsce": "^3.9.1",
         "adm-zip": "^0.5.17",
@@ -812,9 +805,6 @@
         "highlight.js": "^10.7.2",
         "katex": "^0.16.47",
         "lodash": "^4.18.1",
-        "markdown-it": "^14.2.0",
-        "require-from-string": "^2.0.2",
-        "unescape-js": "^1.1.4",
-        "vsc-leetcode-cli": "2.8.1"
+        "markdown-it": "^14.2.0"
     }
 }
