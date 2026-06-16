@@ -11,6 +11,12 @@ describe("renderDescriptionHtml", () => {
         assert.ok(html.indexOf("$a^2") < 0, "raw $-delimited source should be replaced");
     });
 
+    it("leaves paired currency amounts as plain text (no false-positive math)", () => {
+        const html: string = renderDescriptionHtml("<p>you have $5 and $3 left</p>");
+        assert.ok(html.indexOf("katex") < 0, "currency should not be rendered as math");
+        assert.ok(html.indexOf("$5 and $3") >= 0, "currency text should be preserved");
+    });
+
     it("renders display $$…$$ math in display mode", () => {
         const html: string = renderDescriptionHtml("<p>$$\\sum_{i=1}^{n} i$$</p>");
         assert.ok(html.indexOf("katex-display") >= 0, "expected display-mode KaTeX output");

@@ -13,7 +13,7 @@
 | 2 | Favorites & solutions broken on `leetcode.cn` | 🟠 Medium | 📄 Documented — won't fix (PRs welcome) |
 | 3 | Unbounded favorites pagination loop | 🟠 Medium | ✅ Fixed |
 | 4 | Preview webview XSS hardening (`'unsafe-inline'` + regex sanitizer) | 🟡 Low | ✅ Fixed |
-| 5 | Inline `$…$` math false positives (currency) | 🟡 Low | ⬜ Open |
+| 5 | Inline `$…$` math false positives (currency) | 🟡 Low | ✅ Fixed |
 | 6 | Redundant question-detail fetch when opening a problem | 🟡 Low | ⬜ Open |
 | 7 | No HTTP request timeout | ⚪ Minor | ⬜ Open |
 | 8 | Silent favorites degradation | ⚪ Minor | ⬜ Open |
@@ -109,15 +109,16 @@ event handler injected through the description HTML is now blocked by the CSP,
 independent of the (defense-in-depth) regex sanitizer. The `sanitizeHtml` pass is
 kept; the solution webview already had no `'unsafe-inline'`.
 
-### 5 — Inline `$…$` math false positives 🟡 *(Open)*
+### 5 — Inline `$…$` math false positives 🟡 *(✅ Fixed)*
 
 **Symptom.** `extractMathPlaceholders` treats any `$…$` on a line as LaTeX, so a
 description with literal currency ("you have $5 and $3") renders the span between
 the dollar signs as garbled math.
 
-**Fix.** Adopt the common currency guard: only treat `$…$` as math when the
-character after the closing `$` is **not a digit** (and the opening `$` is not
-followed by whitespace), so paired currency amounts are left alone.
+**Fix (done).** The inline matcher is now `/\$(?!\$)(?!\s)([^$\n]+?)\$(?!\d)/g`:
+the opening `$` must not be followed by whitespace and the closing `$` must not be
+followed by a digit, so paired currency amounts ("you have $5 and $3") stay as
+plain text. A regression test covers it; genuine inline math still renders.
 
 ### 6 — Redundant question-detail fetch when opening a problem 🟡 *(Open)*
 
@@ -175,3 +176,4 @@ fallback). No change needed — recorded for awareness.
 | 2026-06-16 | *(this branch)* | Fix #1: cache the catalog; star/sort soft-refresh; gate redundant status emits; de-dup overlapping fetches. |
 | 2026-06-16 | *(this branch)* | Fix #3: bound the favorites pagination loop by `totalLength` + a 50-page backstop. |
 | 2026-06-16 | *(this branch)* | Fix #4: nonce the preview's inline script; drop `script-src 'unsafe-inline'`. |
+| 2026-06-16 | *(this branch)* | Fix #5: currency guard on the inline `$…$` math matcher (+ regression test). |

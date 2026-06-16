@@ -35,8 +35,10 @@ export function extractMathPlaceholders(input: string): IMathExtraction {
     text = replaceMath(text, /\$\$([\s\S]+?)\$\$/g, true, math);
     text = replaceMath(text, /\\\[([\s\S]+?)\\\]/g, true, math);
     text = replaceMath(text, /\\\(([\s\S]+?)\\\)/g, false, math);
-    // Inline $…$ last, and only when it does not look like a stray currency `$`.
-    text = replaceMath(text, /\$(?!\$)([^$\n]+?)\$/g, false, math);
+    // Inline $…$ last. Currency guard: the opening `$` must not be followed by
+    // whitespace and the closing `$` must not be followed by a digit, so paired
+    // amounts like "you have $5 and $3" are left as plain text.
+    text = replaceMath(text, /\$(?!\$)(?!\s)([^$\n]+?)\$(?!\d)/g, false, math);
     return { text, math };
 }
 
