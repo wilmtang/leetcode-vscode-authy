@@ -12,6 +12,14 @@
         <h1>LeetCode Auth Sync</h1>
         <p class="summary">Syncs your LeetCode browser session to the VS Code extension on this machine.</p>
 
+        <section id="permission-section" class="permission-banner" hidden>
+            <h2>Permission needed</h2>
+            <p>This extension needs your permission to read your signed-in leetcode.com session before it can sync. Grant access, then open or refresh a leetcode.com page.</p>
+            <div class="actions">
+                <button id="grant-access" type="button">Grant access</button>
+            </div>
+        </section>
+
         <dl class="sync-details">
             <div>
                 <dt>Connection</dt>

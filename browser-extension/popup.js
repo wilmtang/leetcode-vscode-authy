@@ -1,9 +1,17 @@
+// Host permissions the extension needs to read the LeetCode session and reach
+// the VS Code server. On Chrome these are granted at install, so the popup's
+// permission banner stays hidden; on Firefox MV3 they are optional and must be
+// granted at runtime from a user gesture.
+const REQUIRED_ORIGINS = ["https://leetcode.com/*", "http://127.0.0.1/*"];
+
 const summaryElement = document.getElementById("summary");
 const lastSyncElement = document.getElementById("last-sync");
 const nextSyncElement = document.getElementById("next-sync");
 const lastIssueRow = document.getElementById("last-issue-row");
 const lastIssueElement = document.getElementById("last-issue");
 const statusElement = document.getElementById("status");
+const permissionSection = document.getElementById("permission-section");
+const grantAccessButton = document.getElementById("grant-access");
 const expireNowButton = document.getElementById("expire-now");
 const cookieOnlySection = document.getElementById("cookie-only-section");
 const cookieOnlySyncButton = document.getElementById("cookie-only-sync");
@@ -16,9 +24,34 @@ const clearFixtureButton = document.getElementById("clear-fixture");
 let currentSettings = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
-    await refreshSettings();
-    setInterval(refreshSettings, 30 * 1000);
+    await Promise.all([refreshSettings(), refreshPermissionState()]);
+    setInterval(() => {
+        refreshSettings();
+        refreshPermissionState();
+    }, 30 * 1000);
 });
+
+grantAccessButton.addEventListener("click", async () => {
+    // permissions.request() must be called synchronously from this click so the
+    // browser treats it as a user gesture, so it is invoked before any await.
+    const granted = await requestRequiredPermissions();
+    setStatus(
+        granted
+            ? "Access granted. Open or refresh a leetcode.com page to sync cookies and headers to VS Code."
+            : "Access was not granted. The extension can't read your LeetCode session without it.",
+        granted ? "success" : "error"
+    );
+    await refreshPermissionState();
+    await refreshSettings();
+});
+
+if (chrome.permissions && chrome.permissions.onAdded) {
+    chrome.permissions.onAdded.addListener(refreshPermissionState);
+}
+
+if (chrome.permissions && chrome.permissions.onRemoved) {
+    chrome.permissions.onRemoved.addListener(refreshPermissionState);
+}
 
 expireNowButton.addEventListener("click", async () => {
     setStatus("Expiring sync cooldown...", "");
@@ -80,6 +113,47 @@ if (chrome.storage && chrome.storage.onChanged) {
 async function refreshSettings() {
     currentSettings = await sendMessage({ type: "getSettings" });
     renderSettings();
+}
+
+async function refreshPermissionState() {
+    const granted = await hasRequiredPermissions();
+    permissionSection.hidden = granted;
+}
+
+function hasRequiredPermissions() {
+    return new Promise((resolve) => {
+        if (!chrome.permissions || !chrome.permissions.contains) {
+            // Without the permissions API there is nothing to gate on; assume the
+            // host access was granted at install (Chrome's behaviour).
+            resolve(true);
+            return;
+        }
+
+        try {
+            chrome.permissions.contains({ origins: REQUIRED_ORIGINS }, (granted) => {
+                resolve(!chrome.runtime.lastError && granted === true);
+            });
+        } catch (error) {
+            resolve(true);
+        }
+    });
+}
+
+function requestRequiredPermissions() {
+    return new Promise((resolve) => {
+        if (!chrome.permissions || !chrome.permissions.request) {
+            resolve(false);
+            return;
+        }
+
+        try {
+            chrome.permissions.request({ origins: REQUIRED_ORIGINS }, (granted) => {
+                resolve(!chrome.runtime.lastError && granted === true);
+            });
+        } catch (error) {
+            resolve(false);
+        }
+    });
 }
 
 function renderSettings() {

@@ -566,6 +566,13 @@ function registerLeetCodeXhrListener() {
         return;
     }
 
+    // Re-register from scratch so a newly granted leetcode.com host permission
+    // (optional on Firefox MV3, granted at runtime from the popup) takes effect
+    // without restarting the browser.
+    if (api.webRequest.onBeforeSendHeaders.hasListener(handleLeetCodeXhr)) {
+        api.webRequest.onBeforeSendHeaders.removeListener(handleLeetCodeXhr);
+    }
+
     const filter = {
         urls: ["https://leetcode.com/*"],
         types: ["xmlhttprequest"],
@@ -579,6 +586,10 @@ function registerLeetCodeXhrListener() {
 }
 
 registerLeetCodeXhrListener();
+
+if (api.permissions && api.permissions.onAdded) {
+    api.permissions.onAdded.addListener(() => registerLeetCodeXhrListener());
+}
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || typeof message.type !== "string") {

@@ -177,6 +177,12 @@ export async function listProblems(options: IListProblemsOptions = {}): Promise<
 export async function getQuestionDetail(titleSlug: string, needTranslation: boolean = true): Promise<ILeetCodeQuestionDetail> {
     const cookie: string = getRequiredCookie();
     const referer: string = `${getUrl("base")}/problems/${titleSlug}/`;
+    // `nameTranslated` only exists on the leetcode.cn TopicTagNode schema; the
+    // global (.com) endpoint rejects the whole query with HTTP 400 if it's
+    // requested. Mirror the endpoint split the list queries already make.
+    const topicTagSelection: string = isCnEndpoint()
+        ? "    topicTags { name slug nameTranslated }"
+        : "    topicTags { name slug }";
     const response: IGraphqlResponse<IQuestionDetailData> = await requestJson<IGraphqlResponse<IQuestionDetailData>>({
         method: "POST",
         url: getUrl("graphql"),
@@ -196,7 +202,7 @@ export async function getQuestionDetail(titleSlug: string, needTranslation: bool
                 "    stats",
                 "    title",
                 "    titleSlug",
-                "    topicTags { name slug nameTranslated }",
+                topicTagSelection,
                 "    translatedContent",
                 "  }",
                 "}",

@@ -1,42 +1,63 @@
-* {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
 :root {
     color-scheme: light dark;
-    --page-bg: #f5f5f5;
+
+    /* Light palette */
+    --page-bg: #f3f3f6;
     --panel-bg: #ffffff;
-    --text: #262626;
-    --muted: #666666;
-    --border: #d7d7d7;
-    --field-border: #c7c7c7;
-    --primary: #e65a00;
-    --primary-border: #d35400;
-    --primary-hover: #c94f00;
+    --surface: #f7f7fa;
+    --text: #1d1e22;
+    --muted: #6a6e77;
+    --border: #e5e5ea;
+    --divider: #ececf1;
+    --field-bg: #ffffff;
+    --field-border: #cdced5;
+    --primary: #e85d1c;
+    --primary-hover: #d6520f;
+    --primary-border: #d6520f;
+    --on-primary: #ffffff;
     --secondary-bg: #ffffff;
-    --secondary-hover: #f0f0f0;
-    --shadow: rgba(0, 0, 0, 0.08);
-    --success: #1f7a3a;
-    --danger: #b00020;
+    --secondary-hover: #f1f1f5;
+    --secondary-border: #d4d5dc;
+    --accent-soft: #fff2ea;
+    --accent-soft-border: #ffd3bb;
+    --shadow: 0 12px 34px rgba(22, 22, 34, 0.10);
+    --success: #1b7a3d;
+    --danger: #c12c40;
     --info: #4d5f7a;
+
+    --radius: 12px;
+    --radius-sm: 8px;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --page-bg: #17171d;
-        --panel-bg: #24242c;
-        --text: #f3f3f6;
-        --muted: #b8b8c2;
-        --border: #464650;
-        --field-border: #5a5a66;
-        --primary: #ff7a1a;
-        --primary-border: #ff8a33;
-        --primary-hover: #e96d12;
-        --secondary-bg: #2f2f38;
-        --secondary-hover: #383842;
-        --shadow: rgba(0, 0, 0, 0.32);
-        --success: #63c783;
-        --danger: #ff6b7f;
+        --page-bg: #131318;
+        --panel-bg: #1e1e25;
+        --surface: #26262e;
+        --text: #f1f2f5;
+        --muted: #a2a3ad;
+        --border: #33333c;
+        --divider: #2e2e37;
+        --field-bg: #25252d;
+        --field-border: #464650;
+        --primary: #f56e22;
+        --primary-hover: #e76319;
+        --primary-border: #ff8442;
+        --on-primary: #ffffff;
+        --secondary-bg: #2a2a32;
+        --secondary-hover: #33333d;
+        --secondary-border: #45454f;
+        --accent-soft: #2d2017;
+        --accent-soft-border: #5b3a22;
+        --shadow: 0 14px 36px rgba(0, 0, 0, 0.46);
+        --success: #5fce85;
+        --danger: #ff7286;
         --info: #a9bad8;
     }
 }
@@ -45,12 +66,14 @@ body {
     margin: 0;
     background: var(--page-bg);
     color: var(--text);
-    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
 }
 
-.page {
-    width: min(680px, calc(100vw - 32px));
-    margin: 28px auto;
+/* ---------- Layout shells ---------- */
+
+.panel {
+    background: var(--panel-bg);
 }
 
 .popup {
@@ -59,112 +82,85 @@ body {
 }
 
 .popup .panel {
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+    padding: 18px 18px 20px;
 }
 
+.page {
+    width: min(640px, calc(100vw - 32px));
+    margin: 32px auto;
+}
+
+.page .panel {
+    padding: 28px 28px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+/* ---------- Typography ---------- */
+
 h1 {
-    margin: 0 0 18px;
+    margin: 0 0 4px;
+    font-size: 19px;
+    font-weight: 680;
+    letter-spacing: -0.01em;
+}
+
+.page h1 {
+    margin-bottom: 22px;
     font-size: 22px;
-    font-weight: 650;
-    letter-spacing: 0;
 }
 
 h2 {
-    margin: 0 0 4px;
-    font-size: 14px;
-    font-weight: 650;
-    letter-spacing: 0;
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 660;
+    letter-spacing: 0.01em;
 }
 
-.panel {
-    padding: 20px;
-    background: var(--panel-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px var(--shadow);
-}
-
-label {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 18px;
-}
-
-label > span {
-    font-weight: 600;
-}
-
-small,
 .summary {
+    margin: 0 0 18px;
     color: var(--muted);
+    font-size: 13px;
 }
 
-.summary {
-    margin: 0 0 16px;
+small {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.45;
 }
 
-input[type="number"],
-input[type="password"] {
-    width: 100%;
-    min-height: 34px;
-    padding: 6px 8px;
-    border: 1px solid var(--field-border);
-    border-radius: 6px;
-    background: var(--panel-bg);
-    color: var(--text);
-    font: inherit;
-}
-
-input[type="checkbox"] {
-    accent-color: var(--primary);
-}
-
-.check-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.check-row input {
-    margin-top: 3px;
-}
-
-.check-row small {
-    display: block;
-    margin-top: 4px;
-    font-weight: 400;
-}
-
-.actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    margin-top: 4px;
-}
+/* ---------- Popup: status card ---------- */
 
 .sync-details {
-    margin: 0 0 16px;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
+    margin: 0 0 18px;
+    padding: 2px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
 }
 
 .sync-details div {
     display: grid;
-    grid-template-columns: 92px 1fr;
+    grid-template-columns: 96px 1fr;
     gap: 12px;
-    padding: 9px 0;
+    align-items: baseline;
+    padding: 11px 0;
+}
+
+/* `display: grid` above defeats the UA `[hidden]` rule, so restore it. */
+.sync-details div[hidden] {
+    display: none;
 }
 
 .sync-details div + div {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--divider);
 }
 
 .sync-details dt {
     color: var(--muted);
-    font-weight: 650;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .sync-details dd {
@@ -173,68 +169,218 @@ input[type="checkbox"] {
     overflow-wrap: anywhere;
 }
 
-.advanced {
-    margin-top: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-}
-
-.advanced > h2 {
-    margin-bottom: 14px;
-}
-
-.sync-mode {
-    margin: 0 0 14px;
-    padding: 10px 0 0;
-    border-top: 1px solid var(--border);
-}
-
-.sync-mode p {
-    margin: 0;
-    color: var(--muted);
-}
-
 .issue-row dd {
     color: var(--danger);
 }
 
+/* ---------- Popup: sections ---------- */
+
+.sync-mode {
+    margin: 18px 0 0;
+}
+
+.sync-mode p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+#dev-section {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--divider);
+}
+
+/* ---------- Popup: permission banner ---------- */
+
+.permission-banner {
+    margin: 0 0 18px;
+    padding: 14px 15px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-soft-border);
+    border-radius: var(--radius);
+}
+
+.permission-banner h2 {
+    margin: 0 0 6px;
+}
+
+.permission-banner p {
+    margin: 0 0 13px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.permission-banner .actions {
+    margin-top: 0;
+}
+
+/* ---------- Buttons ---------- */
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+}
+
 button {
-    min-height: 34px;
-    padding: 6px 12px;
+    min-height: 36px;
+    padding: 8px 16px;
     border: 1px solid var(--primary-border);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: var(--primary);
-    color: #ffffff;
+    color: var(--on-primary);
     font: inherit;
-    font-weight: 600;
+    font-weight: 620;
     cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.04s ease;
 }
 
 button:hover {
     background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+button:active {
+    transform: translateY(1px);
 }
 
 button.secondary {
-    border-color: var(--field-border);
+    border-color: var(--secondary-border);
     background: var(--secondary-bg);
     color: var(--text);
 }
 
 button.secondary:hover {
     background: var(--secondary-hover);
+    border-color: var(--secondary-border);
 }
 
-button:focus-visible,
-input:focus-visible {
-    outline: 2px solid var(--primary-border);
-    outline-offset: 2px;
+button:disabled {
+    opacity: 0.45;
+    cursor: default;
+    pointer-events: none;
 }
+
+/* ---------- Options: form fields ---------- */
+
+label {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 20px;
+}
+
+label > span {
+    font-size: 13.5px;
+    font-weight: 620;
+}
+
+input[type="number"],
+input[type="password"],
+input[type="text"] {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 11px;
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-sm);
+    background: var(--field-bg);
+    color: var(--text);
+    font: inherit;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+input[type="number"]:focus,
+input[type="password"]:focus,
+input[type="text"]:focus {
+    border-color: var(--primary-border);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+    outline: none;
+}
+
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+}
+
+.check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+
+.check-row input {
+    flex: none;
+    margin-top: 2px;
+}
+
+.check-row > span strong {
+    font-size: 13.5px;
+    font-weight: 620;
+}
+
+.check-row small {
+    display: block;
+    margin-top: 5px;
+    font-weight: 400;
+}
+
+/* ---------- Options: collapsible Advanced ---------- */
+
+.advanced {
+    margin-top: 6px;
+    padding-top: 22px;
+    border-top: 1px solid var(--divider);
+}
+
+.advanced > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 650;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.advanced > summary::-webkit-details-marker {
+    display: none;
+}
+
+.advanced > summary::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+.advanced[open] > summary {
+    margin-bottom: 18px;
+}
+
+.advanced[open] > summary::before {
+    transform: rotate(45deg);
+}
+
+/* ---------- Status line ---------- */
 
 .status {
     min-height: 20px;
     margin: 16px 0 0;
     color: var(--muted);
+    font-size: 13px;
     overflow-wrap: anywhere;
+}
+
+.status:empty {
+    min-height: 0;
+    margin: 0;
 }
 
 .status.success {
@@ -249,13 +395,11 @@ input:focus-visible {
     color: var(--info);
 }
 
-@media (max-width: 380px) {
-    .popup {
-        width: 320px;
-    }
+/* ---------- Focus ---------- */
 
-    .sync-details div {
-        grid-template-columns: 1fr;
-        gap: 2px;
-    }
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+    outline: 2px solid var(--primary-border);
+    outline-offset: 2px;
 }
