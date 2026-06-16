@@ -17,6 +17,9 @@ import {
 } from "../../request/leetcode-api";
 import { getQuestionDetail as getJudgeMetadata, IQuestionDetail } from "../../request/leetcode-http";
 import { submitSolutionWithSyncedCookie } from "../../request/submit-solution";
+import { explorerNodeManager } from "../../explorer/explorerNodeManager";
+import { leetCodeManager } from "../../leetCodeManager";
+import { IProblem } from "../../shared";
 import { applyAuthFixture, getAuthFixturePath, IAuthFixture, loadAuthFixture } from "./auth-fixture";
 
 // End-to-end sanity tests that hit the real LeetCode API with a locally-stored
@@ -51,10 +54,19 @@ describe("leetcode-api (live)", () => {
 
     describe("problem catalog", () => {
         let problems: ILeetCodeProblem[];
+        let catalogFetchMs: number;
 
         before(async function (): Promise<void> {
             this.timeout(60 * 1000);
+            const start: number = Date.now();
             problems = await listProblems({ needTranslation: false, showLocked: true });
+            catalogFetchMs = Date.now() - start;
+        });
+
+        it("fetches the whole catalog fast enough that search never feels stuck", () => {
+            // Parallel paging brings the ~3,900-problem fetch to ~5-8s (it was
+            // ~20s sequential, which made Search Problem look like it hung).
+            assert.ok(catalogFetchMs < 20000, `catalog fetch took ${catalogFetchMs}ms; search would feel stuck`);
         });
 
         it("returns a large, well-formed catalog", () => {
@@ -85,6 +97,30 @@ describe("leetcode-api (live)", () => {
                     previousId = id;
                 }
             }
+        });
+    });
+
+    describe("explorer catalog cache (Search / Pick One path)", () => {
+        // These commands now read the explorer's cached catalog instead of each
+        // triggering their own ~20s fetch (the cause of "Search Problem hangs").
+        before(async function (): Promise<void> {
+            this.timeout(60 * 1000);
+            // Sign the manager in from the fixture so list.listProblems() does not
+            // short-circuit on SignedOut.
+            await leetCodeManager.getLoginStatus();
+        });
+
+        it("getProblems returns the full catalog and caches it (repeat calls are instant)", async function (): Promise<void> {
+            this.timeout(60 * 1000);
+            const first: IProblem[] = await explorerNodeManager.getProblems();
+            assert.ok(first.length > 2000, `expected the full catalog from the cache path, got ${first.length}`);
+            assert.ok(first.some((p: IProblem) => p.titleSlug === "two-sum"), "expected two-sum in the cached catalog");
+
+            const start: number = Date.now();
+            const second: IProblem[] = await explorerNodeManager.getProblems();
+            const cachedMs: number = Date.now() - start;
+            assert.strictEqual(second.length, first.length, "the cached call should return the same catalog");
+            assert.ok(cachedMs < 500, `cached getProblems took ${cachedMs}ms; expected it served from cache, not refetched`);
         });
     });
 

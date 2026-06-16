@@ -19,8 +19,12 @@
 | 8 | Silent favorites degradation | ⚪ Minor | ✅ Fixed |
 | 9 | Empty code body when a language has no snippet | ⚪ Minor | ✅ Fixed |
 | 10 | KaTeX CSS path is build-layout-relative | ⚪ Minor | ✅ Acceptable (no action) |
+| 11 | **Search Problem hangs** — catalog re-fetched (~20s) on every search | 🔴 High | ✅ Fixed |
+| 12 | Status-bar item click does nothing (orphaned by session removal) | 🟡 Low | ✅ Fixed |
 
 Legend: ✅ fixed/acceptable · ⬜ open · 📄 documented (won't fix)
+
+Findings 11–12 were reported from interactive testing after the migration.
 
 ---
 
@@ -178,6 +182,45 @@ extension layout and is correct for the packaged VSIX; if the layout ever change
 math would render unstyled but still legible (the renderer keeps a literal
 fallback). No change needed — recorded for awareness.
 
+### 11 — Search Problem hangs (catalog re-fetched on every search) 🔴 *(✅ Fixed)*
+
+**Symptom (reported).** `LeetCode: Search Problem` shows a loading bar that never
+finishes (and "Pick One" is similarly slow). Submit/test work fine.
+
+**Cause.** `searchProblem`/`pickOne` ([show.ts](../src/commands/show.ts)) called
+`list.listProblems()`, which re-fetches the **entire ~3,900-problem catalog every
+time** — measured at **~20s** (39 pages fetched *sequentially*). `searchProblem`
+also passed that unresolved promise straight to `showQuickPick`, so the picker sat
+spinning the whole time (and would hang outright if the promise ever rejected
+inside `parseProblemsToPicks`).
+
+**Fix (done).**
+- **Use the cache.** `explorerNodeManager` gained `getProblems()` (cache-backed,
+  reusing any in-flight fetch); `searchProblem`/`pickOne` now resolve that array
+  *before* opening the quick pick. After the explorer's initial load the picker is
+  instant. `parseProblemsToPicks` is now a plain synchronous array mapper (no more
+  promise-in-quick-pick).
+- **Parallelize the fetch.** `listProblemsByCategory` fetches the first page to
+  learn the total, then fetches the rest with bounded concurrency
+  (`PROBLEM_LIST_CONCURRENCY = 8`, ordered via `mapWithConcurrency`). Even a cold
+  fetch dropped from **~20s → ~6s**; verified the result is still complete (3,880
+  problems, unique slugs, ascending-sorted, two-sum #1).
+- **E2E tests:** a live catalog-timing guard (`< 20s`) and a cache test asserting
+  `getProblems()` returns the full catalog and the repeat call is served from cache
+  (`< 500ms`).
+
+### 12 — Status-bar item click does nothing 🟡 *(✅ Fixed)*
+
+**Symptom (reported).** Clicking the `LeetCode: <user>` status-bar item shows
+nothing.
+
+**Cause.** The item's only command was `leetcode.manageSessions`, removed in
+Phase 6 (sessions retired), so Phase 6 left it command-less.
+
+**Fix (done).** Repointed the status-bar item to `leetcode.searchProblem` (with a
+"Search LeetCode problems" tooltip), so clicking it opens the now-fast problem
+search.
+
 ---
 
 ## Progress log
@@ -194,3 +237,4 @@ fallback). No change needed — recorded for awareness.
 | 2026-06-16 | *(this branch)* | Fix #8: log the favorites-fetch failure so an empty Favorite tree is diagnosable. |
 | 2026-06-16 | *(this branch)* | Fix #9: warn when the chosen language has no code snippet (empty scaffold explained). |
 | 2026-06-16 | *(this branch)* | Finding #2 (CN): flagged broken `leetcode.cn` support in the README (favorites + solutions) and invited PRs. Documented, not fixed. |
+| 2026-06-16 | *(this branch)* | Fix #11/#12: Search/Pick use the cached catalog + parallel paging (~20s→~6s, instant when warm); status bar repointed to search. Added live e2e tests. |

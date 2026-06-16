@@ -29,7 +29,6 @@ import { getActiveFilePath, selectWorkspaceFolder } from "../utils/workspaceUtil
 import * as wsl from "../utils/wslUtils";
 import { leetCodePreviewProvider } from "../webview/leetCodePreviewProvider";
 import { leetCodeSolutionProvider } from "../webview/leetCodeSolutionProvider";
-import * as list from "./list";
 import { getLeetCodeEndpoint } from "./plugin";
 import { globalState } from "../globalState";
 
@@ -80,7 +79,10 @@ export async function previewProblem(input: IProblem | vscode.Uri, isSideMode: b
 }
 
 export async function pickOne(): Promise<void> {
-    const problems: IProblem[] = await list.listProblems();
+    const problems: IProblem[] = await explorerNodeManager.getProblems();
+    if (problems.length === 0) {
+        return;
+    }
     const randomProblem: IProblem = problems[Math.floor(Math.random() * problems.length)];
     await showProblemInternal(randomProblem);
 }
@@ -97,7 +99,11 @@ export async function searchProblem(): Promise<void> {
         promptForSignIn();
         return;
     }
-    const choice: IQuickItemEx<IProblem> | undefined = await vscode.window.showQuickPick(parseProblemsToPicks(list.listProblems()), {
+    // Resolve the (cached) catalog first, then open the quick pick on a ready
+    // array — so the picker never sits on an unresolved promise (which could spin
+    // forever) and reuses the explorer cache instead of a fresh ~20s fetch.
+    const problems: IProblem[] = await explorerNodeManager.getProblems();
+    const choice: IQuickItemEx<IProblem> | undefined = await vscode.window.showQuickPick(parseProblemsToPicks(problems), {
         matchOnDetail: true,
         placeHolder: "Select one problem",
     });
@@ -310,21 +316,13 @@ async function generateProblemFile(
 async function showDescriptionView(node: IProblem, detail?: ILeetCodeQuestionDetail): Promise<void> {
     return previewProblem(node, vscode.workspace.getConfiguration("leetcode").get<boolean>("enableSideMode", true), detail);
 }
-async function parseProblemsToPicks(p: Promise<IProblem[]>): Promise<Array<IQuickItemEx<IProblem>>> {
-    return new Promise(async (resolve: (res: Array<IQuickItemEx<IProblem>>) => void): Promise<void> => {
-        const picks: Array<IQuickItemEx<IProblem>> = (await p).map((problem: IProblem) =>
-            Object.assign(
-                {},
-                {
-                    label: `${parseProblemDecorator(problem.state, problem.locked)}${problem.id}.${problem.name}`,
-                    description: "",
-                    detail: `AC rate: ${problem.passRate}, Difficulty: ${problem.difficulty}`,
-                    value: problem,
-                }
-            )
-        );
-        resolve(picks);
-    });
+function parseProblemsToPicks(problems: IProblem[]): Array<IQuickItemEx<IProblem>> {
+    return problems.map((problem: IProblem) => ({
+        label: `${parseProblemDecorator(problem.state, problem.locked)}${problem.id}.${problem.name}`,
+        description: "",
+        detail: `AC rate: ${problem.passRate}, Difficulty: ${problem.difficulty}`,
+        value: problem,
+    }));
 }
 
 function parseProblemDecorator(state: ProblemState, locked: boolean): string {

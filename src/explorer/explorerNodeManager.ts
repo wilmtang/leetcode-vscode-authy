@@ -27,6 +27,14 @@ class ExplorerNodeManager implements Disposable {
         this.rebuild();
     }
 
+    // The cached catalog for callers that need the full problem list (search,
+    // pick-one) without triggering their own ~20s re-fetch. Fetches once if the
+    // cache is cold; subsequent calls are instant and reuse any in-flight fetch.
+    public async getProblems(): Promise<IProblem[]> {
+        await this.refreshCache(false /* use cache when present */);
+        return this.cachedProblems ? this.cachedProblems.slice() : [];
+    }
+
     // Locally reflect a favorite toggle so the star path can soft-refresh without
     // re-fetching the whole catalog. Overwritten on the next forced refresh.
     public setProblemFavorite(problemId: string, isFavorite: boolean): void {

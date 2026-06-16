@@ -4,6 +4,9 @@ import { createHeaders, DirectApiUnsupportedError, requestJson } from "./leetcod
 
 const DEFAULT_PAGE_SIZE: number = 100;
 const PROBLEM_CATEGORIES: string[] = ["algorithms", "database", "shell", "concurrency"];
+// Max concurrent problem-list page requests. Keeps the full-catalog fetch fast
+// without hammering LeetCode with ~39 simultaneous requests.
+const PROBLEM_LIST_CONCURRENCY: number = 8;
 
 export interface IListProblemsOptions {
     needTranslation?: boolean;
@@ -612,20 +615,55 @@ export function formatAcceptanceRate(acRate: number): string {
 }
 
 async function listProblemsByCategory(categorySlug: string, cookie: string, options: IListProblemsOptions): Promise<ILeetCodeProblem[]> {
-    const problems: ILeetCodeProblem[] = [];
-    let skip: number = 0;
-    let total: number | undefined;
-    let hasMore: boolean = true;
+    const needTranslation: boolean = options.needTranslation !== false;
+    // Fetch the first page to learn the total, then fetch the remaining pages in
+    // parallel (bounded concurrency). The catalog is ~3,900 problems / ~39 pages;
+    // paging it sequentially took ~20s and made search/refresh feel stuck.
+    const firstPage: IProblemPage = await fetchProblemPage(categorySlug, 0, DEFAULT_PAGE_SIZE, cookie, needTranslation);
+    const problems: ILeetCodeProblem[] = [...firstPage.problems];
 
-    while (hasMore) {
-        const page: IProblemPage = await fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, cookie, options.needTranslation !== false);
+    if (firstPage.total === undefined) {
+        // No total reported: fall back to safe sequential paging.
+        let skip: number = DEFAULT_PAGE_SIZE;
+        let hasMore: boolean = firstPage.hasMore;
+        while (hasMore) {
+            const page: IProblemPage = await fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, cookie, needTranslation);
+            problems.push(...page.problems);
+            skip += DEFAULT_PAGE_SIZE;
+            hasMore = page.hasMore;
+        }
+        return problems;
+    }
+
+    const skips: number[] = [];
+    for (let skip: number = DEFAULT_PAGE_SIZE; skip < firstPage.total; skip += DEFAULT_PAGE_SIZE) {
+        skips.push(skip);
+    }
+    const pages: IProblemPage[] = await mapWithConcurrency(skips, PROBLEM_LIST_CONCURRENCY,
+        (skip: number) => fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, cookie, needTranslation));
+    for (const page of pages) {
         problems.push(...page.problems);
-        total = page.total;
-        skip += DEFAULT_PAGE_SIZE;
-        hasMore = page.hasMore && (total === undefined || skip < total);
     }
 
     return problems;
+}
+
+// Runs `fn` over `items` with at most `concurrency` in flight, preserving order.
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+    const results: R[] = new Array<R>(items.length);
+    let cursor: number = 0;
+    const worker = async (): Promise<void> => {
+        while (cursor < items.length) {
+            const index: number = cursor++;
+            results[index] = await fn(items[index]);
+        }
+    };
+    const workers: Array<Promise<void>> = [];
+    for (let i: number = 0; i < Math.min(concurrency, items.length); i++) {
+        workers.push(worker());
+    }
+    await Promise.all(workers);
+    return results;
 }
 
 async function fetchProblemPage(categorySlug: string, skip: number, limit: number, cookie: string, needTranslation: boolean): Promise<IProblemPage> {
