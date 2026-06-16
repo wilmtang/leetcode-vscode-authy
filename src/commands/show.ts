@@ -9,7 +9,7 @@ import { explorerNodeManager } from "../explorer/explorerNodeManager";
 import { LeetCodeNode } from "../explorer/LeetCodeNode";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { leetCodeManager } from "../leetCodeManager";
-import { getQuestionDetail, getTopSolutionArticle, ILeetCodeQuestionDetail, ILeetCodeSolutionArticle } from "../request/leetcode-api";
+import { getQuestionDetail, getTopSolutionArticle, ILeetCodeCodeSnippet, ILeetCodeQuestionDetail, ILeetCodeSolutionArticle } from "../request/leetcode-api";
 import { ISolutionFileMeta, parseSolutionFile } from "../request/leetcode-http";
 import { Endpoint, getUrl, IProblem, IQuickItemEx, languages, PREMIUM_URL_CN, PREMIUM_URL_GLOBAL, ProblemState } from "../shared";
 import { genFileExt, genFileName, getNodeIdFromFile } from "../utils/problemUtils";
@@ -288,6 +288,12 @@ async function generateProblemFile(
             return getQuestionDetail(slug, needTranslation);
         },
     );
+
+    // The generated code body is empty when LeetCode has no snippet for the
+    // chosen language; warn (don't block) so the empty scaffold is explained.
+    if (!detail.codeSnippets.some((snippet: ILeetCodeCodeSnippet) => snippet.langSlug === language)) {
+        vscode.window.showWarningMessage(`LeetCode has no ${language} code template for "${node.name}"; generated an empty file.`);
+    }
 
     await fse.createFile(filePath);
     await fse.writeFile(filePath, generateSolutionFileContent({

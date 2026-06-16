@@ -17,7 +17,7 @@
 | 6 | Redundant question-detail fetch when opening a problem | 🟡 Low | ✅ Fixed |
 | 7 | No HTTP request timeout | ⚪ Minor | ✅ Fixed |
 | 8 | Silent favorites degradation | ⚪ Minor | ✅ Fixed |
-| 9 | Empty code body when a language has no snippet | ⚪ Minor | ⬜ Open |
+| 9 | Empty code body when a language has no snippet | ⚪ Minor | ✅ Fixed |
 | 10 | KaTeX CSS path is build-layout-relative | ⚪ Minor | ✅ Acceptable (no action) |
 
 Legend: ✅ fixed/acceptable · ⬜ open · 📄 documented (won't fix)
@@ -155,14 +155,16 @@ the whole refresh.
 channel (`[favorites] Could not load the Favorite list…`) before falling back, so
 an empty Favorite tree is diagnosable instead of silent.
 
-### 9 — Empty code body when a language has no snippet ⚪ *(Open)*
+### 9 — Empty code body when a language has no snippet ⚪ *(✅ Fixed)*
 
 **Symptom.** If a problem has no `codeSnippet` for the chosen language,
 `generateSolutionFileContent` writes an empty code block between the `@lc`
 markers with no warning.
 
-**Fix.** Warn the user (without blocking generation) when the picked language has
-no snippet for the problem, so the empty scaffold is explained.
+**Fix (done).** `generateProblemFile` now checks whether `detail.codeSnippets`
+contains the chosen `langSlug`; if not, it shows a non-blocking warning
+("LeetCode has no `<lang>` code template…; generated an empty file") and still
+writes the scaffold (markers intact).
 
 ### 10 — KaTeX CSS path is build-layout-relative ✅ *(Acceptable — no action)*
 
@@ -186,3 +188,4 @@ fallback). No change needed — recorded for awareness.
 | 2026-06-16 | *(this branch)* | Fix #6: reuse the generated file's question detail for the webview preview (one fetch, not two). |
 | 2026-06-16 | *(this branch)* | Fix #7: 30s default request timeout on axios + matching curl `--max-time`. |
 | 2026-06-16 | *(this branch)* | Fix #8: log the favorites-fetch failure so an empty Favorite tree is diagnosable. |
+| 2026-06-16 | *(this branch)* | Fix #9: warn when the chosen language has no code snippet (empty scaffold explained). |
