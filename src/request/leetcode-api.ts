@@ -1,4 +1,4 @@
-import { globalState } from "../globalState";
+import { globalState, UserDataType } from "../globalState";
 import { getUrl, ProblemState } from "../shared";
 import { createHeaders, DirectApiUnsupportedError, requestJson } from "./leetcode-http";
 
@@ -43,12 +43,6 @@ export interface ILeetCodeQuestionDetail {
     title: string;
     titleSlug: string;
     topicTags: string[];
-}
-
-export interface ILeetCodeUserStatus {
-    isPremium?: boolean;
-    isSignedIn: boolean;
-    username: string;
 }
 
 export interface ILeetCodeSession {
@@ -140,7 +134,7 @@ interface IQuestionDetailItem {
 }
 
 interface IUserStatusData {
-    userStatus?: ILeetCodeUserStatus;
+    userStatus?: UserDataType;
 }
 
 interface ISessionResponse {
@@ -176,6 +170,10 @@ export async function listProblems(options: IListProblemsOptions = {}): Promise<
         .sort((left: ILeetCodeProblem, right: ILeetCodeProblem) => numericId(left.questionFrontendId) - numericId(right.questionFrontendId));
 }
 
+// Full problem detail for display (description, code snippets, hints, tags).
+// Distinct from the lighter getQuestionDetail() in leetcode-http.ts, which
+// selects only the judge metadata (questionId, testcases, metaData) needed by
+// the submit/test paths. Keep the two separate so the hot judge path stays lean.
 export async function getQuestionDetail(titleSlug: string, needTranslation: boolean = true): Promise<ILeetCodeQuestionDetail> {
     const cookie: string = getRequiredCookie();
     const referer: string = `${getUrl("base")}/problems/${titleSlug}/`;
@@ -217,7 +215,10 @@ export async function getQuestionDetail(titleSlug: string, needTranslation: bool
     return mapQuestionDetail(question, needTranslation);
 }
 
-export async function getUserStatus(): Promise<ILeetCodeUserStatus> {
+// Single source of truth for the signed-in user's status. Goes through
+// requestJson so it inherits the axios -> curl Cloudflare fallback that the
+// submit/test paths use (the former LcAxios-based query-user-data.ts had none).
+export async function fetchUserStatus(): Promise<UserDataType> {
     const cookie: string = getRequiredCookie();
     const response: IGraphqlResponse<IUserStatusData> = await requestJson<IGraphqlResponse<IUserStatusData>>({
         method: "POST",
@@ -227,9 +228,11 @@ export async function getUserStatus(): Promise<ILeetCodeUserStatus> {
             query: [
                 "query globalData {",
                 "  userStatus {",
-                "    isPremium",
                 "    isSignedIn",
+                "    isPremium",
+                "    isVerified",
                 "    username",
+                "    avatar",
                 "  }",
                 "}",
             ].join("\n"),
@@ -239,11 +242,12 @@ export async function getUserStatus(): Promise<ILeetCodeUserStatus> {
     }, { label: "user status" });
 
     assertNoGraphqlErrors(response, "user status");
-    if (!response.data || !response.data.userStatus) {
+    const userStatus: UserDataType | undefined = response.data && response.data.userStatus;
+    if (!userStatus) {
         throw new DirectApiUnsupportedError("LeetCode did not return user status.");
     }
 
-    return response.data.userStatus;
+    return userStatus;
 }
 
 export async function listSessions(): Promise<ILeetCodeSession[]> {
@@ -439,7 +443,7 @@ async function updateSession(method: "PUT" | "DELETE", data: object, label: stri
     return (response.sessions || []).map(mapSession);
 }
 
-function mapSession(raw: ISessionItem): ILeetCodeSession {
+export function mapSession(raw: ISessionItem): ILeetCodeSession {
     const acQuestions: number = raw.ac_questions || 0;
     const submittedQuestions: number = raw.submitted_questions || 0;
     const acSubmits: number = raw.total_acs || 0;

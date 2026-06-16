@@ -12,7 +12,7 @@ import { DialogType, openUrl, promptForOpenOutputChannel } from "./utils/uiUtils
 import * as wsl from "./utils/wslUtils";
 import { getLeetCodeEndpoint } from "./commands/plugin";
 import { globalState, IBrowserRequestHeaders } from "./globalState";
-import { queryUserData } from "./request/query-user-data";
+import { fetchUserStatus } from "./request/leetcode-api";
 import { parseQuery } from "./utils/toolUtils";
 
 const chromeAuthSyncExtensionUrl: string = "https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck";
@@ -55,7 +55,7 @@ class LeetCodeManager extends EventEmitter {
 
     public async updateSessionFromCookie(cookie: string, browserUserAgent?: string, browserRequestHeaders?: IBrowserRequestHeaders): Promise<void> {
         await this.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders);
-        const data = await queryUserData();
+        const data = await fetchUserStatus();
         if (!data.isSignedIn || !data.username) {
             throw new Error("LeetCode did not return a signed-in user for the synced cookie.");
         }

@@ -7,8 +7,12 @@ docs/**
 scripts/**
 web-ext-artifacts/**
 out/test/**
+out/src/test/**
 test/**
 src/**
+.mocharc.json
+.mocharc.integration.json
+tsconfig.test.json
 **/*.map
 .DS_Store
 .gitignore

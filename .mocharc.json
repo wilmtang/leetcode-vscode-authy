@@ -1,0 +1,5 @@
+{
+    "require": ["./src/test/support/register-vscode.js"],
+    "spec": ["out/src/test/**/*.test.js"],
+    "timeout": 10000
+}

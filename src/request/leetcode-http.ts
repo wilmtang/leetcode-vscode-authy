@@ -141,6 +141,9 @@ function parseCode(content: string): string {
 // Question detail
 // ---------------------------------------------------------------------------
 
+// Lightweight judge metadata (questionId, testcases, metaData, enableRunCode)
+// for the submit/test paths. For full display detail use getQuestionDetail()
+// in leetcode-api.ts instead.
 export async function getQuestionDetail(slug: string, cookie: string, referer: string): Promise<IQuestionDetail> {
     const response: IQuestionDetailResponse = await requestJson<IQuestionDetailResponse>({
         method: "POST",
