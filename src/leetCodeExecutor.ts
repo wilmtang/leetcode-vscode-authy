@@ -5,7 +5,6 @@ import * as cp from "child_process";
 import * as fse from "fs-extra";
 import * as os from "os";
 import * as path from "path";
-import * as requireFromString from "require-from-string";
 import { ExtensionContext } from "vscode";
 import { ConfigurationChangeEvent, Disposable, MessageItem, ProgressLocation, window, workspace, WorkspaceConfiguration } from "vscode";
 import { leetCodeChannel } from "./leetCodeChannel";
@@ -235,17 +234,6 @@ class LeetCodeExecutor implements Disposable {
             commandParams.push("-d");
         }
         await this.executeCommandWithProgressEx("Updating the favorite list...", this.nodeExecutable, commandParams);
-    }
-
-    public async getCompaniesAndTags(): Promise<{ companies: { [key: string]: string[] }, tags: { [key: string]: string[] } }> {
-        // preprocess the plugin source
-        const companiesTagsPath: string = path.join(this.leetCodeRootPath, "lib", "plugins", "company.js");
-        const companiesTagsSrc: string = (await fse.readFile(companiesTagsPath, "utf8")).replace(
-            "module.exports = plugin",
-            "module.exports = { COMPONIES, TAGS }",
-        );
-        const { COMPONIES, TAGS } = requireFromString(companiesTagsSrc, companiesTagsPath);
-        return { companies: COMPONIES, tags: TAGS };
     }
 
     public get node(): string {

@@ -29,7 +29,7 @@ requests using synced browser cookies, then remove the CLI dependency safely.
 | — | E2E sanity tests + `nameTranslated` fix | ✅ Done (uncommitted) |
 | 1 | Consolidate the HTTP layer | ✅ Done (`39ce44b`) |
 | 2 | Problem identity model | ✅ Done |
-| 3 | Wire problem list + vendor companies/tags | ⬜ Not started |
+| 3 | Wire problem list + vendor companies/tags | ✅ Done |
 | 4 | Description + template generation (+ KaTeX, slug hardening) | ⬜ Not started |
 | 5 | Auth/login off the CLI | ⬜ Not started |
 | 6 | Sessions | ⬜ Not started — ⚠️ scope grew (see phase) |
@@ -65,7 +65,7 @@ modules. Status column updated as phases land.
 | **Submit / Test** | ✅ Direct API (CLI fallback) | `submit-solution.ts` / `test-solution.ts` → `leetcode-http.ts`. Already done before this migration. |
 | **Sign-in user identity** | ✅ Direct API | `leetCodeManager` → `fetchUserStatus()` → `requestJson` (curl/Cloudflare fallback). **Phase 1 consolidated this off the old weak `LcAxios` layer.** |
 | **Startup login check** | ❌ CLI | `getLoginStatus()` → `leetCodeExecutor.getUserInfo()`. **Activation still shells out to the CLI.** → Phase 5. |
-| **Problem list** | ❌ CLI | `list.ts` regex-parses CLI text + reads `vsc-leetcode-cli/lib/plugins/company.js` via `require-from-string`. → Phase 3. |
+| **Problem list** | ✅ Direct API | `list.ts` → `leetcode-api.listProblems()`; companies/tags from the vendored `src/data/companiesTags.ts` snapshot. **Phase 3 deleted the regex parse + `getCompaniesAndTags()` plugin read.** |
 | **Description / template / solution** | ❌ CLI | `show.ts` → `getDescription`, `showProblem`, `showSolution`. → Phases 4 / 8. |
 | **Sessions** | ❌ CLI | `session.ts`. The direct-API replacement is **not** a drop-in — the REST `/session/` endpoint is gone (see Phase 6). |
 | **Favorites** | ❌ CLI | `star.ts` → `toggleFavorite`. → Phase 7. |
@@ -186,14 +186,21 @@ coupling and startup dependency.
   (Phase 4 slug embed, Phase 7 favorites) instead of re-deriving a slug from the
   display title. Compiles; offline test net green (15 tests).
 
-### Phase 3 — Wire problem list + vendor companies/tags ⬜
-- Swap `list.ts` to `leetcode-api.listProblems()`; delete the regex and
-  `getCompaniesAndTags()`.
-- **Vendor** static `COMPONIES`/`TAGS` into the repo as TS/JSON (labeled
-  inherited/static). This single step keeps the Company/Tag trees alive *and*
-  unblocks deleting `require-from-string` + the CLI plugin read.
-- **Done when:** explorer loads from API; company/tag trees populate from vendored
-  data; sort / hide-solved / locked behavior preserved.
+### Phase 3 — Wire problem list + vendor companies/tags ✅
+- Swapped `list.ts` to `leetcode-api.listProblems()`, mapping each
+  `ILeetCodeProblem` → `IProblem` (now carrying `questionId`/`titleSlug`).
+  Deleted the CLI-text regex parse, `parseProblemState`, and the trailing
+  `.reverse()` (the API already returns the catalog sorted ascending by frontend
+  id). Removed `getCompaniesAndTags()` and its `require-from-string` import from
+  `leetCodeExecutor` (the npm dep is dropped in Phase 9).
+- **Vendored** the static `COMPONIES`/`TAGS` tables into `src/data/companiesTags.ts`
+  (506 company entries, 984 tag entries, exported as `COMPANIES`/`TAGS`), extracted
+  verbatim from `vsc-leetcode-cli@2.8.1`. Labeled inherited/frozen; companies stay
+  vendored because the free API has no per-problem company data. `list.ts` keeps
+  the exact `COMPANIES[id] || ["Unknown"]` / `TAGS[id] || ["Unknown"]` behavior.
+- **Done:** explorer loads from the API; company/tag trees populate from vendored
+  data; sort (acceptance rate) / hide-solved / locked behavior preserved.
+  Compiles; offline test net green (17 tests, +2 vendored-data sanity guards).
 
 ### Phase 4 — Description + template generation ⬜ *(+ slug hardening + KaTeX)*
 - `previewProblem`/`showProblemInternal` use `getQuestionDetail`; generate the
@@ -275,3 +282,4 @@ ground rules, never fall back after a confirmed Cloudflare/LeetCode rejection.
 | 2026-06-15 | `5caee5f` | Browser dev-mode capture + live integration harness with local-only secret protection. |
 | 2026-06-15 | *(uncommitted)* | E2E sanity tests; fixed the `.com` `nameTranslated` HTTP 400 bug; documented the `/session/` 405 deprecation (Phase 6). |
 | 2026-06-15 | *(this branch)* | Phase 2: extended `IProblem`/`defaultProblem`/`LeetCodeNode` with the `questionFrontendId`/`questionId`/`titleSlug` identity model. |
+| 2026-06-15 | *(this branch)* | Phase 3: `list.ts` now reads the API (`listProblems()`); vendored `src/data/companiesTags.ts`; deleted the CLI regex parse + `getCompaniesAndTags()`. |
