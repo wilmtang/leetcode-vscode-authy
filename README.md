@@ -66,11 +66,14 @@ When sync succeeds, the VS Code notification closes, the LeetCode side bar refre
 
 If a browser store listing is not available for your browser yet, load `browser-extension/` manually from a local checkout using the contributor steps below.
 
-`Auto Cookie Sync` is only built and tested for `leetcode.com`. `leetcode.cn`
-support is inherited from the previous VS Code LeetCode extension behavior and
-has not been freshly validated in this fork. If you use `leetcode.cn`, or if
-web/manual login already works for your account, you can still use the existing
-`Web Authorization` or `LeetCode Cookie` login options.
+`Auto Cookie Sync` is only built and tested for `leetcode.com`. **`leetcode.cn`
+(力扣) support is currently broken** in this fork — Favorites and Solutions do not
+work on `.cn` after the move to direct API calls (details in the **Switch
+Endpoint** section below and in
+[docs/post-migration-audit.md](docs/post-migration-audit.md)). Contributions to
+restore `.cn` are very welcome. If you use `leetcode.cn`, or if web/manual login
+already works for your account, you can still use the existing `Web Authorization`
+or `LeetCode Cookie` login options.
 
 ### User Controls
 
@@ -324,9 +327,13 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 
   > Note: The accounts of different endpoints are **not** shared. Please make sure you are using the right endpoint. The extension will use `leetcode.com` by default.
   >
-  > `leetcode.cn` support is inherited from the previous extension state and has
-  > not been freshly tested by this fork. Current auth-sync development and
-  > direct-request validation are focused on `leetcode.com`.
+  > ⚠️ **`leetcode.cn` (力扣) support is currently broken.** After this fork moved
+  > off the bundled CLI to direct API calls, two features do not work on `.cn`:
+  > **Favorites** (the default star list is matched by the English name
+  > `"Favorite"`, but `.cn` names it `"收藏"`) and **Solutions** (`.cn` uses a
+  > different community-solutions API). Everything was validated only against
+  > `leetcode.com`. **Contributions to restore `.cn` are very welcome** — please
+  > open a PR. See [docs/post-migration-audit.md](docs/post-migration-audit.md).
 
 ---
 
@@ -380,7 +387,7 @@ Chrome publication is handled by `.github/workflows/chrome-extension.yml`. Build
 | `leetcode.hideSolved`             | Specify to hide the solved problems or not                                                                                                                                                                                                                    | `false`            |
 | `leetcode.defaultLanguage`        | Specify the default language used to solve the problem. Supported languages are: `bash`, `c`, `cpp`, `csharp`, `golang`, `java`, `javascript`, `kotlin`, `mysql`, `php`, `python`,`python3`,`ruby`,`rust`, `scala`, `swift`, `typescript`                     | `N/A`              |
 | `leetcode.useWsl`                 | Specify whether to use WSL or not                                                                                                                                                                                                                             | `false`            |
-| `leetcode.endpoint`               | Specify the active endpoint. Supported endpoints are: `leetcode`, `leetcode-cn`. `leetcode-cn` support is inherited from the previous extension and is not freshly validated by this fork.                                                                     | `leetcode`         |
+| `leetcode.endpoint`               | Specify the active endpoint. Supported endpoints are: `leetcode`, `leetcode-cn`. ⚠️ `leetcode-cn` is currently **broken** (favorites + solutions); only `leetcode` is validated. PRs welcome.                                                                       | `leetcode`         |
 | `leetcode.workspaceFolder`        | Specify the path of the workspace folder to store the problem files.                                                                                                                                                                                          | `""`               |
 | `leetcode.filePath`               | Specify the relative path under the workspace and the file name to save the problem files. More details can be found [here](https://github.com/wilmtang/vscode-leetcode/wiki/Customize-the-Relative-Folder-and-the-File-Name-of-the-Problem-File). |                    |
 | `leetcode.enableStatusBar`        | Specify whether the LeetCode status bar will be shown or not.                                                                                                                                                                                                 | `true`             |

@@ -77,6 +77,10 @@ More broadly, the direct-request paths added during the migration were validated
 only against `leetcode.com`; other CN endpoints (problem detail extras, etc.) are
 inherited and untested.
 
+**User-facing flag.** The README now states `leetcode.cn` support is currently
+broken (Switch Endpoint section, the auth-sync intro, and the `leetcode.endpoint`
+settings row) and invites PRs. No fix is planned here.
+
 ### 3 — Unbounded favorites pagination loop 🟠 *(✅ Fixed)*
 
 **Symptom / risk.** `getFavoriteProblemSlugs()` in
@@ -189,3 +193,4 @@ fallback). No change needed — recorded for awareness.
 | 2026-06-16 | *(this branch)* | Fix #7: 30s default request timeout on axios + matching curl `--max-time`. |
 | 2026-06-16 | *(this branch)* | Fix #8: log the favorites-fetch failure so an empty Favorite tree is diagnosable. |
 | 2026-06-16 | *(this branch)* | Fix #9: warn when the chosen language has no code snippet (empty scaffold explained). |
+| 2026-06-16 | *(this branch)* | Finding #2 (CN): flagged broken `leetcode.cn` support in the README (favorites + solutions) and invited PRs. Documented, not fixed. |
