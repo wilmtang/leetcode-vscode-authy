@@ -18,7 +18,7 @@ export interface IProblemAssociations {
 }
 
 export const COMPANIES: IProblemAssociations = {
-    "1": [
+    1: [
         "adobe",
         "airbnb",
         "amazon",
@@ -32,20 +32,20 @@ export const COMPANIES: IProblemAssociations = {
         "yahoo",
         "yelp"
     ],
-    "2": [
+    2: [
         "adobe",
         "airbnb",
         "amazon",
         "bloomberg",
         "microsoft"
     ],
-    "3": [
+    3: [
         "adobe",
         "amazon",
         "bloomberg",
         "yelp"
     ],
-    "4": [
+    4: [
         "adobe",
         "apple",
         "dropbox",
@@ -54,65 +54,65 @@ export const COMPANIES: IProblemAssociations = {
         "yahoo",
         "zenefits"
     ],
-    "5": [
+    5: [
         "amazon",
         "bloomberg",
         "microsoft"
     ],
-    "7": [
+    7: [
         "apple",
         "bloomberg"
     ],
-    "8": [
+    8: [
         "amazon",
         "bloomberg",
         "microsoft",
         "uber"
     ],
-    "10": [
+    10: [
         "airbnb",
         "facebook",
         "google",
         "twitter",
         "uber"
     ],
-    "11": [
+    11: [
         "bloomberg"
     ],
-    "12": [
+    12: [
         "twitter"
     ],
-    "13": [
+    13: [
         "bloomberg",
         "facebook",
         "microsoft",
         "uber",
         "yahoo"
     ],
-    "14": [
+    14: [
         "yelp"
     ],
-    "15": [
+    15: [
         "adobe",
         "amazon",
         "bloomberg",
         "facebook",
         "microsoft"
     ],
-    "16": [
+    16: [
         "bloomberg"
     ],
-    "17": [
+    17: [
         "amazon",
         "dropbox",
         "facebook",
         "google",
         "uber"
     ],
-    "18": [
+    18: [
         "linkedin"
     ],
-    "20": [
+    20: [
         "airbnb",
         "amazon",
         "bloomberg",
@@ -122,18 +122,18 @@ export const COMPANIES: IProblemAssociations = {
         "twitter",
         "zenefits"
     ],
-    "21": [
+    21: [
         "amazon",
         "apple",
         "linkedin",
         "microsoft"
     ],
-    "22": [
+    22: [
         "google",
         "uber",
         "zenefits"
     ],
-    "23": [
+    23: [
         "airbnb",
         "amazon",
         "facebook",
@@ -143,59 +143,59 @@ export const COMPANIES: IProblemAssociations = {
         "twitter",
         "uber"
     ],
-    "24": [
+    24: [
         "bloomberg",
         "microsoft",
         "uber"
     ],
-    "25": [
+    25: [
         "facebook",
         "microsoft"
     ],
-    "26": [
+    26: [
         "bloomberg",
         "facebook",
         "microsoft"
     ],
-    "28": [
+    28: [
         "apple",
         "facebook",
         "microsoft",
         "pocketgems"
     ],
-    "31": [
+    31: [
         "google"
     ],
-    "33": [
+    33: [
         "bloomberg",
         "facebook",
         "linkedin",
         "microsoft",
         "uber"
     ],
-    "34": [
+    34: [
         "linkedin"
     ],
-    "36": [
+    36: [
         "apple",
         "snapchat",
         "uber"
     ],
-    "37": [
+    37: [
         "snapchat",
         "uber"
     ],
-    "38": [
+    38: [
         "facebook"
     ],
-    "39": [
+    39: [
         "snapchat",
         "uber"
     ],
-    "40": [
+    40: [
         "snapchat"
     ],
-    "42": [
+    42: [
         "amazon",
         "apple",
         "bloomberg",
@@ -203,60 +203,60 @@ export const COMPANIES: IProblemAssociations = {
         "twitter",
         "zenefits"
     ],
-    "43": [
+    43: [
         "facebook",
         "twitter"
     ],
-    "44": [
+    44: [
         "facebook",
         "google",
         "snapchat",
         "twitter",
         "twosigma"
     ],
-    "46": [
+    46: [
         "linkedin",
         "microsoft"
     ],
-    "47": [
+    47: [
         "linkedin",
         "microsoft"
     ],
-    "48": [
+    48: [
         "amazon",
         "apple",
         "microsoft"
     ],
-    "49": [
+    49: [
         "amazon",
         "bloomberg",
         "facebook",
         "uber",
         "yelp"
     ],
-    "50": [
+    50: [
         "bloomberg",
         "facebook",
         "google",
         "linkedin"
     ],
-    "52": [
+    52: [
         "zenefits"
     ],
-    "53": [
+    53: [
         "bloomberg",
         "linkedin",
         "microsoft"
     ],
-    "54": [
+    54: [
         "google",
         "microsoft",
         "uber"
     ],
-    "55": [
+    55: [
         "microsoft"
     ],
-    "56": [
+    56: [
         "bloomberg",
         "facebook",
         "google",
@@ -265,116 +265,116 @@ export const COMPANIES: IProblemAssociations = {
         "twitter",
         "yelp"
     ],
-    "57": [
+    57: [
         "facebook",
         "google",
         "linkedin"
     ],
-    "60": [
+    60: [
         "twitter"
     ],
-    "62": [
+    62: [
         "bloomberg"
     ],
-    "63": [
+    63: [
         "bloomberg"
     ],
-    "65": [
+    65: [
         "linkedin"
     ],
-    "66": [
+    66: [
         "google"
     ],
-    "67": [
+    67: [
         "facebook"
     ],
-    "68": [
+    68: [
         "airbnb",
         "facebook",
         "linkedin"
     ],
-    "69": [
+    69: [
         "apple",
         "bloomberg",
         "facebook"
     ],
-    "70": [
+    70: [
         "adobe",
         "apple"
     ],
-    "71": [
+    71: [
         "facebook",
         "microsoft"
     ],
-    "73": [
+    73: [
         "amazon",
         "microsoft"
     ],
-    "75": [
+    75: [
         "facebook",
         "microsoft",
         "pocketgems"
     ],
-    "76": [
+    76: [
         "facebook",
         "linkedin",
         "snapchat",
         "uber"
     ],
-    "78": [
+    78: [
         "amazon",
         "bloomberg",
         "facebook",
         "uber"
     ],
-    "79": [
+    79: [
         "bloomberg",
         "facebook",
         "microsoft"
     ],
-    "80": [
+    80: [
         "facebook"
     ],
-    "85": [
+    85: [
         "facebook"
     ],
-    "88": [
+    88: [
         "bloomberg",
         "facebook",
         "microsoft"
     ],
-    "89": [
+    89: [
         "amazon"
     ],
-    "90": [
+    90: [
         "facebook"
     ],
-    "91": [
+    91: [
         "facebook",
         "microsoft",
         "uber"
     ],
-    "94": [
+    94: [
         "microsoft"
     ],
-    "96": [
+    96: [
         "snapchat"
     ],
-    "98": [
+    98: [
         "amazon",
         "bloomberg",
         "facebook",
         "microsoft"
     ],
-    "100": [
+    100: [
         "bloomberg"
     ],
-    "101": [
+    101: [
         "bloomberg",
         "linkedin",
         "microsoft"
     ],
-    "102": [
+    102: [
         "amazon",
         "apple",
         "bloomberg",
@@ -382,111 +382,111 @@ export const COMPANIES: IProblemAssociations = {
         "linkedin",
         "microsoft"
     ],
-    "103": [
+    103: [
         "bloomberg",
         "linkedin",
         "microsoft"
     ],
-    "104": [
+    104: [
         "apple",
         "linkedin",
         "uber",
         "yahoo"
     ],
-    "105": [
+    105: [
         "bloomberg"
     ],
-    "106": [
+    106: [
         "microsoft"
     ],
-    "108": [
+    108: [
         "airbnb"
     ],
-    "109": [
+    109: [
         "zenefits"
     ],
-    "110": [
+    110: [
         "bloomberg"
     ],
-    "112": [
+    112: [
         "microsoft"
     ],
-    "113": [
+    113: [
         "bloomberg"
     ],
-    "114": [
+    114: [
         "microsoft"
     ],
-    "116": [
+    116: [
         "microsoft"
     ],
-    "117": [
+    117: [
         "bloomberg",
         "facebook",
         "microsoft"
     ],
-    "118": [
+    118: [
         "apple",
         "twitter"
     ],
-    "119": [
+    119: [
         "amazon"
     ],
-    "121": [
+    121: [
         "amazon",
         "bloomberg",
         "facebook",
         "microsoft",
         "uber"
     ],
-    "122": [
+    122: [
         "bloomberg"
     ],
-    "124": [
+    124: [
         "baidu",
         "microsoft"
     ],
-    "125": [
+    125: [
         "facebook",
         "microsoft",
         "uber",
         "zenefits"
     ],
-    "126": [
+    126: [
         "amazon",
         "yelp"
     ],
-    "127": [
+    127: [
         "amazon",
         "facebook",
         "linkedin",
         "snapchat",
         "yelp"
     ],
-    "128": [
+    128: [
         "facebook",
         "google"
     ],
-    "131": [
+    131: [
         "bloomberg"
     ],
-    "133": [
+    133: [
         "facebook",
         "google",
         "pocketgems",
         "uber"
     ],
-    "136": [
+    136: [
         "airbnb",
         "palantir"
     ],
-    "138": [
+    138: [
         "amazon",
         "bloomberg",
         "microsoft",
         "uber"
     ],
-    "139": [
+    139: [
         "amazon",
         "bloomberg",
         "facebook",
@@ -495,20 +495,20 @@ export const COMPANIES: IProblemAssociations = {
         "uber",
         "yahoo"
     ],
-    "140": [
+    140: [
         "dropbox",
         "google",
         "snapchat",
         "twitter",
         "uber"
     ],
-    "141": [
+    141: [
         "amazon",
         "bloomberg",
         "microsoft",
         "yahoo"
     ],
-    "146": [
+    146: [
         "amazon",
         "bloomberg",
         "facebook",
@@ -521,28 +521,28 @@ export const COMPANIES: IProblemAssociations = {
         "yahoo",
         "zenefits"
     ],
-    "149": [
+    149: [
         "apple",
         "linkedin",
         "twitter"
     ],
-    "150": [
+    150: [
         "linkedin"
     ],
-    "151": [
+    151: [
         "apple",
         "bloomberg",
         "microsoft",
         "snapchat",
         "yelp"
     ],
-    "152": [
+    152: [
         "linkedin"
     ],
-    "153": [
+    153: [
         "microsoft"
     ],
-    "155": [
+    155: [
         "amazon",
         "bloomberg",
         "google",
@@ -550,128 +550,128 @@ export const COMPANIES: IProblemAssociations = {
         "uber",
         "zenefits"
     ],
-    "156": [
+    156: [
         "linkedin"
     ],
-    "157": [
+    157: [
         "facebook"
     ],
-    "158": [
+    158: [
         "bloomberg",
         "facebook",
         "google"
     ],
-    "159": [
+    159: [
         "google"
     ],
-    "160": [
+    160: [
         "airbnb",
         "amazon",
         "bloomberg",
         "microsoft"
     ],
-    "161": [
+    161: [
         "facebook",
         "snapchat",
         "twitter",
         "uber"
     ],
-    "162": [
+    162: [
         "google",
         "microsoft"
     ],
-    "163": [
+    163: [
         "google"
     ],
-    "165": [
+    165: [
         "apple",
         "microsoft"
     ],
-    "166": [
+    166: [
         "google"
     ],
-    "167": [
+    167: [
         "amazon"
     ],
-    "168": [
+    168: [
         "facebook",
         "microsoft",
         "zenefits"
     ],
-    "169": [
+    169: [
         "adobe",
         "zenefits"
     ],
-    "170": [
+    170: [
         "linkedin"
     ],
-    "171": [
+    171: [
         "microsoft",
         "uber"
     ],
-    "172": [
+    172: [
         "bloomberg"
     ],
-    "173": [
+    173: [
         "facebook",
         "google",
         "linkedin",
         "microsoft"
     ],
-    "174": [
+    174: [
         "microsoft"
     ],
-    "186": [
+    186: [
         "amazon",
         "microsoft",
         "uber"
     ],
-    "187": [
+    187: [
         "linkedin"
     ],
-    "189": [
+    189: [
         "amazon",
         "bloomberg",
         "microsoft"
     ],
-    "190": [
+    190: [
         "airbnb",
         "apple"
     ],
-    "191": [
+    191: [
         "apple",
         "microsoft"
     ],
-    "195": [
+    195: [
         "adobe"
     ],
-    "198": [
+    198: [
         "airbnb",
         "linkedin"
     ],
-    "199": [
+    199: [
         "amazon"
     ],
-    "200": [
+    200: [
         "amazon",
         "facebook",
         "google",
         "microsoft",
         "zenefits"
     ],
-    "202": [
+    202: [
         "airbnb",
         "twitter",
         "uber"
     ],
-    "204": [
+    204: [
         "amazon",
         "microsoft"
     ],
-    "205": [
+    205: [
         "linkedin"
     ],
-    "206": [
+    206: [
         "adobe",
         "amazon",
         "apple",
@@ -685,13 +685,13 @@ export const COMPANIES: IProblemAssociations = {
         "yelp",
         "zenefits"
     ],
-    "207": [
+    207: [
         "apple",
         "uber",
         "yelp",
         "zenefits"
     ],
-    "208": [
+    208: [
         "bloomberg",
         "facebook",
         "google",
@@ -699,29 +699,29 @@ export const COMPANIES: IProblemAssociations = {
         "twitter",
         "uber"
     ],
-    "209": [
+    209: [
         "facebook"
     ],
-    "210": [
+    210: [
         "facebook",
         "zenefits"
     ],
-    "211": [
+    211: [
         "facebook"
     ],
-    "212": [
+    212: [
         "airbnb",
         "google",
         "microsoft"
     ],
-    "213": [
+    213: [
         "microsoft"
     ],
-    "214": [
+    214: [
         "google",
         "pocketgems"
     ],
-    "215": [
+    215: [
         "amazon",
         "apple",
         "bloomberg",
@@ -729,178 +729,178 @@ export const COMPANIES: IProblemAssociations = {
         "microsoft",
         "pocketgems"
     ],
-    "217": [
+    217: [
         "airbnb",
         "palantir",
         "yahoo"
     ],
-    "218": [
+    218: [
         "facebook",
         "google",
         "microsoft",
         "twitter",
         "yelp"
     ],
-    "219": [
+    219: [
         "airbnb",
         "palantir"
     ],
-    "220": [
+    220: [
         "airbnb",
         "palantir"
     ],
-    "221": [
+    221: [
         "airbnb",
         "apple",
         "facebook"
     ],
-    "224": [
+    224: [
         "google"
     ],
-    "225": [
+    225: [
         "bloomberg"
     ],
-    "227": [
+    227: [
         "airbnb"
     ],
-    "228": [
+    228: [
         "google"
     ],
-    "229": [
+    229: [
         "zenefits"
     ],
-    "230": [
+    230: [
         "bloomberg",
         "google",
         "uber"
     ],
-    "231": [
+    231: [
         "google"
     ],
-    "232": [
+    232: [
         "bloomberg",
         "microsoft"
     ],
-    "234": [
+    234: [
         "amazon",
         "facebook"
     ],
-    "235": [
+    235: [
         "amazon",
         "facebook",
         "microsoft",
         "twitter"
     ],
-    "236": [
+    236: [
         "amazon",
         "apple",
         "facebook",
         "linkedin",
         "microsoft"
     ],
-    "237": [
+    237: [
         "adobe",
         "apple",
         "microsoft"
     ],
-    "238": [
+    238: [
         "amazon",
         "apple",
         "facebook",
         "linkedin",
         "microsoft"
     ],
-    "239": [
+    239: [
         "amazon",
         "google",
         "zenefits"
     ],
-    "240": [
+    240: [
         "amazon",
         "apple",
         "google"
     ],
-    "242": [
+    242: [
         "amazon",
         "uber",
         "yelp"
     ],
-    "243": [
+    243: [
         "linkedin"
     ],
-    "244": [
+    244: [
         "linkedin"
     ],
-    "245": [
+    245: [
         "linkedin"
     ],
-    "246": [
+    246: [
         "google"
     ],
-    "247": [
+    247: [
         "google"
     ],
-    "249": [
+    249: [
         "google",
         "uber"
     ],
-    "251": [
+    251: [
         "airbnb",
         "google",
         "twitter",
         "zenefits"
     ],
-    "252": [
+    252: [
         "facebook"
     ],
-    "253": [
+    253: [
         "facebook",
         "google",
         "snapchat"
     ],
-    "254": [
+    254: [
         "linkedin",
         "uber"
     ],
-    "255": [
+    255: [
         "zenefits"
     ],
-    "256": [
+    256: [
         "linkedin"
     ],
-    "257": [
+    257: [
         "apple",
         "facebook",
         "google"
     ],
-    "258": [
+    258: [
         "adobe",
         "microsoft"
     ],
-    "259": [
+    259: [
         "google"
     ],
-    "261": [
+    261: [
         "facebook",
         "google",
         "zenefits"
     ],
-    "262": [
+    262: [
         "uber"
     ],
-    "265": [
+    265: [
         "facebook"
     ],
-    "266": [
+    266: [
         "bloomberg",
         "google",
         "uber"
     ],
-    "268": [
+    268: [
         "bloomberg",
         "microsoft"
     ],
-    "269": [
+    269: [
         "airbnb",
         "facebook",
         "google",
@@ -908,106 +908,106 @@ export const COMPANIES: IProblemAssociations = {
         "snapchat",
         "twitter"
     ],
-    "270": [
+    270: [
         "google",
         "microsoft",
         "snapchat"
     ],
-    "271": [
+    271: [
         "google"
     ],
-    "272": [
+    272: [
         "google"
     ],
-    "273": [
+    273: [
         "facebook",
         "microsoft"
     ],
-    "274": [
+    274: [
         "bloomberg",
         "facebook",
         "google"
     ],
-    "275": [
+    275: [
         "facebook"
     ],
-    "276": [
+    276: [
         "google"
     ],
-    "277": [
+    277: [
         "facebook",
         "linkedin"
     ],
-    "278": [
+    278: [
         "facebook"
     ],
-    "279": [
+    279: [
         "google"
     ],
-    "280": [
+    280: [
         "google"
     ],
-    "281": [
+    281: [
         "google"
     ],
-    "282": [
+    282: [
         "facebook",
         "google"
     ],
-    "283": [
+    283: [
         "bloomberg",
         "facebook"
     ],
-    "284": [
+    284: [
         "apple",
         "google",
         "yahoo"
     ],
-    "285": [
+    285: [
         "facebook",
         "microsoft",
         "pocketgems"
     ],
-    "286": [
+    286: [
         "facebook",
         "google"
     ],
-    "287": [
+    287: [
         "bloomberg"
     ],
-    "288": [
+    288: [
         "google"
     ],
-    "289": [
+    289: [
         "dropbox",
         "google",
         "snapchat",
         "twosigma"
     ],
-    "290": [
+    290: [
         "dropbox",
         "uber"
     ],
-    "291": [
+    291: [
         "dropbox",
         "uber"
     ],
-    "292": [
+    292: [
         "adobe"
     ],
-    "293": [
+    293: [
         "google"
     ],
-    "294": [
+    294: [
         "google"
     ],
-    "295": [
+    295: [
         "google"
     ],
-    "296": [
+    296: [
         "twitter"
     ],
-    "297": [
+    297: [
         "amazon",
         "bloomberg",
         "facebook",
@@ -1017,223 +1017,223 @@ export const COMPANIES: IProblemAssociations = {
         "uber",
         "yahoo"
     ],
-    "298": [
+    298: [
         "google"
     ],
-    "300": [
+    300: [
         "microsoft"
     ],
-    "301": [
+    301: [
         "facebook"
     ],
-    "302": [
+    302: [
         "google"
     ],
-    "303": [
+    303: [
         "palantir"
     ],
-    "305": [
+    305: [
         "google"
     ],
-    "308": [
+    308: [
         "google"
     ],
-    "309": [
+    309: [
         "google"
     ],
-    "310": [
+    310: [
         "google"
     ],
-    "311": [
+    311: [
         "facebook",
         "linkedin"
     ],
-    "312": [
+    312: [
         "google",
         "snapchat"
     ],
-    "313": [
+    313: [
         "google"
     ],
-    "314": [
+    314: [
         "facebook",
         "google",
         "snapchat"
     ],
-    "315": [
+    315: [
         "google"
     ],
-    "316": [
+    316: [
         "google"
     ],
-    "317": [
+    317: [
         "google",
         "zenefits"
     ],
-    "318": [
+    318: [
         "google"
     ],
-    "320": [
+    320: [
         "google"
     ],
-    "321": [
+    321: [
         "google"
     ],
-    "323": [
+    323: [
         "google",
         "twitter"
     ],
-    "324": [
+    324: [
         "google"
     ],
-    "325": [
+    325: [
         "facebook",
         "palantir"
     ],
-    "326": [
+    326: [
         "google"
     ],
-    "327": [
+    327: [
         "google"
     ],
-    "329": [
+    329: [
         "google"
     ],
-    "330": [
+    330: [
         "google"
     ],
-    "331": [
+    331: [
         "google"
     ],
-    "332": [
+    332: [
         "google"
     ],
-    "333": [
+    333: [
         "microsoft"
     ],
-    "334": [
+    334: [
         "facebook"
     ],
-    "336": [
+    336: [
         "airbnb",
         "google"
     ],
-    "337": [
+    337: [
         "uber"
     ],
-    "339": [
+    339: [
         "linkedin"
     ],
-    "340": [
+    340: [
         "google"
     ],
-    "341": [
+    341: [
         "facebook",
         "google",
         "twitter"
     ],
-    "342": [
+    342: [
         "twosigma"
     ],
-    "345": [
+    345: [
         "google"
     ],
-    "346": [
+    346: [
         "google"
     ],
-    "347": [
+    347: [
         "pocketgems",
         "yelp"
     ],
-    "348": [
+    348: [
         "google",
         "microsoft"
     ],
-    "349": [
+    349: [
         "twosigma"
     ],
-    "351": [
+    351: [
         "google"
     ],
-    "353": [
+    353: [
         "google"
     ],
-    "354": [
+    354: [
         "google"
     ],
-    "355": [
+    355: [
         "amazon",
         "twitter"
     ],
-    "356": [
+    356: [
         "google"
     ],
-    "357": [
+    357: [
         "google"
     ],
-    "358": [
+    358: [
         "google"
     ],
-    "359": [
+    359: [
         "google"
     ],
-    "360": [
+    360: [
         "google"
     ],
-    "361": [
+    361: [
         "google"
     ],
-    "362": [
+    362: [
         "dropbox",
         "google"
     ],
-    "363": [
+    363: [
         "google"
     ],
-    "364": [
+    364: [
         "linkedin"
     ],
-    "365": [
+    365: [
         "microsoft"
     ],
-    "366": [
+    366: [
         "linkedin"
     ],
-    "367": [
+    367: [
         "linkedin"
     ],
-    "368": [
+    368: [
         "google"
     ],
-    "369": [
+    369: [
         "google"
     ],
-    "370": [
+    370: [
         "google"
     ],
-    "373": [
+    373: [
         "google",
         "uber"
     ],
-    "374": [
+    374: [
         "google"
     ],
-    "375": [
+    375: [
         "google"
     ],
-    "377": [
+    377: [
         "facebook",
         "google",
         "snapchat"
     ],
-    "378": [
+    378: [
         "google",
         "twitter"
     ],
-    "379": [
+    379: [
         "google"
     ],
-    "380": [
+    380: [
         "amazon",
         "facebook",
         "google",
@@ -1242,4249 +1242,4249 @@ export const COMPANIES: IProblemAssociations = {
         "uber",
         "yelp"
     ],
-    "381": [
+    381: [
         "yelp"
     ],
-    "382": [
+    382: [
         "google"
     ],
-    "383": [
+    383: [
         "apple"
     ],
-    "385": [
+    385: [
         "airbnb"
     ],
-    "386": [
+    386: [
         "bloomberg"
     ],
-    "387": [
+    387: [
         "amazon",
         "bloomberg",
         "microsoft"
     ],
-    "388": [
+    388: [
         "google"
     ],
-    "389": [
+    389: [
         "google"
     ],
-    "391": [
+    391: [
         "google"
     ],
-    "393": [
+    393: [
         "google"
     ],
-    "394": [
+    394: [
         "google",
         "yelp"
     ],
-    "395": [
+    395: [
         "baidu"
     ],
-    "396": [
+    396: [
         "amazon"
     ],
-    "397": [
+    397: [
         "baidu",
         "google"
     ],
-    "398": [
+    398: [
         "facebook"
     ],
-    "399": [
+    399: [
         "google"
     ],
-    "400": [
+    400: [
         "google"
     ],
-    "401": [
+    401: [
         "google"
     ],
-    "402": [
+    402: [
         "google",
         "snapchat"
     ],
-    "403": [
+    403: [
         "snapchat"
     ],
-    "404": [
+    404: [
         "facebook"
     ],
-    "406": [
+    406: [
         "google"
     ],
-    "407": [
+    407: [
         "google",
         "twitter"
     ],
-    "408": [
+    408: [
         "google"
     ],
-    "409": [
+    409: [
         "google"
     ],
-    "410": [
+    410: [
         "baidu",
         "facebook"
     ],
-    "411": [
+    411: [
         "google"
     ],
-    "413": [
+    413: [
         "baidu"
     ],
-    "414": [
+    414: [
         "amazon"
     ],
-    "415": [
+    415: [
         "airbnb",
         "google"
     ],
-    "416": [
+    416: [
         "ebay"
     ],
-    "417": [
+    417: [
         "google"
     ],
-    "418": [
+    418: [
         "google"
     ],
-    "419": [
+    419: [
         "microsoft"
     ],
-    "421": [
+    421: [
         "google"
     ],
-    "422": [
+    422: [
         "google"
     ],
-    "424": [
+    424: [
         "pocketgems"
     ],
-    "425": [
+    425: [
         "google"
     ],
-    "432": [
+    432: [
         "uber"
     ],
-    "433": [
+    433: [
         "twitter"
     ],
-    "438": [
+    438: [
         "amazon"
     ],
-    "439": [
+    439: [
         "snapchat"
     ],
-    "442": [
+    442: [
         "pocketgems"
     ],
-    "443": [
+    443: [
         "bloomberg",
         "microsoft",
         "snapchat",
         "yelp"
     ],
-    "444": [
+    444: [
         "google"
     ],
-    "445": [
+    445: [
         "bloomberg",
         "microsoft"
     ],
-    "446": [
+    446: [
         "baidu"
     ],
-    "447": [
+    447: [
         "google"
     ],
-    "448": [
+    448: [
         "google"
     ],
-    "449": [
+    449: [
         "amazon"
     ],
-    "450": [
+    450: [
         "uber"
     ],
-    "451": [
+    451: [
         "amazon",
         "google"
     ],
-    "452": [
+    452: [
         "microsoft"
     ],
-    "453": [
+    453: [
         "indeed"
     ],
-    "459": [
+    459: [
         "amazon",
         "google"
     ],
-    "460": [
+    460: [
         "amazon",
         "google"
     ],
-    "461": [
+    461: [
         "facebook"
     ],
-    "463": [
+    463: [
         "google"
     ],
-    "464": [
+    464: [
         "linkedin"
     ],
-    "465": [
+    465: [
         "google"
     ],
-    "468": [
+    468: [
         "twitter"
     ],
-    "469": [
+    469: [
         "google"
     ],
-    "471": [
+    471: [
         "google"
     ],
-    "474": [
+    474: [
         "google"
     ],
-    "475": [
+    475: [
         "google"
     ],
-    "477": [
+    477: [
         "facebook"
     ],
-    "479": [
+    479: [
         "yahoo"
     ],
-    "480": [
+    480: [
         "google"
     ],
-    "481": [
+    481: [
         "google"
     ],
-    "482": [
+    482: [
         "google"
     ],
-    "483": [
+    483: [
         "google"
     ],
-    "484": [
+    484: [
         "google"
     ],
-    "485": [
+    485: [
         "google"
     ],
-    "486": [
+    486: [
         "google"
     ],
-    "487": [
+    487: [
         "google"
     ],
-    "488": [
+    488: [
         "baidu"
     ],
-    "490": [
+    490: [
         "google"
     ],
-    "491": [
+    491: [
         "yahoo"
     ],
-    "493": [
+    493: [
         "google"
     ],
-    "494": [
+    494: [
         "facebook",
         "google"
     ],
-    "498": [
+    498: [
         "google"
     ],
-    "500": [
+    500: [
         "mathworks"
     ],
-    "501": [
+    501: [
         "google"
     ],
-    "503": [
+    503: [
         "google"
     ],
-    "505": [
+    505: [
         "google"
     ],
-    "506": [
+    506: [
         "google"
     ],
-    "508": [
+    508: [
         "amazon"
     ],
-    "513": [
+    513: [
         "microsoft"
     ],
-    "514": [
+    514: [
         "google"
     ],
-    "515": [
+    515: [
         "linkedin"
     ],
-    "516": [
+    516: [
         "amazon",
         "uber"
     ],
-    "517": [
+    517: [
         "amazon"
     ],
-    "520": [
+    520: [
         "google"
     ],
-    "521": [
+    521: [
         "google"
     ],
-    "522": [
+    522: [
         "google"
     ],
-    "523": [
+    523: [
         "facebook"
     ],
-    "524": [
+    524: [
         "google"
     ],
-    "525": [
+    525: [
         "facebook"
     ],
-    "526": [
+    526: [
         "google"
     ],
-    "527": [
+    527: [
         "google",
         "snapchat"
     ],
-    "529": [
+    529: [
         "amazon"
     ],
-    "530": [
+    530: [
         "google"
     ],
-    "531": [
+    531: [
         "google"
     ],
-    "532": [
+    532: [
         "amazon"
     ],
-    "533": [
+    533: [
         "google"
     ],
-    "534": [
+    534: [
         "amazon",
         "facebook",
         "google",
         "uber"
     ],
-    "535": [
+    535: [
         "amazon",
         "facebook",
         "google",
         "uber"
     ],
-    "536": [
+    536: [
         "amazon"
     ],
-    "537": [
+    537: [
         "amazon"
     ],
-    "538": [
+    538: [
         "amazon"
     ],
-    "541": [
+    541: [
         "google"
     ],
-    "542": [
+    542: [
         "google"
     ],
-    "543": [
+    543: [
         "facebook",
         "google"
     ],
-    "544": [
+    544: [
         "google"
     ],
-    "545": [
+    545: [
         "amazon",
         "google"
     ],
-    "547": [
+    547: [
         "bloomberg",
         "twosigma"
     ],
-    "548": [
+    548: [
         "alibaba"
     ],
-    "549": [
+    549: [
         "google"
     ],
-    "551": [
+    551: [
         "google"
     ],
-    "552": [
+    552: [
         "google"
     ],
-    "553": [
+    553: [
         "amazon"
     ],
-    "554": [
+    554: [
         "facebook"
     ],
-    "555": [
+    555: [
         "alibaba"
     ],
-    "556": [
+    556: [
         "bloomberg"
     ],
-    "557": [
+    557: [
         "zappos"
     ],
-    "560": [
+    560: [
         "google"
     ],
-    "562": [
+    562: [
         "google"
     ],
-    "563": [
+    563: [
         "indeed"
     ],
-    "564": [
+    564: [
         "yelp"
     ],
-    "566": [
+    566: [
         "mathworks"
     ],
-    "567": [
+    567: [
         "microsoft"
     ],
-    "568": [
+    568: [
         "google"
     ],
-    "569": [
+    569: [
         "google"
     ],
-    "570": [
+    570: [
         "bloomberg"
     ],
-    "572": [
+    572: [
         "ebay",
         "facebook",
         "google"
     ],
-    "576": [
+    576: [
         "baidu"
     ],
-    "578": [
+    578: [
         "facebook"
     ],
-    "579": [
+    579: [
         "amazon"
     ],
-    "580": [
+    580: [
         "twitter"
     ],
-    "581": [
+    581: [
         "google"
     ],
-    "582": [
+    582: [
         "bloomberg"
     ],
-    "583": [
+    583: [
         "google"
     ],
-    "585": [
+    585: [
         "twitter"
     ],
-    "586": [
+    586: [
         "twitter"
     ],
-    "587": [
+    587: [
         "google"
     ],
-    "591": [
+    591: [
         "microsoft"
     ],
-    "597": [
+    597: [
         "facebook"
     ],
-    "599": [
+    599: [
         "yelp"
     ],
-    "602": [
+    602: [
         "facebook"
     ],
-    "604": [
+    604: [
         "google"
     ],
-    "605": [
+    605: [
         "linkedin"
     ],
-    "606": [
+    606: [
         "amazon"
     ],
-    "608": [
+    608: [
         "twitter"
     ],
-    "616": [
+    616: [
         "google"
     ],
-    "617": [
+    617: [
         "amazon"
     ],
-    "621": [
+    621: [
         "facebook"
     ],
-    "631": [
+    631: [
         "microsoft"
     ],
-    "633": [
+    633: [
         "linkedin"
     ],
-    "635": [
+    635: [
         "snapchat"
     ],
-    "636": [
+    636: [
         "facebook",
         "uber"
     ],
-    "637": [
+    637: [
         "facebook"
     ],
-    "638": [
+    638: [
         "google"
     ],
-    "639": [
+    639: [
         "facebook"
     ],
-    "640": [
+    640: [
         "amazon"
     ],
-    "642": [
+    642: [
         "facebook",
         "microsoft"
     ],
-    "643": [
+    643: [
         "google"
     ],
-    "644": [
+    644: [
         "google"
     ],
-    "645": [
+    645: [
         "amazon"
     ],
-    "646": [
+    646: [
         "amazon"
     ],
-    "647": [
+    647: [
         "facebook",
         "linkedin"
     ],
-    "648": [
+    648: [
         "uber"
     ],
-    "650": [
+    650: [
         "microsoft"
     ],
-    "651": [
+    651: [
         "google",
         "microsoft"
     ],
-    "652": [
+    652: [
         "google"
     ],
-    "653": [
+    653: [
         "facebook"
     ],
-    "654": [
+    654: [
         "microsoft"
     ],
-    "656": [
+    656: [
         "google"
     ],
-    "657": [
+    657: [
         "google"
     ],
-    "658": [
+    658: [
         "google"
     ],
-    "659": [
+    659: [
         "google"
     ],
-    "661": [
+    661: [
         "amazon"
     ],
-    "662": [
+    662: [
         "amazon"
     ],
-    "663": [
+    663: [
         "amazon"
     ],
-    "665": [
+    665: [
         "google"
     ],
-    "667": [
+    667: [
         "google"
     ],
-    "668": [
+    668: [
         "google"
     ],
-    "669": [
+    669: [
         "bloomberg"
     ],
-    "670": [
+    670: [
         "facebook"
     ],
-    "671": [
+    671: [
         "linkedin"
     ],
-    "672": [
+    672: [
         "microsoft"
     ],
-    "673": [
+    673: [
         "facebook"
     ],
-    "674": [
+    674: [
         "facebook"
     ],
-    "675": [
+    675: [
         "amazon"
     ],
-    "676": [
+    676: [
         "google"
     ],
-    "679": [
+    679: [
         "google"
     ],
-    "680": [
+    680: [
         "facebook"
     ],
-    "681": [
+    681: [
         "google"
     ],
-    "682": [
+    682: [
         "amazon"
     ],
-    "683": [
+    683: [
         "google"
     ],
-    "684": [
+    684: [
         "google"
     ],
-    "685": [
+    685: [
         "google"
     ],
-    "686": [
+    686: [
         "google"
     ],
-    "687": [
+    687: [
         "google"
     ],
-    "689": [
+    689: [
         "facebook",
         "google"
     ],
-    "690": [
+    690: [
         "uber"
     ],
-    "692": [
+    692: [
         "amazon",
         "bloomberg",
         "uber",
         "yelp"
     ],
-    "694": [
+    694: [
         "amazon"
     ],
-    "698": [
+    698: [
         "linkedin"
     ],
-    "699": [
+    699: [
         "uber"
     ],
-    "711": [
+    711: [
         "amazon"
     ],
-    "714": [
+    714: [
         "bloomberg",
         "facebook"
     ],
-    "716": [
+    716: [
         "linkedin"
     ],
-    "719": [
+    719: [
         "google"
     ],
-    "721": [
+    721: [
         "facebook"
     ],
-    "722": [
+    722: [
         "microsoft"
     ],
-    "725": [
+    725: [
         "amazon"
     ],
-    "726": [
+    726: [
         "google"
     ],
-    "727": [
+    727: [
         "google"
     ],
-    "729": [
+    729: [
         "google"
     ],
-    "730": [
+    730: [
         "linkedin"
     ],
-    "731": [
+    731: [
         "google"
     ]
 };
 
 export const TAGS: IProblemAssociations = {
-    "1": [
+    1: [
         "array",
         "hash-table"
     ],
-    "2": [
+    2: [
         "linked-list",
         "math"
     ],
-    "3": [
+    3: [
         "hash-table",
         "two-pointers",
         "string",
         "sliding-window"
     ],
-    "4": [
+    4: [
         "array",
         "binary-search",
         "divide-and-conquer"
     ],
-    "5": [
+    5: [
         "string",
         "dynamic-programming"
     ],
-    "6": [
+    6: [
         "string"
     ],
-    "7": [
+    7: [
         "math"
     ],
-    "8": [
+    8: [
         "math",
         "string"
     ],
-    "9": [
+    9: [
         "math"
     ],
-    "10": [
+    10: [
         "string",
         "dynamic-programming",
         "backtracking"
     ],
-    "11": [
+    11: [
         "array",
         "two-pointers"
     ],
-    "12": [
+    12: [
         "math",
         "string"
     ],
-    "13": [
+    13: [
         "math",
         "string"
     ],
-    "14": [
+    14: [
         "string"
     ],
-    "15": [
+    15: [
         "array",
         "two-pointers"
     ],
-    "16": [
+    16: [
         "array",
         "two-pointers"
     ],
-    "17": [
+    17: [
         "string",
         "backtracking"
     ],
-    "18": [
+    18: [
         "array",
         "hash-table",
         "two-pointers"
     ],
-    "19": [
+    19: [
         "linked-list",
         "two-pointers"
     ],
-    "20": [
+    20: [
         "string",
         "stack"
     ],
-    "21": [
+    21: [
         "linked-list"
     ],
-    "22": [
+    22: [
         "string",
         "backtracking"
     ],
-    "23": [
+    23: [
         "linked-list",
         "divide-and-conquer",
         "heap"
     ],
-    "24": [
+    24: [
         "linked-list"
     ],
-    "25": [
+    25: [
         "linked-list"
     ],
-    "26": [
+    26: [
         "array",
         "two-pointers"
     ],
-    "27": [
+    27: [
         "array",
         "two-pointers"
     ],
-    "28": [
+    28: [
         "two-pointers",
         "string"
     ],
-    "29": [
+    29: [
         "math",
         "binary-search"
     ],
-    "30": [
+    30: [
         "hash-table",
         "two-pointers",
         "string"
     ],
-    "31": [
+    31: [
         "array"
     ],
-    "32": [
+    32: [
         "string",
         "dynamic-programming"
     ],
-    "33": [
+    33: [
         "array",
         "binary-search"
     ],
-    "34": [
+    34: [
         "array",
         "binary-search"
     ],
-    "35": [
+    35: [
         "array",
         "binary-search"
     ],
-    "36": [
+    36: [
         "hash-table"
     ],
-    "37": [
+    37: [
         "hash-table",
         "backtracking"
     ],
-    "38": [
+    38: [
         "string"
     ],
-    "39": [
+    39: [
         "array",
         "backtracking"
     ],
-    "40": [
+    40: [
         "array",
         "backtracking"
     ],
-    "41": [
+    41: [
         "array"
     ],
-    "42": [
+    42: [
         "array",
         "two-pointers",
         "stack"
     ],
-    "43": [
+    43: [
         "math",
         "string"
     ],
-    "44": [
+    44: [
         "string",
         "dynamic-programming",
         "backtracking",
         "greedy"
     ],
-    "45": [
+    45: [
         "array",
         "greedy"
     ],
-    "46": [
+    46: [
         "backtracking"
     ],
-    "47": [
+    47: [
         "backtracking"
     ],
-    "48": [
+    48: [
         "array"
     ],
-    "49": [
+    49: [
         "hash-table",
         "string"
     ],
-    "50": [
+    50: [
         "math",
         "binary-search"
     ],
-    "51": [
+    51: [
         "backtracking"
     ],
-    "52": [
+    52: [
         "backtracking"
     ],
-    "53": [
+    53: [
         "array",
         "divide-and-conquer",
         "dynamic-programming"
     ],
-    "54": [
+    54: [
         "array"
     ],
-    "55": [
+    55: [
         "array",
         "greedy"
     ],
-    "56": [
+    56: [
         "array",
         "sort"
     ],
-    "57": [
+    57: [
         "array",
         "sort"
     ],
-    "58": [
+    58: [
         "string"
     ],
-    "59": [
+    59: [
         "array"
     ],
-    "60": [
+    60: [
         "math",
         "backtracking"
     ],
-    "61": [
+    61: [
         "linked-list",
         "two-pointers"
     ],
-    "62": [
+    62: [
         "array",
         "dynamic-programming"
     ],
-    "63": [
+    63: [
         "array",
         "dynamic-programming"
     ],
-    "64": [
+    64: [
         "array",
         "dynamic-programming"
     ],
-    "65": [
+    65: [
         "math",
         "string"
     ],
-    "66": [
+    66: [
         "array"
     ],
-    "67": [
+    67: [
         "math",
         "string"
     ],
-    "68": [
+    68: [
         "string"
     ],
-    "69": [
+    69: [
         "math",
         "binary-search"
     ],
-    "70": [
+    70: [
         "dynamic-programming"
     ],
-    "71": [
+    71: [
         "string",
         "stack"
     ],
-    "72": [
+    72: [
         "string",
         "dynamic-programming"
     ],
-    "73": [
+    73: [
         "array"
     ],
-    "74": [
+    74: [
         "array",
         "binary-search"
     ],
-    "75": [
+    75: [
         "array",
         "two-pointers",
         "sort"
     ],
-    "76": [
+    76: [
         "hash-table",
         "two-pointers",
         "string",
         "sliding-window"
     ],
-    "77": [
+    77: [
         "backtracking"
     ],
-    "78": [
+    78: [
         "array",
         "backtracking",
         "bit-manipulation"
     ],
-    "79": [
+    79: [
         "array",
         "backtracking"
     ],
-    "80": [
+    80: [
         "array",
         "two-pointers"
     ],
-    "81": [
+    81: [
         "array",
         "binary-search"
     ],
-    "82": [
+    82: [
         "linked-list"
     ],
-    "83": [
+    83: [
         "linked-list"
     ],
-    "84": [
+    84: [
         "array",
         "stack"
     ],
-    "85": [
+    85: [
         "array",
         "hash-table",
         "dynamic-programming",
         "stack"
     ],
-    "86": [
+    86: [
         "linked-list",
         "two-pointers"
     ],
-    "87": [
+    87: [
         "string",
         "dynamic-programming"
     ],
-    "88": [
+    88: [
         "array",
         "two-pointers"
     ],
-    "89": [
+    89: [
         "backtracking"
     ],
-    "90": [
+    90: [
         "array",
         "backtracking"
     ],
-    "91": [
+    91: [
         "string",
         "dynamic-programming"
     ],
-    "92": [
+    92: [
         "linked-list"
     ],
-    "93": [
+    93: [
         "string",
         "backtracking"
     ],
-    "94": [
+    94: [
         "hash-table",
         "stack",
         "tree"
     ],
-    "95": [
+    95: [
         "dynamic-programming",
         "tree"
     ],
-    "96": [
+    96: [
         "dynamic-programming",
         "tree"
     ],
-    "97": [
+    97: [
         "string",
         "dynamic-programming"
     ],
-    "98": [
+    98: [
         "tree",
         "depth-first-search"
     ],
-    "99": [
+    99: [
         "tree",
         "depth-first-search"
     ],
-    "100": [
+    100: [
         "tree",
         "depth-first-search"
     ],
-    "101": [
+    101: [
         "tree",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "102": [
+    102: [
         "tree",
         "breadth-first-search"
     ],
-    "103": [
+    103: [
         "stack",
         "tree",
         "breadth-first-search"
     ],
-    "104": [
+    104: [
         "tree",
         "depth-first-search"
     ],
-    "105": [
+    105: [
         "array",
         "tree",
         "depth-first-search"
     ],
-    "106": [
+    106: [
         "array",
         "tree",
         "depth-first-search"
     ],
-    "107": [
+    107: [
         "tree",
         "breadth-first-search"
     ],
-    "108": [
+    108: [
         "tree",
         "depth-first-search"
     ],
-    "109": [
+    109: [
         "linked-list",
         "depth-first-search"
     ],
-    "110": [
+    110: [
         "tree",
         "depth-first-search"
     ],
-    "111": [
+    111: [
         "tree",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "112": [
+    112: [
         "tree",
         "depth-first-search"
     ],
-    "113": [
+    113: [
         "tree",
         "depth-first-search"
     ],
-    "114": [
+    114: [
         "tree",
         "depth-first-search"
     ],
-    "115": [
+    115: [
         "string",
         "dynamic-programming"
     ],
-    "116": [
+    116: [
         "tree",
         "depth-first-search"
     ],
-    "117": [
+    117: [
         "tree",
         "depth-first-search"
     ],
-    "118": [
+    118: [
         "array"
     ],
-    "119": [
+    119: [
         "array"
     ],
-    "120": [
+    120: [
         "array",
         "dynamic-programming"
     ],
-    "121": [
+    121: [
         "array",
         "dynamic-programming"
     ],
-    "122": [
+    122: [
         "array",
         "greedy"
     ],
-    "123": [
+    123: [
         "array",
         "dynamic-programming"
     ],
-    "124": [
+    124: [
         "tree",
         "depth-first-search"
     ],
-    "125": [
+    125: [
         "two-pointers",
         "string"
     ],
-    "126": [
+    126: [
         "array",
         "string",
         "backtracking",
         "breadth-first-search"
     ],
-    "127": [
+    127: [
         "breadth-first-search"
     ],
-    "128": [
+    128: [
         "array",
         "union-find"
     ],
-    "129": [
+    129: [
         "tree",
         "depth-first-search"
     ],
-    "130": [
+    130: [
         "depth-first-search",
         "breadth-first-search",
         "union-find"
     ],
-    "131": [
+    131: [
         "backtracking"
     ],
-    "132": [
+    132: [
         "dynamic-programming"
     ],
-    "133": [
+    133: [
         "depth-first-search",
         "breadth-first-search",
         "graph"
     ],
-    "134": [
+    134: [
         "greedy"
     ],
-    "135": [
+    135: [
         "greedy"
     ],
-    "136": [
+    136: [
         "hash-table",
         "bit-manipulation"
     ],
-    "137": [
+    137: [
         "bit-manipulation"
     ],
-    "138": [
+    138: [
         "hash-table",
         "linked-list"
     ],
-    "139": [
+    139: [
         "dynamic-programming"
     ],
-    "140": [
+    140: [
         "dynamic-programming",
         "backtracking"
     ],
-    "141": [
+    141: [
         "linked-list",
         "two-pointers"
     ],
-    "142": [
+    142: [
         "linked-list",
         "two-pointers"
     ],
-    "143": [
+    143: [
         "linked-list"
     ],
-    "144": [
+    144: [
         "stack",
         "tree"
     ],
-    "145": [
+    145: [
         "stack",
         "tree"
     ],
-    "146": [
+    146: [
         "design"
     ],
-    "147": [
+    147: [
         "linked-list",
         "sort"
     ],
-    "148": [
+    148: [
         "linked-list",
         "sort"
     ],
-    "149": [
+    149: [
         "hash-table",
         "math"
     ],
-    "150": [
+    150: [
         "stack"
     ],
-    "151": [
+    151: [
         "string"
     ],
-    "152": [
+    152: [
         "array",
         "dynamic-programming"
     ],
-    "153": [
+    153: [
         "array",
         "binary-search"
     ],
-    "154": [
+    154: [
         "array",
         "binary-search"
     ],
-    "155": [
+    155: [
         "stack",
         "design"
     ],
-    "156": [
+    156: [
         "tree"
     ],
-    "157": [
+    157: [
         "string"
     ],
-    "158": [
+    158: [
         "string"
     ],
-    "159": [
+    159: [
         "hash-table",
         "two-pointers",
         "string",
         "sliding-window"
     ],
-    "160": [
+    160: [
         "linked-list"
     ],
-    "161": [
+    161: [
         "string"
     ],
-    "162": [
+    162: [
         "array",
         "binary-search"
     ],
-    "163": [
+    163: [
         "array"
     ],
-    "164": [
+    164: [
         "sort"
     ],
-    "165": [
+    165: [
         "string"
     ],
-    "166": [
+    166: [
         "hash-table",
         "math"
     ],
-    "167": [
+    167: [
         "array",
         "two-pointers",
         "binary-search"
     ],
-    "168": [
+    168: [
         "math"
     ],
-    "169": [
+    169: [
         "array",
         "divide-and-conquer",
         "bit-manipulation"
     ],
-    "170": [
+    170: [
         "hash-table",
         "design"
     ],
-    "171": [
+    171: [
         "math"
     ],
-    "172": [
+    172: [
         "math"
     ],
-    "173": [
+    173: [
         "stack",
         "tree",
         "design"
     ],
-    "174": [
+    174: [
         "binary-search",
         "dynamic-programming"
     ],
-    "179": [
+    179: [
         "sort"
     ],
-    "186": [
+    186: [
         "string"
     ],
-    "187": [
+    187: [
         "hash-table",
         "bit-manipulation"
     ],
-    "188": [
+    188: [
         "dynamic-programming"
     ],
-    "189": [
+    189: [
         "array"
     ],
-    "190": [
+    190: [
         "bit-manipulation"
     ],
-    "191": [
+    191: [
         "bit-manipulation"
     ],
-    "198": [
+    198: [
         "dynamic-programming"
     ],
-    "199": [
+    199: [
         "tree",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "200": [
+    200: [
         "depth-first-search",
         "breadth-first-search",
         "union-find"
     ],
-    "201": [
+    201: [
         "bit-manipulation"
     ],
-    "202": [
+    202: [
         "hash-table",
         "math"
     ],
-    "203": [
+    203: [
         "linked-list"
     ],
-    "204": [
+    204: [
         "hash-table",
         "math"
     ],
-    "205": [
+    205: [
         "hash-table"
     ],
-    "206": [
+    206: [
         "linked-list"
     ],
-    "207": [
+    207: [
         "depth-first-search",
         "breadth-first-search",
         "graph",
         "topological-sort"
     ],
-    "208": [
+    208: [
         "design",
         "trie"
     ],
-    "209": [
+    209: [
         "array",
         "two-pointers",
         "binary-search"
     ],
-    "210": [
+    210: [
         "depth-first-search",
         "breadth-first-search",
         "graph",
         "topological-sort"
     ],
-    "211": [
+    211: [
         "backtracking",
         "design",
         "trie"
     ],
-    "212": [
+    212: [
         "backtracking",
         "trie"
     ],
-    "213": [
+    213: [
         "dynamic-programming"
     ],
-    "214": [
+    214: [
         "string"
     ],
-    "215": [
+    215: [
         "divide-and-conquer",
         "heap"
     ],
-    "216": [
+    216: [
         "array",
         "backtracking"
     ],
-    "217": [
+    217: [
         "array",
         "hash-table"
     ],
-    "218": [
+    218: [
         "divide-and-conquer",
         "heap",
         "binary-indexed-tree",
         "segment-tree",
         "line-sweep"
     ],
-    "219": [
+    219: [
         "array",
         "hash-table"
     ],
-    "220": [
+    220: [
         "sort",
         "ordered-map"
     ],
-    "221": [
+    221: [
         "dynamic-programming"
     ],
-    "222": [
+    222: [
         "binary-search",
         "tree"
     ],
-    "223": [
+    223: [
         "math"
     ],
-    "224": [
+    224: [
         "math",
         "stack"
     ],
-    "225": [
+    225: [
         "stack",
         "design"
     ],
-    "226": [
+    226: [
         "tree"
     ],
-    "227": [
+    227: [
         "string"
     ],
-    "228": [
+    228: [
         "array"
     ],
-    "229": [
+    229: [
         "array"
     ],
-    "230": [
+    230: [
         "binary-search",
         "tree"
     ],
-    "231": [
+    231: [
         "math",
         "bit-manipulation"
     ],
-    "232": [
+    232: [
         "stack",
         "design"
     ],
-    "233": [
+    233: [
         "math"
     ],
-    "234": [
+    234: [
         "linked-list",
         "two-pointers"
     ],
-    "235": [
+    235: [
         "tree"
     ],
-    "236": [
+    236: [
         "tree"
     ],
-    "237": [
+    237: [
         "linked-list"
     ],
-    "238": [
+    238: [
         "array"
     ],
-    "239": [
+    239: [
         "heap",
         "sliding-window"
     ],
-    "240": [
+    240: [
         "binary-search",
         "divide-and-conquer"
     ],
-    "241": [
+    241: [
         "divide-and-conquer"
     ],
-    "242": [
+    242: [
         "hash-table",
         "sort"
     ],
-    "243": [
+    243: [
         "array"
     ],
-    "244": [
+    244: [
         "hash-table",
         "design"
     ],
-    "245": [
+    245: [
         "array"
     ],
-    "246": [
+    246: [
         "hash-table",
         "math"
     ],
-    "247": [
+    247: [
         "math",
         "recursion"
     ],
-    "248": [
+    248: [
         "math",
         "recursion"
     ],
-    "249": [
+    249: [
         "hash-table",
         "string"
     ],
-    "250": [
+    250: [
         "tree"
     ],
-    "251": [
+    251: [
         "design"
     ],
-    "252": [
+    252: [
         "sort"
     ],
-    "253": [
+    253: [
         "heap",
         "greedy",
         "sort"
     ],
-    "254": [
+    254: [
         "backtracking"
     ],
-    "255": [
+    255: [
         "stack",
         "tree"
     ],
-    "256": [
+    256: [
         "dynamic-programming"
     ],
-    "257": [
+    257: [
         "tree",
         "depth-first-search"
     ],
-    "258": [
+    258: [
         "math"
     ],
-    "259": [
+    259: [
         "array",
         "two-pointers"
     ],
-    "260": [
+    260: [
         "bit-manipulation"
     ],
-    "261": [
+    261: [
         "depth-first-search",
         "breadth-first-search",
         "union-find",
         "graph"
     ],
-    "263": [
+    263: [
         "math"
     ],
-    "264": [
+    264: [
         "math",
         "dynamic-programming",
         "heap"
     ],
-    "265": [
+    265: [
         "dynamic-programming"
     ],
-    "266": [
+    266: [
         "hash-table"
     ],
-    "267": [
+    267: [
         "backtracking"
     ],
-    "268": [
+    268: [
         "array",
         "math",
         "bit-manipulation"
     ],
-    "269": [
+    269: [
         "graph",
         "topological-sort"
     ],
-    "270": [
+    270: [
         "binary-search",
         "tree"
     ],
-    "271": [
+    271: [
         "string"
     ],
-    "272": [
+    272: [
         "stack",
         "tree"
     ],
-    "273": [
+    273: [
         "math",
         "string"
     ],
-    "274": [
+    274: [
         "hash-table",
         "sort"
     ],
-    "275": [
+    275: [
         "binary-search"
     ],
-    "276": [
+    276: [
         "dynamic-programming"
     ],
-    "277": [
+    277: [
         "array"
     ],
-    "278": [
+    278: [
         "binary-search"
     ],
-    "279": [
+    279: [
         "math",
         "dynamic-programming",
         "breadth-first-search"
     ],
-    "280": [
+    280: [
         "array",
         "sort"
     ],
-    "281": [
+    281: [
         "design"
     ],
-    "282": [
+    282: [
         "divide-and-conquer"
     ],
-    "283": [
+    283: [
         "array",
         "two-pointers"
     ],
-    "284": [
+    284: [
         "design"
     ],
-    "285": [
+    285: [
         "tree"
     ],
-    "286": [
+    286: [
         "breadth-first-search"
     ],
-    "287": [
+    287: [
         "array",
         "two-pointers",
         "binary-search"
     ],
-    "288": [
+    288: [
         "hash-table",
         "design"
     ],
-    "289": [
+    289: [
         "array"
     ],
-    "290": [
+    290: [
         "hash-table"
     ],
-    "291": [
+    291: [
         "backtracking"
     ],
-    "292": [
+    292: [
         "brainteaser",
         "minimax"
     ],
-    "293": [
+    293: [
         "string"
     ],
-    "294": [
+    294: [
         "backtracking",
         "minimax"
     ],
-    "295": [
+    295: [
         "heap",
         "design"
     ],
-    "296": [
+    296: [
         "math",
         "sort"
     ],
-    "297": [
+    297: [
         "tree",
         "design"
     ],
-    "298": [
+    298: [
         "tree"
     ],
-    "299": [
+    299: [
         "hash-table"
     ],
-    "300": [
+    300: [
         "binary-search",
         "dynamic-programming"
     ],
-    "301": [
+    301: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "302": [
+    302: [
         "binary-search"
     ],
-    "303": [
+    303: [
         "dynamic-programming"
     ],
-    "304": [
+    304: [
         "dynamic-programming"
     ],
-    "305": [
+    305: [
         "union-find"
     ],
-    "306": [
+    306: [
         "backtracking"
     ],
-    "307": [
+    307: [
         "binary-indexed-tree",
         "segment-tree"
     ],
-    "308": [
+    308: [
         "binary-indexed-tree",
         "segment-tree"
     ],
-    "309": [
+    309: [
         "dynamic-programming"
     ],
-    "310": [
+    310: [
         "breadth-first-search",
         "graph"
     ],
-    "311": [
+    311: [
         "hash-table"
     ],
-    "312": [
+    312: [
         "divide-and-conquer",
         "dynamic-programming"
     ],
-    "313": [
+    313: [
         "math",
         "heap"
     ],
-    "314": [
+    314: [
         "hash-table"
     ],
-    "315": [
+    315: [
         "binary-search",
         "divide-and-conquer",
         "sort",
         "binary-indexed-tree",
         "segment-tree"
     ],
-    "316": [
+    316: [
         "stack",
         "greedy"
     ],
-    "317": [
+    317: [
         "breadth-first-search"
     ],
-    "318": [
+    318: [
         "bit-manipulation"
     ],
-    "319": [
+    319: [
         "math",
         "brainteaser"
     ],
-    "320": [
+    320: [
         "backtracking",
         "bit-manipulation"
     ],
-    "321": [
+    321: [
         "dynamic-programming",
         "greedy"
     ],
-    "322": [
+    322: [
         "dynamic-programming"
     ],
-    "323": [
+    323: [
         "depth-first-search",
         "breadth-first-search",
         "union-find",
         "graph"
     ],
-    "324": [
+    324: [
         "sort"
     ],
-    "325": [
+    325: [
         "hash-table"
     ],
-    "326": [
+    326: [
         "math"
     ],
-    "327": [
+    327: [
         "binary-search",
         "divide-and-conquer",
         "sort",
         "binary-indexed-tree",
         "segment-tree"
     ],
-    "328": [
+    328: [
         "linked-list"
     ],
-    "329": [
+    329: [
         "depth-first-search",
         "topological-sort",
         "memoization"
     ],
-    "330": [
+    330: [
         "greedy"
     ],
-    "331": [
+    331: [
         "stack"
     ],
-    "332": [
+    332: [
         "depth-first-search",
         "graph"
     ],
-    "333": [
+    333: [
         "tree"
     ],
-    "335": [
+    335: [
         "math"
     ],
-    "336": [
+    336: [
         "hash-table",
         "string",
         "trie"
     ],
-    "337": [
+    337: [
         "tree",
         "depth-first-search"
     ],
-    "338": [
+    338: [
         "dynamic-programming",
         "bit-manipulation"
     ],
-    "339": [
+    339: [
         "depth-first-search"
     ],
-    "340": [
+    340: [
         "hash-table",
         "string",
         "sliding-window"
     ],
-    "341": [
+    341: [
         "stack",
         "design"
     ],
-    "342": [
+    342: [
         "bit-manipulation"
     ],
-    "343": [
+    343: [
         "math",
         "dynamic-programming"
     ],
-    "344": [
+    344: [
         "two-pointers",
         "string"
     ],
-    "345": [
+    345: [
         "two-pointers",
         "string"
     ],
-    "346": [
+    346: [
         "design",
         "queue"
     ],
-    "347": [
+    347: [
         "hash-table",
         "heap"
     ],
-    "348": [
+    348: [
         "design"
     ],
-    "349": [
+    349: [
         "hash-table",
         "two-pointers",
         "binary-search",
         "sort"
     ],
-    "350": [
+    350: [
         "hash-table",
         "two-pointers",
         "binary-search",
         "sort"
     ],
-    "351": [
+    351: [
         "dynamic-programming",
         "backtracking"
     ],
-    "352": [
+    352: [
         "binary-search",
         "ordered-map"
     ],
-    "353": [
+    353: [
         "design",
         "queue"
     ],
-    "354": [
+    354: [
         "binary-search",
         "dynamic-programming"
     ],
-    "355": [
+    355: [
         "hash-table",
         "heap",
         "design"
     ],
-    "356": [
+    356: [
         "hash-table",
         "math"
     ],
-    "357": [
+    357: [
         "math",
         "dynamic-programming",
         "backtracking"
     ],
-    "358": [
+    358: [
         "hash-table",
         "heap",
         "greedy"
     ],
-    "359": [
+    359: [
         "hash-table",
         "design"
     ],
-    "360": [
+    360: [
         "math",
         "two-pointers"
     ],
-    "361": [
+    361: [
         "dynamic-programming"
     ],
-    "362": [
+    362: [
         "design"
     ],
-    "363": [
+    363: [
         "binary-search",
         "dynamic-programming",
         "queue"
     ],
-    "364": [
+    364: [
         "depth-first-search"
     ],
-    "365": [
+    365: [
         "math"
     ],
-    "366": [
+    366: [
         "tree",
         "depth-first-search"
     ],
-    "367": [
+    367: [
         "math",
         "binary-search"
     ],
-    "368": [
+    368: [
         "math",
         "dynamic-programming"
     ],
-    "369": [
+    369: [
         "linked-list"
     ],
-    "370": [
+    370: [
         "array"
     ],
-    "371": [
+    371: [
         "bit-manipulation"
     ],
-    "372": [
+    372: [
         "math"
     ],
-    "373": [
+    373: [
         "heap"
     ],
-    "374": [
+    374: [
         "binary-search"
     ],
-    "375": [
+    375: [
         "dynamic-programming",
         "minimax"
     ],
-    "376": [
+    376: [
         "dynamic-programming",
         "greedy"
     ],
-    "377": [
+    377: [
         "dynamic-programming"
     ],
-    "378": [
+    378: [
         "binary-search",
         "heap"
     ],
-    "379": [
+    379: [
         "linked-list",
         "design"
     ],
-    "380": [
+    380: [
         "array",
         "hash-table",
         "design"
     ],
-    "381": [
+    381: [
         "array",
         "hash-table",
         "design"
     ],
-    "382": [
+    382: [
         "reservoir-sampling"
     ],
-    "383": [
+    383: [
         "string"
     ],
-    "385": [
+    385: [
         "string",
         "stack"
     ],
-    "387": [
+    387: [
         "hash-table",
         "string"
     ],
-    "389": [
+    389: [
         "hash-table",
         "bit-manipulation"
     ],
-    "391": [
+    391: [
         "line-sweep"
     ],
-    "392": [
+    392: [
         "binary-search",
         "dynamic-programming",
         "greedy"
     ],
-    "393": [
+    393: [
         "bit-manipulation"
     ],
-    "394": [
+    394: [
         "stack",
         "depth-first-search"
     ],
-    "396": [
+    396: [
         "math"
     ],
-    "397": [
+    397: [
         "math",
         "bit-manipulation"
     ],
-    "398": [
+    398: [
         "reservoir-sampling"
     ],
-    "399": [
+    399: [
         "union-find",
         "graph"
     ],
-    "400": [
+    400: [
         "math"
     ],
-    "401": [
+    401: [
         "backtracking",
         "bit-manipulation"
     ],
-    "402": [
+    402: [
         "stack",
         "greedy"
     ],
-    "403": [
+    403: [
         "dynamic-programming"
     ],
-    "404": [
+    404: [
         "tree"
     ],
-    "405": [
+    405: [
         "bit-manipulation"
     ],
-    "406": [
+    406: [
         "greedy"
     ],
-    "407": [
+    407: [
         "heap",
         "breadth-first-search"
     ],
-    "408": [
+    408: [
         "string"
     ],
-    "409": [
+    409: [
         "hash-table"
     ],
-    "410": [
+    410: [
         "binary-search",
         "dynamic-programming"
     ],
-    "411": [
+    411: [
         "backtracking",
         "bit-manipulation"
     ],
-    "413": [
+    413: [
         "math",
         "dynamic-programming"
     ],
-    "414": [
+    414: [
         "array"
     ],
-    "415": [
+    415: [
         "string"
     ],
-    "416": [
+    416: [
         "dynamic-programming"
     ],
-    "417": [
+    417: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "418": [
+    418: [
         "dynamic-programming"
     ],
-    "421": [
+    421: [
         "bit-manipulation",
         "trie"
     ],
-    "423": [
+    423: [
         "math"
     ],
-    "424": [
+    424: [
         "two-pointers",
         "sliding-window"
     ],
-    "425": [
+    425: [
         "backtracking",
         "trie"
     ],
-    "432": [
+    432: [
         "design"
     ],
-    "434": [
+    434: [
         "string"
     ],
-    "435": [
+    435: [
         "greedy"
     ],
-    "436": [
+    436: [
         "binary-search"
     ],
-    "437": [
+    437: [
         "tree"
     ],
-    "438": [
+    438: [
         "hash-table"
     ],
-    "439": [
+    439: [
         "stack",
         "depth-first-search"
     ],
-    "441": [
+    441: [
         "math",
         "binary-search"
     ],
-    "442": [
+    442: [
         "array"
     ],
-    "443": [
+    443: [
         "string"
     ],
-    "444": [
+    444: [
         "graph",
         "topological-sort"
     ],
-    "445": [
+    445: [
         "linked-list"
     ],
-    "446": [
+    446: [
         "dynamic-programming"
     ],
-    "447": [
+    447: [
         "hash-table"
     ],
-    "448": [
+    448: [
         "array"
     ],
-    "449": [
+    449: [
         "tree"
     ],
-    "450": [
+    450: [
         "tree"
     ],
-    "451": [
+    451: [
         "hash-table",
         "heap"
     ],
-    "452": [
+    452: [
         "greedy"
     ],
-    "453": [
+    453: [
         "math"
     ],
-    "454": [
+    454: [
         "hash-table",
         "binary-search"
     ],
-    "455": [
+    455: [
         "greedy"
     ],
-    "456": [
+    456: [
         "stack"
     ],
-    "457": [
+    457: [
         "array",
         "two-pointers"
     ],
-    "458": [
+    458: [
         "math"
     ],
-    "459": [
+    459: [
         "string"
     ],
-    "460": [
+    460: [
         "design"
     ],
-    "461": [
+    461: [
         "bit-manipulation"
     ],
-    "462": [
+    462: [
         "math"
     ],
-    "463": [
+    463: [
         "hash-table"
     ],
-    "464": [
+    464: [
         "dynamic-programming",
         "minimax"
     ],
-    "466": [
+    466: [
         "dynamic-programming"
     ],
-    "467": [
+    467: [
         "dynamic-programming"
     ],
-    "468": [
+    468: [
         "string"
     ],
-    "469": [
+    469: [
         "math"
     ],
-    "471": [
+    471: [
         "dynamic-programming"
     ],
-    "472": [
+    472: [
         "dynamic-programming",
         "depth-first-search",
         "trie"
     ],
-    "473": [
+    473: [
         "depth-first-search"
     ],
-    "474": [
+    474: [
         "dynamic-programming"
     ],
-    "475": [
+    475: [
         "binary-search"
     ],
-    "476": [
+    476: [
         "bit-manipulation"
     ],
-    "477": [
+    477: [
         "bit-manipulation"
     ],
-    "480": [
+    480: [
         "sliding-window"
     ],
-    "483": [
+    483: [
         "math",
         "binary-search"
     ],
-    "484": [
+    484: [
         "greedy"
     ],
-    "485": [
+    485: [
         "array"
     ],
-    "486": [
+    486: [
         "dynamic-programming",
         "minimax"
     ],
-    "487": [
+    487: [
         "two-pointers"
     ],
-    "488": [
+    488: [
         "depth-first-search"
     ],
-    "490": [
+    490: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "491": [
+    491: [
         "depth-first-search"
     ],
-    "493": [
+    493: [
         "binary-search",
         "divide-and-conquer",
         "sort",
         "binary-indexed-tree",
         "segment-tree"
     ],
-    "494": [
+    494: [
         "dynamic-programming",
         "depth-first-search"
     ],
-    "495": [
+    495: [
         "array"
     ],
-    "496": [
+    496: [
         "stack"
     ],
-    "499": [
+    499: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "500": [
+    500: [
         "hash-table"
     ],
-    "501": [
+    501: [
         "tree"
     ],
-    "502": [
+    502: [
         "heap",
         "greedy"
     ],
-    "503": [
+    503: [
         "stack"
     ],
-    "505": [
+    505: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "507": [
+    507: [
         "math"
     ],
-    "508": [
+    508: [
         "hash-table",
         "tree"
     ],
-    "509": [
+    509: [
         "tree"
     ],
-    "511": [
+    511: [
         "depth-first-search",
         "graph"
     ],
-    "513": [
+    513: [
         "tree",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "514": [
+    514: [
         "divide-and-conquer",
         "dynamic-programming",
         "depth-first-search"
     ],
-    "515": [
+    515: [
         "tree",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "516": [
+    516: [
         "dynamic-programming"
     ],
-    "517": [
+    517: [
         "math",
         "dynamic-programming"
     ],
-    "520": [
+    520: [
         "string"
     ],
-    "521": [
+    521: [
         "string"
     ],
-    "522": [
+    522: [
         "string"
     ],
-    "523": [
+    523: [
         "math",
         "dynamic-programming"
     ],
-    "524": [
+    524: [
         "two-pointers",
         "sort"
     ],
-    "525": [
+    525: [
         "hash-table"
     ],
-    "526": [
+    526: [
         "backtracking"
     ],
-    "527": [
+    527: [
         "string",
         "sort"
     ],
-    "529": [
+    529: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "530": [
+    530: [
         "tree"
     ],
-    "531": [
+    531: [
         "array",
         "depth-first-search"
     ],
-    "532": [
+    532: [
         "array",
         "two-pointers"
     ],
-    "533": [
+    533: [
         "array",
         "depth-first-search"
     ],
-    "535": [
+    535: [
         "hash-table",
         "math"
     ],
-    "536": [
+    536: [
         "string",
         "tree"
     ],
-    "537": [
+    537: [
         "math",
         "string"
     ],
-    "538": [
+    538: [
         "tree"
     ],
-    "539": [
+    539: [
         "string"
     ],
-    "541": [
+    541: [
         "string"
     ],
-    "542": [
+    542: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "543": [
+    543: [
         "tree"
     ],
-    "544": [
+    544: [
         "string",
         "recursion"
     ],
-    "545": [
+    545: [
         "tree"
     ],
-    "546": [
+    546: [
         "dynamic-programming",
         "depth-first-search"
     ],
-    "547": [
+    547: [
         "depth-first-search",
         "union-find"
     ],
-    "548": [
+    548: [
         "array"
     ],
-    "549": [
+    549: [
         "tree"
     ],
-    "551": [
+    551: [
         "string"
     ],
-    "552": [
+    552: [
         "dynamic-programming"
     ],
-    "553": [
+    553: [
         "math",
         "string"
     ],
-    "554": [
+    554: [
         "hash-table"
     ],
-    "555": [
+    555: [
         "string"
     ],
-    "556": [
+    556: [
         "string"
     ],
-    "557": [
+    557: [
         "string"
     ],
-    "560": [
+    560: [
         "array",
         "hash-table"
     ],
-    "561": [
+    561: [
         "array"
     ],
-    "562": [
+    562: [
         "array"
     ],
-    "563": [
+    563: [
         "tree"
     ],
-    "564": [
+    564: [
         "string"
     ],
-    "565": [
+    565: [
         "array"
     ],
-    "566": [
+    566: [
         "array"
     ],
-    "567": [
+    567: [
         "two-pointers",
         "sliding-window"
     ],
-    "568": [
+    568: [
         "dynamic-programming"
     ],
-    "572": [
+    572: [
         "tree"
     ],
-    "573": [
+    573: [
         "math"
     ],
-    "575": [
+    575: [
         "hash-table"
     ],
-    "576": [
+    576: [
         "dynamic-programming",
         "depth-first-search"
     ],
-    "581": [
+    581: [
         "array"
     ],
-    "582": [
+    582: [
         "tree",
         "queue"
     ],
-    "583": [
+    583: [
         "string"
     ],
-    "587": [
+    587: [
         "geometry"
     ],
-    "588": [
+    588: [
         "design"
     ],
-    "591": [
+    591: [
         "string",
         "stack"
     ],
-    "592": [
+    592: [
         "math"
     ],
-    "593": [
+    593: [
         "math"
     ],
-    "594": [
+    594: [
         "hash-table"
     ],
-    "598": [
+    598: [
         "math"
     ],
-    "599": [
+    599: [
         "hash-table"
     ],
-    "600": [
+    600: [
         "dynamic-programming"
     ],
-    "604": [
+    604: [
         "design"
     ],
-    "605": [
+    605: [
         "array"
     ],
-    "606": [
+    606: [
         "string",
         "tree"
     ],
-    "609": [
+    609: [
         "hash-table",
         "string"
     ],
-    "611": [
+    611: [
         "array"
     ],
-    "616": [
+    616: [
         "string"
     ],
-    "617": [
+    617: [
         "tree"
     ],
-    "621": [
+    621: [
         "array",
         "greedy",
         "queue"
     ],
-    "623": [
+    623: [
         "tree"
     ],
-    "624": [
+    624: [
         "array",
         "hash-table"
     ],
-    "625": [
+    625: [
         "math",
         "recursion"
     ],
-    "628": [
+    628: [
         "array",
         "math"
     ],
-    "629": [
+    629: [
         "dynamic-programming"
     ],
-    "630": [
+    630: [
         "greedy"
     ],
-    "631": [
+    631: [
         "design"
     ],
-    "632": [
+    632: [
         "hash-table",
         "two-pointers",
         "string"
     ],
-    "633": [
+    633: [
         "math"
     ],
-    "634": [
+    634: [
         "math"
     ],
-    "635": [
+    635: [
         "string",
         "design"
     ],
-    "636": [
+    636: [
         "stack"
     ],
-    "637": [
+    637: [
         "tree"
     ],
-    "638": [
+    638: [
         "dynamic-programming",
         "depth-first-search"
     ],
-    "639": [
+    639: [
         "dynamic-programming"
     ],
-    "640": [
+    640: [
         "math"
     ],
-    "642": [
+    642: [
         "design",
         "trie"
     ],
-    "643": [
+    643: [
         "array"
     ],
-    "644": [
+    644: [
         "array",
         "binary-search"
     ],
-    "645": [
+    645: [
         "hash-table",
         "math"
     ],
-    "646": [
+    646: [
         "dynamic-programming"
     ],
-    "647": [
+    647: [
         "string",
         "dynamic-programming"
     ],
-    "648": [
+    648: [
         "hash-table",
         "trie"
     ],
-    "649": [
+    649: [
         "greedy"
     ],
-    "650": [
+    650: [
         "dynamic-programming"
     ],
-    "651": [
+    651: [
         "math",
         "dynamic-programming",
         "greedy"
     ],
-    "652": [
+    652: [
         "tree"
     ],
-    "653": [
+    653: [
         "tree"
     ],
-    "654": [
+    654: [
         "tree"
     ],
-    "655": [
+    655: [
         "tree"
     ],
-    "656": [
+    656: [
         "dynamic-programming"
     ],
-    "657": [
+    657: [
         "string"
     ],
-    "658": [
+    658: [
         "binary-search"
     ],
-    "659": [
+    659: [
         "heap",
         "greedy"
     ],
-    "660": [
+    660: [
         "math"
     ],
-    "661": [
+    661: [
         "array"
     ],
-    "662": [
+    662: [
         "tree"
     ],
-    "663": [
+    663: [
         "tree"
     ],
-    "664": [
+    664: [
         "dynamic-programming",
         "depth-first-search"
     ],
-    "665": [
+    665: [
         "array"
     ],
-    "666": [
+    666: [
         "tree"
     ],
-    "667": [
+    667: [
         "array"
     ],
-    "668": [
+    668: [
         "binary-search"
     ],
-    "669": [
+    669: [
         "tree"
     ],
-    "670": [
+    670: [
         "array",
         "math"
     ],
-    "671": [
+    671: [
         "tree"
     ],
-    "672": [
+    672: [
         "math"
     ],
-    "673": [
+    673: [
         "dynamic-programming"
     ],
-    "674": [
+    674: [
         "array"
     ],
-    "675": [
+    675: [
         "breadth-first-search"
     ],
-    "676": [
+    676: [
         "hash-table",
         "trie"
     ],
-    "677": [
+    677: [
         "trie"
     ],
-    "678": [
+    678: [
         "string"
     ],
-    "679": [
+    679: [
         "depth-first-search"
     ],
-    "680": [
+    680: [
         "string"
     ],
-    "681": [
+    681: [
         "string"
     ],
-    "682": [
+    682: [
         "stack"
     ],
-    "683": [
+    683: [
         "ordered-map"
     ],
-    "684": [
+    684: [
         "tree",
         "union-find",
         "graph"
     ],
-    "685": [
+    685: [
         "tree",
         "depth-first-search",
         "union-find",
         "graph"
     ],
-    "686": [
+    686: [
         "string"
     ],
-    "687": [
+    687: [
         "tree",
         "recursion"
     ],
-    "688": [
+    688: [
         "dynamic-programming"
     ],
-    "689": [
+    689: [
         "array",
         "dynamic-programming"
     ],
-    "690": [
+    690: [
         "hash-table",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "691": [
+    691: [
         "dynamic-programming",
         "backtracking"
     ],
-    "692": [
+    692: [
         "hash-table",
         "heap",
         "trie"
     ],
-    "693": [
+    693: [
         "bit-manipulation"
     ],
-    "694": [
+    694: [
         "hash-table",
         "depth-first-search"
     ],
-    "695": [
+    695: [
         "array",
         "depth-first-search"
     ],
-    "696": [
+    696: [
         "string"
     ],
-    "697": [
+    697: [
         "array"
     ],
-    "698": [
+    698: [
         "dynamic-programming",
         "recursion"
     ],
-    "699": [
+    699: [
         "segment-tree",
         "ordered-map"
     ],
-    "711": [
+    711: [
         "hash-table",
         "depth-first-search"
     ],
-    "712": [
+    712: [
         "dynamic-programming"
     ],
-    "713": [
+    713: [
         "array",
         "two-pointers"
     ],
-    "714": [
+    714: [
         "array",
         "dynamic-programming",
         "greedy"
     ],
-    "715": [
+    715: [
         "segment-tree",
         "ordered-map"
     ],
-    "716": [
+    716: [
         "design"
     ],
-    "717": [
+    717: [
         "array"
     ],
-    "718": [
+    718: [
         "array",
         "hash-table",
         "binary-search",
         "dynamic-programming"
     ],
-    "719": [
+    719: [
         "array",
         "binary-search",
         "heap"
     ],
-    "720": [
+    720: [
         "hash-table",
         "trie"
     ],
-    "721": [
+    721: [
         "depth-first-search",
         "union-find"
     ],
-    "722": [
+    722: [
         "string"
     ],
-    "723": [
+    723: [
         "array",
         "two-pointers"
     ],
-    "724": [
+    724: [
         "array"
     ],
-    "725": [
+    725: [
         "linked-list"
     ],
-    "726": [
+    726: [
         "hash-table",
         "stack",
         "recursion"
     ],
-    "727": [
+    727: [
         "dynamic-programming",
         "sliding-window"
     ],
-    "728": [
+    728: [
         "math"
     ],
-    "729": [
+    729: [
         "array"
     ],
-    "730": [
+    730: [
         "string",
         "dynamic-programming"
     ],
-    "731": [
+    731: [
         "ordered-map"
     ],
-    "732": [
+    732: [
         "segment-tree",
         "ordered-map"
     ],
-    "733": [
+    733: [
         "depth-first-search"
     ],
-    "734": [
+    734: [
         "hash-table"
     ],
-    "735": [
+    735: [
         "stack"
     ],
-    "736": [
+    736: [
         "string"
     ],
-    "737": [
+    737: [
         "depth-first-search",
         "union-find"
     ],
-    "738": [
+    738: [
         "greedy"
     ],
-    "739": [
+    739: [
         "hash-table",
         "stack"
     ],
-    "740": [
+    740: [
         "dynamic-programming"
     ],
-    "741": [
+    741: [
         "dynamic-programming"
     ],
-    "742": [
+    742: [
         "string"
     ],
-    "743": [
+    743: [
         "tree"
     ],
-    "744": [
+    744: [
         "heap",
         "depth-first-search",
         "breadth-first-search",
         "graph"
     ],
-    "745": [
+    745: [
         "binary-search"
     ],
-    "746": [
+    746: [
         "trie"
     ],
-    "747": [
+    747: [
         "array",
         "dynamic-programming"
     ],
-    "748": [
+    748: [
         "array"
     ],
-    "749": [
+    749: [
         "hash-table"
     ],
-    "750": [
+    750: [
         "depth-first-search"
     ],
-    "751": [
+    751: [
         "dynamic-programming"
     ],
-    "752": [
+    752: [
         "bit-manipulation"
     ],
-    "753": [
+    753: [
         "breadth-first-search"
     ],
-    "754": [
+    754: [
         "math",
         "depth-first-search"
     ],
-    "755": [
+    755: [
         "math"
     ],
-    "756": [
+    756: [
         "array"
     ],
-    "757": [
+    757: [
         "bit-manipulation",
         "depth-first-search"
     ],
-    "758": [
+    758: [
         "linked-list",
         "divide-and-conquer",
         "tree"
     ],
-    "759": [
+    759: [
         "greedy"
     ],
-    "760": [
+    760: [
         "string"
     ],
-    "761": [
+    761: [
         "heap",
         "greedy"
     ],
-    "762": [
+    762: [
         "hash-table"
     ],
-    "763": [
+    763: [
         "string",
         "recursion"
     ],
-    "764": [
+    764: [
         "tree",
         "breadth-first-search"
     ],
-    "765": [
+    765: [
         "tree"
     ],
-    "766": [
+    766: [
         "linked-list",
         "depth-first-search"
     ],
-    "767": [
+    767: [
         "bit-manipulation"
     ],
-    "768": [
+    768: [
         "two-pointers",
         "greedy"
     ],
-    "769": [
+    769: [
         "dynamic-programming"
     ],
-    "770": [
+    770: [
         "greedy",
         "union-find",
         "graph"
     ],
-    "771": [
+    771: [
         "tree"
     ],
-    "774": [
+    774: [
         "tree",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "775": [
+    775: [
         "tree"
     ],
-    "776": [
+    776: [
         "tree"
     ],
-    "777": [
+    777: [
         "array"
     ],
-    "778": [
+    778: [
         "string",
         "heap",
         "greedy",
         "sort"
     ],
-    "779": [
+    779: [
         "array"
     ],
-    "780": [
+    780: [
         "array"
     ],
-    "781": [
+    781: [
         "hash-table",
         "string",
         "stack"
     ],
-    "782": [
+    782: [
         "hash-table"
     ],
-    "783": [
+    783: [
         "tree"
     ],
-    "784": [
+    784: [
         "tree"
     ],
-    "785": [
+    785: [
         "string",
         "stack"
     ],
-    "786": [
+    786: [
         "binary-search"
     ],
-    "787": [
+    787: [
         "breadth-first-search"
     ],
-    "788": [
+    788: [
         "binary-search"
     ],
-    "789": [
+    789: [
         "heap"
     ],
-    "790": [
+    790: [
         "array",
         "math"
     ],
-    "791": [
+    791: [
         "tree",
         "recursion"
     ],
-    "792": [
+    792: [
         "binary-search"
     ],
-    "793": [
+    793: [
         "brainteaser"
     ],
-    "794": [
+    794: [
         "binary-search",
         "heap",
         "depth-first-search",
         "union-find"
     ],
-    "795": [
+    795: [
         "recursion"
     ],
-    "796": [
+    796: [
         "math"
     ],
-    "797": [
+    797: [
         "hash-table",
         "math"
     ],
-    "798": [
+    798: [
         "array",
         "math"
     ],
-    "799": [
+    799: [
         "tree",
         "recursion"
     ],
-    "800": [
+    800: [
         "backtracking",
         "bit-manipulation"
     ],
-    "801": [
+    801: [
         "depth-first-search",
         "breadth-first-search",
         "graph"
     ],
-    "802": [
+    802: [
         "binary-search",
         "heap"
     ],
-    "803": [
+    803: [
         "dynamic-programming",
         "heap",
         "breadth-first-search"
     ],
-    "804": [
+    804: [
         "string"
     ],
-    "805": [
+    805: [
         "math"
     ],
-    "806": [
+    806: [
         "dynamic-programming"
     ],
-    "807": [
+    807: [
         "string"
     ],
-    "808": [
+    808: [
         "array"
     ],
-    "809": [
+    809: [
         "binary-search"
     ],
-    "810": [
+    810: [
         "math",
         "recursion"
     ],
-    "811": [
+    811: [
         "array"
     ],
-    "816": [
+    816: [
         "hash-table",
         "design"
     ],
-    "817": [
+    817: [
         "hash-table",
         "design"
     ],
-    "818": [
+    818: [
         "math",
         "string"
     ],
-    "819": [
+    819: [
         "dynamic-programming"
     ],
-    "820": [
+    820: [
         "depth-first-search",
         "graph"
     ],
-    "821": [
+    821: [
         "union-find"
     ],
-    "822": [
+    822: [
         "string"
     ],
-    "823": [
+    823: [
         "math"
     ],
-    "826": [
+    826: [
         "dynamic-programming"
     ],
-    "827": [
+    827: [
         "string"
     ],
-    "828": [
+    828: [
         "math"
     ],
-    "829": [
+    829: [
         "hash-table"
     ],
-    "830": [
+    830: [
         "math"
     ],
-    "831": [
+    831: [
         "dynamic-programming"
     ],
-    "832": [
+    832: [
         "tree"
     ],
-    "833": [
+    833: [
         "breadth-first-search"
     ],
-    "834": [
+    834: [
         "string"
     ],
-    "835": [
+    835: [
         "linked-list"
     ],
-    "836": [
+    836: [
         "dynamic-programming",
         "heap"
     ],
-    "837": [
+    837: [
         "string"
     ],
-    "838": [
+    838: [
         "linked-list",
         "design"
     ],
-    "850": [
+    850: [
         "linked-list"
     ],
-    "851": [
+    851: [
         "string"
     ],
-    "852": [
+    852: [
         "array"
     ],
-    "853": [
+    853: [
         "two-pointers"
     ],
-    "854": [
+    854: [
         "depth-first-search"
     ],
-    "855": [
+    855: [
         "two-pointers"
     ],
-    "856": [
+    856: [
         "math"
     ],
-    "857": [
+    857: [
         "array"
     ],
-    "858": [
+    858: [
         "string"
     ],
-    "859": [
+    859: [
         "design",
         "queue"
     ],
-    "860": [
+    860: [
         "design",
         "queue"
     ],
-    "861": [
+    861: [
         "array"
     ],
-    "862": [
+    862: [
         "string"
     ],
-    "863": [
+    863: [
         "tree",
         "depth-first-search"
     ],
-    "864": [
+    864: [
         "array"
     ],
-    "865": [
+    865: [
         "depth-first-search"
     ],
-    "866": [
+    866: [
         "math"
     ],
-    "867": [
+    867: [
         "dynamic-programming"
     ],
-    "868": [
+    868: [
         "two-pointers",
         "dynamic-programming"
     ],
-    "869": [
+    869: [
         "depth-first-search",
         "union-find",
         "graph"
     ],
-    "870": [
+    870: [
         "array"
     ],
-    "871": [
+    871: [
         "depth-first-search",
         "graph"
     ],
-    "872": [
+    872: [
         "string",
         "backtracking",
         "greedy"
     ],
-    "873": [
+    873: [
         "minimax"
     ],
-    "874": [
+    874: [
         "two-pointers",
         "stack"
     ],
-    "875": [
+    875: [
         "two-pointers"
     ],
-    "876": [
+    876: [
         "ordered-map"
     ],
-    "877": [
+    877: [
         "dynamic-programming",
         "breadth-first-search"
     ],
-    "878": [
+    878: [
         "string"
     ],
-    "879": [
+    879: [
         "array"
     ],
-    "880": [
+    880: [
         "segment-tree",
         "line-sweep"
     ],
-    "881": [
+    881: [
         "depth-first-search"
     ],
-    "882": [
+    882: [
         "binary-search"
     ],
-    "883": [
+    883: [
         "sort"
     ],
-    "884": [
+    884: [
         "breadth-first-search",
         "graph"
     ],
-    "885": [
+    885: [
         "ordered-map"
     ],
-    "886": [
+    886: [
         "string",
         "stack"
     ],
-    "887": [
+    887: [
         "heap"
     ],
-    "888": [
+    888: [
         "math"
     ],
-    "889": [
+    889: [
         "string"
     ],
-    "890": [
+    890: [
         "greedy"
     ],
-    "891": [
+    891: [
         "greedy"
     ],
-    "892": [
+    892: [
         "binary-search",
         "queue"
     ],
-    "893": [
+    893: [
         "tree",
         "depth-first-search",
         "breadth-first-search"
     ],
-    "894": [
+    894: [
         "hash-table",
         "binary-search",
         "sort",
         "random"
     ],
-    "895": [
+    895: [
         "heap",
         "breadth-first-search"
     ],
-    "896": [
+    896: [
         "tree"
     ],
-    "897": [
+    897: [
         "math"
     ],
-    "898": [
+    898: [
         "array"
     ],
-    "899": [
+    899: [
         "math"
     ],
-    "900": [
+    900: [
         "math"
     ],
-    "901": [
+    901: [
         "array",
         "greedy"
     ],
-    "902": [
+    902: [
         "dynamic-programming",
         "heap"
     ],
-    "903": [
+    903: [
         "random",
         "rejection-sampling"
     ],
-    "904": [
+    904: [
         "tree",
         "depth-first-search"
     ],
-    "905": [
+    905: [
         "array",
         "dynamic-programming"
     ],
-    "906": [
+    906: [
         "greedy"
     ],
-    "907": [
+    907: [
         "binary-search"
     ],
-    "908": [
+    908: [
         "linked-list"
     ],
-    "909": [
+    909: [
         "math",
         "dynamic-programming",
         "minimax"
     ],
-    "910": [
+    910: [
         "math",
         "binary-search"
     ],
-    "911": [
+    911: [
         "dynamic-programming"
     ],
-    "912": [
+    912: [
         "binary-search",
         "random"
     ],
-    "913": [
+    913: [
         "random"
     ],
-    "914": [
+    914: [
         "binary-search",
         "random"
     ],
-    "915": [
+    915: [
         "math",
         "random",
         "rejection-sampling"
     ],
-    "916": [
+    916: [
         "stack"
     ],
-    "917": [
+    917: [
         "two-pointers",
         "greedy"
     ],
-    "918": [
+    918: [
         "heap"
     ],
-    "919": [
+    919: [
         "math"
     ],
-    "920": [
+    920: [
         "hash-table"
     ],
-    "921": [
+    921: [
         "math"
     ],
-    "922": [
+    922: [
         "depth-first-search"
     ],
-    "923": [
+    923: [
         "math",
         "binary-search",
         "dynamic-programming"
     ],
-    "924": [
+    924: [
         "array"
     ],
-    "925": [
+    925: [
         "tree"
     ],
-    "926": [
+    926: [
         "string"
     ],
-    "927": [
+    927: [
         "array",
         "math"
     ],
-    "928": [
+    928: [
         "math",
         "geometry"
     ],
-    "929": [
+    929: [
         "string"
     ],
-    "930": [
+    930: [
         "tree",
         "recursion"
     ],
-    "931": [
+    931: [
         "hash-table",
         "stack"
     ],
-    "932": [
+    932: [
         "array"
     ],
-    "933": [
+    933: [
         "tree",
         "depth-first-search"
     ],
-    "934": [
+    934: [
         "dynamic-programming",
         "bit-manipulation"
     ],
-    "935": [
+    935: [
         "math",
         "string"
     ],
-    "936": [
+    936: [
         "array"
     ],
-    "937": [
+    937: [
         "stack"
     ],
-    "938": [
+    938: [
         "math",
         "dynamic-programming"
     ],
-    "939": [
+    939: [
         "divide-and-conquer",
         "dynamic-programming"
     ],
-    "940": [
+    940: [
         "two-pointers"
     ],
-    "941": [
+    941: [
         "array"
     ],
-    "942": [
+    942: [
         "math"
     ],
-    "943": [
+    943: [
         "array",
         "stack"
     ],
-    "944": [
+    944: [
         "math"
     ],
-    "945": [
+    945: [
         "breadth-first-search"
     ],
-    "946": [
+    946: [
         "math",
         "greedy"
     ],
-    "947": [
+    947: [
         "binary-search"
     ],
-    "949": [
+    949: [
         "breadth-first-search",
         "minimax"
     ],
-    "950": [
+    950: [
         "array",
         "math"
     ],
-    "951": [
+    951: [
         "array"
     ],
-    "952": [
+    952: [
         "string"
     ],
-    "953": [
+    953: [
         "string"
     ],
-    "954": [
+    954: [
         "array"
     ],
-    "955": [
+    955: [
         "tree"
     ],
-    "956": [
+    956: [
         "dynamic-programming"
     ],
-    "957": [
+    957: [
         "stack",
         "greedy"
     ],
-    "958": [
+    958: [
         "array",
         "sort"
     ],
-    "959": [
+    959: [
         "two-pointers"
     ],
-    "960": [
+    960: [
         "depth-first-search",
         "union-find"
     ],
-    "961": [
+    961: [
         "two-pointers",
         "string"
     ],
-    "962": [
+    962: [
         "array"
     ],
-    "963": [
+    963: [
         "math",
         "binary-search",
         "greedy"
     ],
-    "964": [
+    964: [
         "depth-first-search",
         "union-find",
         "graph"
     ],
-    "965": [
+    965: [
         "string"
     ],
-    "966": [
+    966: [
         "hash-table",
         "two-pointers"
     ],
-    "967": [
+    967: [
         "dynamic-programming"
     ],
-    "968": [
+    968: [
         "divide-and-conquer"
     ],
-    "969": [
+    969: [
         "queue"
     ],
-    "971": [
+    971: [
         "depth-first-search",
         "breadth-first-search"
     ],
-    "972": [
+    972: [
         "dynamic-programming"
     ],
-    "973": [
+    973: [
         "string",
         "greedy"
     ],
-    "974": [
+    974: [
         "string"
     ],
-    "975": [
+    975: [
         "tree",
         "recursion"
     ],
-    "976": [
+    976: [
         "hash-table"
     ],
-    "977": [
+    977: [
         "dynamic-programming"
     ],
-    "978": [
+    978: [
         "array"
     ],
-    "979": [
+    979: [
         "math"
     ],
-    "980": [
+    980: [
         "dynamic-programming"
     ],
-    "981": [
+    981: [
         "greedy"
     ],
-    "982": [
+    982: [
         "array"
     ],
-    "983": [
+    983: [
         "stack"
     ],
-    "984": [
+    984: [
         "depth-first-search",
         "union-find"
     ],
-    "985": [
+    985: [
         "greedy"
     ],
-    "986": [
+    986: [
         "math"
     ],
-    "987": [
+    987: [
         "array"
     ],
-    "988": [
+    988: [
         "tree"
     ],
-    "989": [
+    989: [
         "math",
         "union-find"
     ],
-    "990": [
+    990: [
         "hash-table"
     ],
-    "991": [
+    991: [
         "array",
         "hash-table"
     ],
-    "992": [
+    992: [
         "greedy"
     ],
-    "993": [
+    993: [
         "dynamic-programming"
     ],
-    "994": [
+    994: [
         "hash-table"
     ],
-    "998": [
+    998: [
         "tree"
     ],
-    "999": [
+    999: [
         "depth-first-search",
         "union-find",
         "graph"
     ],
-    "1000": [
+    1000: [
         "dynamic-programming"
     ],
-    "1001": [
+    1001: [
         "hash-table"
     ],
-    "1002": [
+    1002: [
         "array"
     ],
-    "1003": [
+    1003: [
         "math",
         "geometry"
     ],
-    "1004": [
+    1004: [
         "math",
         "dynamic-programming"
     ],
-    "1005": [
+    1005: [
         "tree"
     ],
-    "1006": [
+    1006: [
         "hash-table",
         "string"
     ],
-    "1007": [
+    1007: [
         "dynamic-programming"
     ],
-    "1008": [
+    1008: [
         "dynamic-programming",
         "tree",
         "depth-first-search"
     ],
-    "1009": [
+    1009: [
         "array",
         "sort"
     ],
-    "1010": [
+    1010: [
         "hash-table",
         "math"
     ],
-    "1011": [
+    1011: [
         "tree",
         "depth-first-search"
     ],
-    "1012": [
+    1012: [
         "math"
     ],
-    "1013": [
+    1013: [
         "array"
     ],
-    "1014": [
+    1014: [
         "divide-and-conquer",
         "heap",
         "sort"
     ],
-    "1016": [
+    1016: [
         "array",
         "hash-table"
     ],
-    "1017": [
+    1017: [
         "dynamic-programming",
         "stack",
         "ordered-map"
     ],
-    "1018": [
+    1018: [
         "math",
         "sort"
     ],
-    "1019": [
+    1019: [
         "array",
         "two-pointers"
     ],
-    "1020": [
+    1020: [
         "array",
         "dynamic-programming",
         "sliding-window"
     ],
-    "1021": [
+    1021: [
         "tree",
         "depth-first-search"
     ],
-    "1022": [
+    1022: [
         "backtracking",
         "depth-first-search"
     ],
-    "1023": [
+    1023: [
         "hash-table",
         "binary-search"
     ],
-    "1024": [
+    1024: [
         "dynamic-programming"
     ],
-    "1025": [
+    1025: [
         "dynamic-programming"
     ],
-    "1026": [
+    1026: [
         "greedy"
     ],
-    "1027": [
+    1027: [
         "array"
     ],
-    "1028": [
+    1028: [
         "two-pointers"
     ],
-    "1029": [
+    1029: [
         "hash-table",
         "tree"
     ],
-    "1030": [
+    1030: [
         "tree",
         "depth-first-search"
     ],
-    "1031": [
+    1031: [
         "array"
     ],
-    "1032": [
+    1032: [
         "union-find",
         "graph"
     ],
-    "1033": [
+    1033: [
         "math",
         "greedy"
     ],
-    "1034": [
+    1034: [
         "hash-table",
         "two-pointers",
         "sliding-window"
     ],
-    "1035": [
+    1035: [
         "tree",
         "breadth-first-search"
     ],
-    "1036": [
+    1036: [
         "breadth-first-search"
     ],
-    "1037": [
+    1037: [
         "greedy",
         "sliding-window"
     ],
-    "1038": [
+    1038: [
         "math",
         "backtracking",
         "graph"
     ],
-    "1039": [
+    1039: [
         "graph"
     ],
-    "1040": [
+    1040: [
         "tree"
     ],
-    "1041": [
+    1041: [
         "array"
     ],
-    "1042": [
+    1042: [
         "dynamic-programming"
     ],
-    "1043": [
+    1043: [
         "hash-table"
     ],
-    "1044": [
+    1044: [
         "array",
         "hash-table"
     ],
-    "1045": [
+    1045: [
         "string",
         "stack"
     ],
-    "1046": [
+    1046: [
         "two-pointers",
         "sliding-window"
     ],
-    "1047": [
+    1047: [
         "greedy"
     ],
-    "1048": [
+    1048: [
         "math"
     ],
-    "1049": [
+    1049: [
         "array",
         "greedy"
     ],
-    "1050": [
+    1050: [
         "tree"
     ],
-    "1051": [
+    1051: [
         "dynamic-programming",
         "greedy"
     ],
-    "1052": [
+    1052: [
         "greedy",
         "sort"
     ],
-    "1053": [
+    1053: [
         "math",
         "dynamic-programming",
         "greedy"
     ],
-    "1054": [
+    1054: [
         "math"
     ],
-    "1055": [
+    1055: [
         "array"
     ],
-    "1056": [
+    1056: [
         "array",
         "binary-search"
     ],
-    "1057": [
+    1057: [
         "math",
         "dynamic-programming"
     ],
-    "1058": [
+    1058: [
         "depth-first-search",
         "union-find"
     ],
-    "1059": [
+    1059: [
         "binary-search"
     ],
-    "1060": [
+    1060: [
         "string"
     ],
-    "1061": [
+    1061: [
         "stack"
     ],
-    "1062": [
+    1062: [
         "array"
     ],
-    "1063": [
+    1063: [
         "array"
     ],
-    "1064": [
+    1064: [
         "math"
     ],
-    "1065": [
+    1065: [
         "string"
     ],
-    "1066": [
+    1066: [
         "array",
         "binary-search"
     ],
-    "1067": [
+    1067: [
         "dynamic-programming",
         "backtracking"
     ],
-    "1068": [
+    1068: [
         "math",
         "dynamic-programming"
     ],
-    "1069": [
+    1069: [
         "math"
     ],
-    "1070": [
+    1070: [
         "math"
     ],
-    "1071": [
+    1071: [
         "array"
     ],
-    "1072": [
+    1072: [
         "linked-list",
         "stack"
     ],
-    "1073": [
+    1073: [
         "depth-first-search"
     ],
-    "1075": [
+    1075: [
         "string",
         "trie"
     ],
-    "1078": [
+    1078: [
         "stack"
     ],
-    "1079": [
+    1079: [
         "tree"
     ],
-    "1080": [
+    1080: [
         "string",
         "trie"
     ],
-    "1081": [
+    1081: [
         "dynamic-programming"
     ],
-    "1086": [
+    1086: [
         "math",
         "dynamic-programming"
     ],
-    "1087": [
+    1087: [
         "dynamic-programming"
     ],
-    "1092": [
+    1092: [
         "tree",
         "depth-first-search"
     ],
-    "1093": [
+    1093: [
         "tree",
         "depth-first-search"
     ],
-    "1094": [
+    1094: [
         "sort"
     ],
-    "1095": [
+    1095: [
         "greedy"
     ],
-    "1096": [
+    1096: [
         "array"
     ],
-    "1097": [
+    1097: [
         "trie"
     ],
-    "1103": [
+    1103: [
         "brainteaser"
     ],
-    "1104": [
+    1104: [
         "depth-first-search"
     ],
-    "1105": [
+    1105: [
         "array"
     ],
-    "1106": [
+    1106: [
         "breadth-first-search"
     ],
-    "1111": [
+    1111: [
         "dynamic-programming"
     ],
-    "1113": [
+    1113: [
         "array",
         "sliding-window"
     ],
-    "1114": [
+    1114: [
         "binary-search-tree"
     ],
-    "1115": [
+    1115: [
         "math"
     ],
-    "1119": [
+    1119: [
         "math"
     ],
-    "1120": [
+    1120: [
         "graph"
     ],
-    "1121": [
+    1121: [
         "graph"
     ],
-    "1122": [
+    1122: [
         "hash-table",
         "binary-search"
     ],
-    "1127": [
+    1127: [
         "heap",
         "greedy"
     ],
-    "1128": [
+    1128: [
         "stack"
     ],
-    "1129": [
+    1129: [
         "hash-table",
         "dynamic-programming"
     ],
-    "1130": [
+    1130: [
         "dynamic-programming"
     ],
-    "1137": [
+    1137: [
         "array"
     ],
-    "1138": [
+    1138: [
         "array",
         "sliding-window"
     ],
-    "1139": [
+    1139: [
         "array",
         "greedy"
     ],
-    "1140": [
+    1140: [
         "heap",
         "sort"
     ],
-    "1145": [
+    1145: [
         "array",
         "dynamic-programming",
         "sliding-window"
     ],
-    "1146": [
+    1146: [
         "string"
     ],
-    "1147": [
+    1147: [
         "hash-table"
     ],
-    "1148": [
+    1148: [
         "math"
     ]
 };

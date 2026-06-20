@@ -42,4 +42,3 @@ export function getCommentStyle(language: string): ICommentStyle {
     const marker: string = singleLineCommentByLanguage.get(language) || "#";
     return { start: marker, line: marker, end: marker, singleLine: marker };
 }
-
