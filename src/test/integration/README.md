@@ -29,6 +29,8 @@ The copied JSON has this shape (see [`auth-fixture.example.json`](./auth-fixture
 ## 2. Paste it into the local-only fixture file
 
 Create `src/test/.secrets/leetcode-auth.local.json` and paste the JSON there.
+The directory is committed with an empty `leetcode-auth.local.example.json`
+placeholder; keep real cookies in the `.local.json` file only.
 
 ```
 src/test/.secrets/leetcode-auth.local.json

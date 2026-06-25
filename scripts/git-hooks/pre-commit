@@ -17,6 +17,9 @@ function stagedDiff(args) {
 }
 
 const offenders = [];
+const allowedSecretPlaceholders = new Set([
+    "src/test/.secrets/leetcode-auth.local.example.json",
+]);
 
 const stagedNames = stagedDiff("--name-only")
     .split("\n")
@@ -24,7 +27,7 @@ const stagedNames = stagedDiff("--name-only")
     .filter(Boolean);
 
 for (const name of stagedNames) {
-    if (name.includes(".secrets/") || name.endsWith(".local.json")) {
+    if ((name.includes(".secrets/") && !allowedSecretPlaceholders.has(name)) || name.endsWith(".local.json")) {
         offenders.push(`staged file looks local-only: ${name}`);
     }
 }
