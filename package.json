@@ -2,7 +2,7 @@
     "name": "vscode-leetcode-auth-sync",
     "displayName": "LeetCode with Auth Sync",
     "description": "Unofficial VS Code extension for solving LeetCode problems with browser auth sync; not affiliated with LeetCode",
-    "version": "0.19.0",
+    "version": "0.19.1",
     "author": "wilmtang",
     "publisher": "wilmtang",
     "license": "MIT",
