@@ -161,8 +161,9 @@ git push origin vscode-extension-v0.18.8
 ```
 
 `.github/workflows/vscode-extension.yml` verifies the tag matches
-`package.json`, packages the VSIX, and publishes when the tag starts with
-`vscode-extension-v`. Required environment secrets:
+`package.json`, packages the VSIX, publishes when the tag starts with
+`vscode-extension-v`, and creates a GitHub Release with generated notes, store
+links, and the VSIX attached. Required environment secrets:
 
 - `VSCE_PAT` in `vscode-marketplace`
 - `OVSX_PAT` for Open VSX publishing

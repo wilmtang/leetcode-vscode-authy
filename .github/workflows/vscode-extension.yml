@@ -81,6 +81,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: startsWith(github.ref, 'refs/tags/vscode-extension-v') || github.event.inputs.publish == 'true'
+    permissions:
+      contents: write
     environment: vscode-marketplace
     env:
       VSIX_PATH: dist/vscode-leetcode-auth-sync.vsix
@@ -120,3 +122,27 @@ jobs:
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: npm run publish:vscode:open-vsx -- "$VSIX_PATH" --skip-duplicate
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/vscode-extension-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPEN_VSX_URL: https://open-vsx.org/extension/wilmtang/vscode-leetcode-auth-sync
+          VSCODE_MARKETPLACE_URL: https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync
+        run: |
+          VERSION="${GITHUB_REF_NAME#vscode-extension-v}"
+          RELEASE_VSIX="dist/vscode-leetcode-auth-sync-$VERSION.vsix"
+          cp "$VSIX_PATH" "$RELEASE_VSIX"
+
+          cat > release-notes.md <<EOF
+          ## Store links
+          - [VS Code Marketplace]($VSCODE_MARKETPLACE_URL)
+          - [Open VSX Registry]($OPEN_VSX_URL)
+
+          EOF
+
+          gh release create "$GITHUB_REF_NAME" "$RELEASE_VSIX" \
+            --title "VS Code Extension v$VERSION" \
+            --notes-file release-notes.md \
+            --generate-notes \
+            --verify-tag || gh release upload "$GITHUB_REF_NAME" "$RELEASE_VSIX" --clobber
