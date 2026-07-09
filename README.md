@@ -134,7 +134,8 @@ Important details:
 - The health endpoint is `GET http://127.0.0.1:17899/health`.
 - If several VS Code windows are open, only one owns the listener. Other windows verify the live owner through the local `/health` endpoint and can take over when that listener is gone.
 - The browser extension reads `leetcode.com` cookies and sends a LeetCode `Cookie` header to the local listener.
-- Automatic sync observes only LeetCode XHR/fetch requests and waits for the configured cooldown after a successful automatic sync of an unchanged session. Sign-in changes sync immediately.
+- Automatic sync observes only LeetCode XHR/fetch requests and waits for the configured cooldown after a successful automatic sync of an unchanged session. The cooldown is bypassed (syncs immediately) if the login session fingerprint changes (based on `LEETCODE_SESSION` + `csrftoken`) or if headers are captured for the first time after a cookie-only sync.
+- The VS Code output channel prints full sync details only when the login session changes. Repeat syncs of an unchanged session are collapsed into a single `session unchanged` line; freshly captured browser request headers are still stored and used either way.
 - `Expire now` from the popup bypasses the cooldown for the next real LeetCode request. The optional `Cookie-only sync` button sends cookies immediately but does not capture browser request headers.
 - Cookie values are sent only to the local VS Code listener and are not intentionally logged by either extension.
 - If `leetcode.authSync.secret` is set, the browser extension must send the same value in the `X-LeetCode-AuthSync-Secret` header.

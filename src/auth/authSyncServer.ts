@@ -423,7 +423,7 @@ class AuthSyncServer implements vscode.Disposable {
             return;
         }
 
-        const payloadHash: string = this.getSessionPayloadHash(cookie, browserUserAgent, browserRequestHeaders);
+        const payloadHash: string = this.getSessionPayloadHash(cookie);
 
         if (payloadHash === this.lastPayloadHash) {
             leetCodeChannel.appendLine(`[auth-sync] Cookie update received (session unchanged). Reason: ${this.getSafeReason(body.reason)}.`);
@@ -622,26 +622,19 @@ class AuthSyncServer implements vscode.Disposable {
         return typeof reason === "string" && reason ? reason : "unspecified";
     }
 
-    // Hashes only the login-relevant parts of the payload. The full cookie
-    // header churns on nearly every request (__cf_bm rotates, _dd_s embeds
-    // timestamps), which would make the "session unchanged" log dedupe never
-    // fire. Header keys are sorted because the browser does not guarantee a
-    // stable header order between requests.
-    private getSessionPayloadHash(cookie: string, browserUserAgent: string | undefined, browserRequestHeaders: IBrowserRequestHeaders | undefined): string {
-        const headers: IBrowserRequestHeaders = browserRequestHeaders || {};
-        const sortedHeaders: string = Object.keys(headers)
-            .sort()
-            .map((key: string) => `${key}:${headers[key]}`)
-            .join("\n");
-
+    // Fingerprints the login identity only (LEETCODE_SESSION + csrftoken),
+    // mirroring the browser extension's cooldown fingerprint. Deliberately
+    // excludes the captured request headers and user agent: headers like
+    // `priority`, `accept`, and `sec-fetch-*` describe whichever XHR happened
+    // to trigger the sync and differ between requests from the same browser,
+    // so including them makes the "session unchanged" log dedupe in
+    // handleRequest never fire. Headers are still stored on every sync —
+    // this hash only decides how much to log.
+    private getSessionPayloadHash(cookie: string): string {
         return crypto.createHash("sha256")
             .update(this.getCookieValue(cookie, "LEETCODE_SESSION") || "")
             .update("\n")
             .update(this.getCookieValue(cookie, "csrftoken") || "")
-            .update("\n")
-            .update(sortedHeaders)
-            .update("\n")
-            .update(browserUserAgent || "")
             .digest("hex");
     }
 
