@@ -3,7 +3,13 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.20.0]
+### Fixed
+- Fixed auth-sync cooldown being bypassed too eagerly for unchanged sessions. Automatic syncs now correctly respect the configured cooldown unless the login session fingerprint changes or headers are captured for the first time.
+- Reduced log noise in the output channel: repeat syncs of an unchanged session now collapse to a single `session unchanged` line instead of printing three lines per sync. Browser request headers are still captured and stored on every sync.
+- Browser extension updated to 0.1.6 with improved cooldown logic.
+
+## [0.19.1]
 ### Added
 - **Status bar profile panel**: clicking the `LeetCode: <username>` status bar
   item opens a personal-stats webview with total solved counts, Easy/Medium/Hard
