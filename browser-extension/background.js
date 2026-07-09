@@ -6,6 +6,8 @@ const DEFAULTS = {
     showCookieOnlyButton: false,
     devMode: false,
     lastSyncAt: 0,
+    lastSyncSessionFingerprint: "",
+    lastSyncHadHeaders: false,
     lastSyncError: "",
     lastSyncErrorAt: 0,
     lastSyncErrorReason: "",
@@ -35,6 +37,8 @@ async function getSettings() {
         showCookieOnlyButton: stored.showCookieOnlyButton === true,
         devMode: stored.devMode === true,
         lastSyncAt: normalizeTimestamp(stored.lastSyncAt),
+        lastSyncSessionFingerprint: typeof stored.lastSyncSessionFingerprint === "string" ? stored.lastSyncSessionFingerprint : "",
+        lastSyncHadHeaders: stored.lastSyncHadHeaders === true,
         lastSyncError: typeof stored.lastSyncError === "string" ? stored.lastSyncError : "",
         lastSyncErrorAt: normalizeTimestamp(stored.lastSyncErrorAt),
         lastSyncErrorReason: typeof stored.lastSyncErrorReason === "string" ? stored.lastSyncErrorReason : "",
@@ -131,17 +135,6 @@ async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
         };
     }
 
-    const remainingMs = shouldRespectCooldown(syncReason, requestHeadersOverride) ? getCooldownRemainingMs(settings) : 0;
-    if (remainingMs > 0) {
-        return {
-            ...addComputedSyncStatus(settings),
-            ok: false,
-            skipped: true,
-            error: `Sync cooldown is active. Next sync is available in ${formatDuration(remainingMs)}.`,
-            nextSyncAt: settings.lastSyncAt + settings.cooldownMinutes * 60 * 1000,
-        };
-    }
-
     const cookie = typeof cookieOverride === "string" && cookieOverride
         ? cookieOverride
         : await getLeetCodeCookieHeader();
@@ -162,6 +155,20 @@ async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
     }
 
     const replayableRequestHeaders = getReplayableRequestHeaders(requestHeadersOverride);
+
+    const remainingMs = getCooldownRemainingMs(settings);
+    if (isAutomaticSyncReason(syncReason) && remainingMs > 0) {
+        const bypass = await shouldBypassCooldown(cookie, replayableRequestHeaders, settings);
+        if (!bypass) {
+            return {
+                ...addComputedSyncStatus(settings),
+                ok: false,
+                skipped: true,
+                error: `Sync cooldown is active. Next sync is available in ${formatDuration(remainingMs)}.`,
+                nextSyncAt: settings.lastSyncAt + settings.cooldownMinutes * 60 * 1000,
+            };
+        }
+    }
 
     if (settings.devMode) {
         // Persist the exact data we send so a developer can copy it from the
@@ -208,8 +215,11 @@ async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
     }
 
     const lastSyncAt = Date.now();
+    const sessionFingerprint = await getSessionFingerprint(cookie);
     const successState = {
         lastSyncAt,
+        lastSyncSessionFingerprint: sessionFingerprint,
+        lastSyncHadHeaders: Object.keys(replayableRequestHeaders).length > 0,
         lastSyncError: "",
         lastSyncErrorAt: 0,
         lastSyncErrorReason: "",
@@ -359,8 +369,25 @@ function isAutomaticSyncReason(reason) {
     return reason === "leetcode-xhr";
 }
 
-function shouldRespectCooldown(reason, requestHeaders = null) {
-    return isAutomaticSyncReason(reason) && Object.keys(getReplayableRequestHeaders(requestHeaders)).length === 0;
+async function getSessionFingerprint(cookieHeader) {
+    const cookies = parseCookieHeader(cookieHeader);
+    const session = cookies.get("LEETCODE_SESSION") || "";
+    const csrf = cookies.get("csrftoken") || "";
+    const data = new TextEncoder().encode(`${session}\n${csrf}`);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function shouldBypassCooldown(cookie, replayableHeaders, stored) {
+    const fingerprint = await getSessionFingerprint(cookie);
+    if (fingerprint !== stored.lastSyncSessionFingerprint) {
+        return true;
+    }
+    if (!stored.lastSyncHadHeaders && Object.keys(replayableHeaders).length > 0) {
+        return true;
+    }
+    return false;
 }
 
 function parseCookieHeader(cookieHeader) {

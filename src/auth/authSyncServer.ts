@@ -71,6 +71,7 @@ class AuthSyncServer implements vscode.Disposable {
     private readonly windowId: string = crypto.randomBytes(6).toString("hex");
     private readonly startedAt: number = Date.now();
     private readonly controlToken: string = crypto.randomBytes(24).toString("hex");
+    private lastPayloadHash: string | undefined;
     // Fires after the browser extension pushes a fresh auth payload (cookie +
     // request headers + user agent) and lastSyncedAt is bumped. Lets the status
     // bar refresh its "Last auth sync" tooltip on every sync, not just on the
@@ -422,12 +423,19 @@ class AuthSyncServer implements vscode.Disposable {
             return;
         }
 
-        this.logCookieUpdate(cookie, body.reason);
-        if (browserUserAgent) {
-            leetCodeChannel.appendLine("[auth-sync] Captured browser user agent for direct judge requests.");
-        }
-        if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
-            leetCodeChannel.appendLine(`[auth-sync] Captured ${Object.keys(browserRequestHeaders).length} browser request headers for direct judge requests.`);
+        const payloadHash: string = this.getSessionPayloadHash(cookie, browserUserAgent, browserRequestHeaders);
+
+        if (payloadHash === this.lastPayloadHash) {
+            leetCodeChannel.appendLine(`[auth-sync] Cookie update received (session unchanged). Reason: ${this.getSafeReason(body.reason)}.`);
+        } else {
+            this.lastPayloadHash = payloadHash;
+            this.logCookieUpdate(cookie, body.reason);
+            if (browserUserAgent) {
+                leetCodeChannel.appendLine("[auth-sync] Captured browser user agent for direct judge requests.");
+            }
+            if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
+                leetCodeChannel.appendLine(`[auth-sync] Captured ${Object.keys(browserRequestHeaders).length} browser request headers for direct judge requests.`);
+            }
         }
         if (leetCodeManager.getStatus() === UserStatus.SignedOut) {
             await leetCodeManager.updateSessionFromCookie(cookie, browserUserAgent, browserRequestHeaders);
@@ -607,9 +615,34 @@ class AuthSyncServer implements vscode.Disposable {
             .map((part: string) => part.trim().split("=")[0])
             .filter((name: string) => !!name)
             .join(", ");
-        const safeReason: string = typeof reason === "string" && reason ? reason : "unspecified";
+        leetCodeChannel.appendLine(`[auth-sync] Received cookie update. Cookie names: ${names}. Reason: ${this.getSafeReason(reason)}.`);
+    }
 
-        leetCodeChannel.appendLine(`[auth-sync] Received cookie update. Cookie names: ${names}. Reason: ${safeReason}.`);
+    private getSafeReason(reason: string | undefined): string {
+        return typeof reason === "string" && reason ? reason : "unspecified";
+    }
+
+    // Hashes only the login-relevant parts of the payload. The full cookie
+    // header churns on nearly every request (__cf_bm rotates, _dd_s embeds
+    // timestamps), which would make the "session unchanged" log dedupe never
+    // fire. Header keys are sorted because the browser does not guarantee a
+    // stable header order between requests.
+    private getSessionPayloadHash(cookie: string, browserUserAgent: string | undefined, browserRequestHeaders: IBrowserRequestHeaders | undefined): string {
+        const headers: IBrowserRequestHeaders = browserRequestHeaders || {};
+        const sortedHeaders: string = Object.keys(headers)
+            .sort()
+            .map((key: string) => `${key}:${headers[key]}`)
+            .join("\n");
+
+        return crypto.createHash("sha256")
+            .update(this.getCookieValue(cookie, "LEETCODE_SESSION") || "")
+            .update("\n")
+            .update(this.getCookieValue(cookie, "csrftoken") || "")
+            .update("\n")
+            .update(sortedHeaders)
+            .update("\n")
+            .update(browserUserAgent || "")
+            .digest("hex");
     }
 
     private sendJson(res: http.ServerResponse, status: number, payload: object, allowCors: boolean = true, req?: http.IncomingMessage): void {

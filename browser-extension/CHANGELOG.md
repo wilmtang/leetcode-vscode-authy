@@ -3,6 +3,10 @@ All notable changes to the "LeetCode VS Code Auth Sync" browser extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.6]
+### Fixed
+- Fixed an issue where the background cooldown was bypassed too eagerly, causing excessive `leetcode-xhr` syncs and noisy logs for an unchanged session. Automatic syncs now correctly respect the configured cooldown (default 30 minutes) unless the login session fingerprint or header presence materially changes.
+
 ## [0.1.5]
 ### Changed
 - Clarify auth-sync and browser request-header documentation.
