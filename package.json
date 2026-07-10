@@ -1,6 +1,6 @@
 {
     "name": "vscode-leetcode-auth-sync",
-    "displayName": "LeetCode with Auth Sync",
+    "displayName": "LeetCode VS Code Authy",
     "description": "Unofficial VS Code extension for solving LeetCode problems with browser auth sync; not affiliated with LeetCode",
     "version": "0.20.0",
     "author": "wilmtang",
@@ -12,9 +12,9 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/wilmtang/vscode-leetcode"
+        "url": "https://github.com/wilmtang/leetcode-vscode-authy"
     },
-    "homepage": "https://github.com/wilmtang/vscode-leetcode/blob/main/README.md",
+    "homepage": "https://github.com/wilmtang/leetcode-vscode-authy/blob/main/README.md",
     "categories": [
         "Other",
         "Snippets"
@@ -167,7 +167,7 @@
             "activitybar": [
                 {
                     "id": "leetcode",
-                    "title": "LeetCode with Auth Sync",
+                    "title": "LeetCode VS Code Authy",
                     "icon": "resources/auth-sync.svg"
                 }
             ]
@@ -718,7 +718,7 @@
                         "type": "boolean",
                         "default": false,
                         "scope": "application",
-                        "description": "Opt in to anonymous usage telemetry. When enabled, events are sent to the official LeetCode plugin telemetry endpoint, not to an endpoint operated by this unofficial fork. Telemetry is disabled by default."
+                        "description": "Opt in to anonymous usage telemetry. When enabled, events are sent to the official LeetCode plugin telemetry endpoint, not to an endpoint operated by this unofficial project. Telemetry is disabled by default."
                     },
                     "leetcode.authSync.enabled": {
                         "type": "boolean",

@@ -1,12 +1,12 @@
-# LeetCode with Auth Sync
+# LeetCode VS Code Authy
 
-**VS Code extension:** [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-open-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Version](https://vsmarketplacebadges.dev/version-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Downloads](https://vsmarketplacebadges.dev/downloads/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![Build](https://img.shields.io/github/actions/workflow/status/wilmtang/vscode-leetcode/build.yml?branch=main&label=build)](https://github.com/wilmtang/vscode-leetcode/actions/workflows/build.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+**VS Code extension:** [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-open-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Version](https://vsmarketplacebadges.dev/version-short/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![VS Code Marketplace Downloads](https://vsmarketplacebadges.dev/downloads/wilmtang.vscode-leetcode-auth-sync.svg)](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) [![Build](https://img.shields.io/github/actions/workflow/status/wilmtang/leetcode-vscode-authy/build.yml?branch=main&label=build)](https://github.com/wilmtang/leetcode-vscode-authy/actions/workflows/build.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Browser extension:** [![Firefox Add-ons](https://img.shields.io/badge/Firefox%20Add--ons-open-FF7139?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/) [![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-open-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck) [![Open VSX](https://img.shields.io/open-vsx/v/wilmtang/vscode-leetcode-auth-sync?label=Open%20VSX&logo=openvsx&logoColor=white)](https://open-vsx.org/extension/wilmtang/vscode-leetcode-auth-sync)
 
 Solve LeetCode problems in VS Code with a companion browser extension that syncs your signed-in `leetcode.com` session to a local VS Code listener.
 
-This is an unofficial fork maintained by `wilmtang` at [wilmtang/vscode-leetcode](https://github.com/wilmtang/vscode-leetcode). It is not affiliated with, endorsed by, sponsored by, or published by LeetCode. The original MIT license and copyright notices are preserved in [LICENSE](LICENSE), with fork attribution in [NOTICE.md](NOTICE.md).
+This independent project is maintained by `wilmtang` at [wilmtang/leetcode-vscode-authy](https://github.com/wilmtang/leetcode-vscode-authy). It is not affiliated with, endorsed by, sponsored by, or published by LeetCode. The original MIT license and copyright notices are preserved in [LICENSE](LICENSE), with source attribution in [NOTICE.md](NOTICE.md).
 
 ## Visual Tour
 
@@ -26,20 +26,20 @@ This is an unofficial fork maintained by `wilmtang` at [wilmtang/vscode-leetcode
 
 ## Why Use It
 
-Older LeetCode VS Code workflows can break when LeetCode changes auth, CSRF, or bot-protection behavior. This fork keeps the workflow local and direct:
+Older LeetCode VS Code workflows can break when LeetCode changes auth, CSRF, or bot-protection behavior. This project keeps the workflow local and direct:
 
 - **No manual cookie copying:** sign in to `leetcode.com` in your browser, then sync that browser session into VS Code.
 - **More reliable test and submit:** VS Code reuses the synced cookie and captured browser request headers.
 - **Local-first sync:** session data is posted only to the VS Code listener on `127.0.0.1`.
 - **Useful failure messages:** auth-sync and Cloudflare failures surface as explicit sync/debug messages instead of generic login errors.
 
-`leetcode.cn` support is currently broken and untested in this fork. Favorites and Solutions do not work on `.cn` after the move to direct API calls. Details live in [docs/maintainer-guide.md](docs/maintainer-guide.md#current-caveats).
+`leetcode.cn` support is currently broken and untested. Favorites and Solutions do not work on `.cn` after the move to direct API calls. Details live in [docs/maintainer-guide.md](docs/maintainer-guide.md#current-caveats).
 
 ## Quick Start
 
 Install both pieces on the same machine:
 
-1. Install [LeetCode with Auth Sync from the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) or [Open VSX](https://open-vsx.org/extension/wilmtang/vscode-leetcode-auth-sync).
+1. Install [LeetCode VS Code Authy from the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) or [Open VSX](https://open-vsx.org/extension/wilmtang/vscode-leetcode-auth-sync).
 2. Install the companion browser extension:
    - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/)
    - [Chrome Web Store](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck)
@@ -116,7 +116,7 @@ That blocks ordinary malicious websites through the Origin/CORS checks, but it i
 | `leetcode.hideSolved` | `false` | Hide solved problems. |
 | `leetcode.defaultLanguage` | `N/A` | Default solution language. |
 | `leetcode.useWsl` | `false` | Use WSL. |
-| `leetcode.endpoint` | `leetcode` | Active endpoint. `leetcode-cn` is currently broken in this fork. |
+| `leetcode.endpoint` | `leetcode` | Active endpoint. `leetcode-cn` is currently broken in this project. |
 | `leetcode.workspaceFolder` | `""` | Folder for generated problem files. |
 | `leetcode.filePath` | `""` | Relative folder and filename pattern for problem files. |
 | `leetcode.enableStatusBar` | `true` | Show the LeetCode status bar item. |
@@ -180,7 +180,7 @@ No Node.js runtime is required for extension users. The extension talks to LeetC
 
 ## Help
 
-Check the [Troubleshooting](https://github.com/wilmtang/vscode-leetcode/wiki/Troubleshooting) and [FAQ](https://github.com/wilmtang/vscode-leetcode/wiki/FAQ) pages first. If the issue is still unresolved, [file an issue](https://github.com/wilmtang/vscode-leetcode/issues/new/choose).
+Check the [Troubleshooting](https://github.com/wilmtang/leetcode-vscode-authy/wiki/Troubleshooting) and [FAQ](https://github.com/wilmtang/leetcode-vscode-authy/wiki/FAQ) pages first. If the issue is still unresolved, [file an issue](https://github.com/wilmtang/leetcode-vscode-authy/issues/new/choose).
 
 ## Release Notes
 
@@ -188,6 +188,6 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## Acknowledgement
 
-This extension originated from [@jdneo](https://github.com/jdneo)'s [vscode-leetcode](https://github.com/LeetCode-OpenSource/vscode-leetcode), which built on [@skygragon](https://github.com/skygragon)'s [leetcode-cli](https://github.com/skygragon/leetcode-cli). This fork no longer bundles `leetcode-cli`; it talks to LeetCode directly using a synced browser cookie.
+This extension originated from [@jdneo](https://github.com/jdneo)'s [vscode-leetcode](https://github.com/LeetCode-OpenSource/vscode-leetcode), which built on [@skygragon](https://github.com/skygragon)'s [leetcode-cli](https://github.com/skygragon/leetcode-cli). This project no longer bundles `leetcode-cli`; it talks to LeetCode directly using a synced browser cookie.
 
 Special thanks to the project [contributors](ACKNOWLEDGEMENTS.md).

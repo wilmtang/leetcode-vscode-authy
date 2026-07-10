@@ -53,7 +53,7 @@ placeholder so the directory exists.
 
 Capture the fixture:
 
-1. Open the LeetCode Auth Sync browser extension settings and enable Developer mode.
+1. Open the LeetCode VS Code Authy browser extension settings and enable Developer mode.
 2. Sign in to `leetcode.com`, then refresh a LeetCode page so the extension captures browser headers.
 3. Open the extension popup, choose Developer, then Copy test fixture.
 4. Paste the copied JSON into `src/test/.secrets/leetcode-auth.local.json`.

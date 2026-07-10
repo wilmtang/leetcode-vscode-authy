@@ -257,7 +257,7 @@ class LeetCodeManager extends EventEmitter {
 
     private async promptForFirstAuthSyncSetup(): Promise<boolean> {
         const choice: string | undefined = await vscode.window.showInformationMessage(
-            "Auto Cookie Sync needs the LeetCode VS Code Auth Sync browser extension installed in Chrome or Firefox.",
+            "Auto Cookie Sync needs the LeetCode VS Code Authy browser extension installed in Chrome or Firefox.",
             installChromeExtensionAction,
             installFirefoxAddOnAction,
             continueWaitingAction,

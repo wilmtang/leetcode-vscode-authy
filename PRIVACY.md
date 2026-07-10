@@ -1,10 +1,10 @@
 # Privacy Policy
 
-This privacy policy applies to the **LeetCode with Auth Sync** VS Code
-extension and its separately packaged **LeetCode VS Code Auth Sync** companion
+This privacy policy applies to the **LeetCode VS Code Authy** VS Code
+extension and its separately packaged **LeetCode VS Code Authy** companion
 browser extension.
 
-This is an unofficial fork maintained by `wilmtang`. It is not affiliated with,
+This is an independent project maintained by `wilmtang`. It is not affiliated with,
 endorsed by, sponsored by, or published by LeetCode.
 
 ## VS Code Extension
@@ -20,7 +20,7 @@ extension state so it can make those user-requested LeetCode requests.
 Telemetry is disabled by default. If you explicitly enable
 `leetcode.allowReportData`, the VS Code extension may send limited usage events
 such as command names and problem identifiers to the official LeetCode plugin
-telemetry endpoint, not to an endpoint operated by this unofficial fork. The
+telemetry endpoint, not to an endpoint operated by this unofficial project. The
 configured telemetry URLs are `https://analysis.leetcode.cn/i/event` for
 production and `https://analysis.lingkou.xyz/i/event` for non-production
 development. Telemetry does not intentionally include LeetCode cookies, solution
@@ -59,4 +59,4 @@ reflected in this document within the GitHub repository.
 ## Contact
 
 If you have any questions or concerns regarding this privacy policy, please open
-an issue in the [GitHub repository](https://github.com/wilmtang/vscode-leetcode).
+an issue in the [GitHub repository](https://github.com/wilmtang/leetcode-vscode-authy).
