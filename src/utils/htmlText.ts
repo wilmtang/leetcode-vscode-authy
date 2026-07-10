@@ -1,5 +1,5 @@
 // Copyright (c) jdneo. All rights reserved.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Minimal HTML-entity decoder. LeetCode descriptions use a small, stable set of
 // named entities plus numeric character references; decoding them keeps the

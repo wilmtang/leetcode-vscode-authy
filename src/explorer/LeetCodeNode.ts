@@ -1,5 +1,5 @@
 // Copyright (c) jdneo. All rights reserved.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Command, Uri } from "vscode";
 import { IProblem, ProblemState } from "../shared";

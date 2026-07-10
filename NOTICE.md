@@ -9,5 +9,7 @@ The project is maintained by wilmtang at:
 
 https://github.com/wilmtang/leetcode-vscode-authy
 
-The upstream copyright notices and MIT license are preserved in `LICENSE`.
+This project is distributed under the GNU Affero General Public License v3.0,
+whose terms are in `LICENSE`. The upstream copyright notices and MIT license
+are preserved in `LICENSE-MIT`.
 This project is not affiliated with, endorsed by, or sponsored by LeetCode.

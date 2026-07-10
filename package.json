@@ -5,7 +5,7 @@
     "version": "0.20.0",
     "author": "wilmtang",
     "publisher": "wilmtang",
-    "license": "MIT",
+    "license": "AGPL-3.0-or-later",
     "icon": "resources/auth-sync.png",
     "engines": {
         "vscode": "^1.57.0"

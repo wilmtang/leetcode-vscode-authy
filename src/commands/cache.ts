@@ -1,5 +1,5 @@
 // Copyright (c) jdneo. All rights reserved.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Deprecated no-op. The extension no longer maintains a bundled-CLI cache; the
 // problem list and details are fetched directly each time. Kept so the existing

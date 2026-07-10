@@ -1,5 +1,5 @@
 // Copyright (c) jdneo. All rights reserved.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import { UserStatus } from "../shared";

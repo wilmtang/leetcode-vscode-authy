@@ -1,5 +1,5 @@
 // Copyright (c) wilmtang. All rights reserved.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import * as cp from "child_process";
 import * as os from "os";

@@ -1,5 +1,5 @@
 // Copyright (c) leo.zhao. All rights reserved.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import * as vscode from "vscode";
 

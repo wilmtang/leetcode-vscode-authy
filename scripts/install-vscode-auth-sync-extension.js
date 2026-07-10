@@ -1,5 +1,5 @@
 // Copyright (c) wilmtang. All rights reserved.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 const fs = require("fs");
 const { commandExists, distPath, getCodeCommand, run, vsixPath } = require("./auth-sync-utils");
