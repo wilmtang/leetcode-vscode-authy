@@ -28,6 +28,7 @@ caveats, and publishing. User-facing usage stays in [README.md](../README.md).
 
 ```bash
 npm run compile
+npm run bundle
 npm test
 npm run lint
 npm run test:integration
@@ -36,7 +37,15 @@ npm run test:integration
 `npm test` is offline. It compiles `tsconfig.test.json`, runs mapper,
 renderer/XSS, request-security, cache-concurrency, path/testcase, and
 solution-file round-trip tests, then syntax-checks the browser extension's
-JavaScript entry points.
+JavaScript entry points and verifies the prospective VSIX content contract.
+
+The published extension runtime is `out/extension.js`, produced by esbuild with
+`vscode` externalized. The build copies KaTeX's stylesheet and fonts to
+`out/katex/`; those are the only third-party files kept outside the bundle.
+`.vscodeignore` excludes `node_modules/` and TypeScript's per-module `out/src/`
+tree. `scripts/verify-vscode-package.js` fails if either tree re-enters the
+package, required KaTeX assets disappear, external npm imports remain in the
+bundle, or the prospective package grows beyond 150 extension files.
 
 `npm run test:integration` hits the live LeetCode API only when a local auth
 fixture exists. Without one, the live suite self-skips.
@@ -193,6 +202,8 @@ Chrome uses `.github/workflows/chrome-extension.yml` and needs:
 Local packaging helpers:
 
 ```bash
+npm run test:package
+npm run build -- --out dist/vscode-leetcode-auth-sync.vsix
 npm run auth-sync:lint:firefox
 npm run auth-sync:build:firefox
 npm run auth-sync:build:chrome
@@ -223,6 +234,8 @@ Previously fixed or accepted areas:
 - Missing language snippets warn without blocking file generation.
 - The status bar click opens the profile panel when signed in.
 - Profile panel state is preserved across markdown configuration changes.
+- The VS Code runtime is bundled, with a package-content regression test
+  preventing `node_modules/` or `out/src/` from re-entering the VSIX.
 
 Still fair game in future reviews:
 
@@ -234,4 +247,3 @@ Still fair game in future reviews:
 - `leetcode.cn` restoration
 - Migration from deprecated TSLint and upstream minimatch/brace-expansion
   advisory resolution in the development toolchain
-- VSIX bundling to reduce the packaged file count

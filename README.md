@@ -149,6 +149,7 @@ Common commands:
 
 ```bash
 npm run compile
+npm run bundle
 npm test
 npm run local -- vscode:dev
 npm run local -- vscode:install
@@ -158,6 +159,12 @@ npm run auth-sync:lint:firefox
 npm run auth-sync:build:firefox
 npm run auth-sync:build:chrome
 ```
+
+`npm run compile` type-checks the TypeScript source. `npm run bundle` produces
+the runtime entry and KaTeX webview assets under `out/`; packaging and the local
+VS Code development command run both steps automatically. `npm test` also
+verifies that the prospective VSIX contains the bundle and required assets,
+without packaged `node_modules`.
 
 Manual browser-extension loading:
 

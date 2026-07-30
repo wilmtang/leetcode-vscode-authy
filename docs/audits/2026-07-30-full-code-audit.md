@@ -57,10 +57,12 @@ major versions underneath those tools was rejected because it would create an
 unverified toolchain. TSLint replacement and upstream web-ext/Mocha movement
 should be tracked as maintenance work.
 
-The VSIX still contains 3,721 files (5.93 MB), primarily runtime packages.
-Bundling the extension would improve installation/startup performance and reduce
-the package surface, but it is a build-system change rather than a safe audit
-patch.
+The audit initially found a VSIX containing 3,721 files (5.93 MB), primarily
+runtime package contents. A follow-up build-system change closed that residual:
+esbuild now produces one runtime entry, the package retains only KaTeX's
+stylesheet/fonts as third-party assets, and the verified VSIX contains 82 files
+(1.68 MB). The offline suite enforces a 150-file ceiling and rejects packaged
+`node_modules/`, per-module compiler output, or unexpected external npm imports.
 
 ## Verification Evidence
 

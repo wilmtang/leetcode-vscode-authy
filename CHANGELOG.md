@@ -41,12 +41,18 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   descriptions with its four values.
 
 ### Changed
+- Bundle the VS Code runtime with esbuild and package only the KaTeX stylesheet
+  and fonts as external webview assets. The verified VSIX dropped from 3,721
+  files / 5.93 MB to 82 files / 1.68 MB.
+- Extend `npm test` with a package-content contract that rejects bundled
+  external npm imports, packaged `node_modules` or per-module compiler output,
+  missing KaTeX assets, and unexpected file-count growth.
 - CI and VS Code release validation now run the offline suite before packaging.
   `npm test` also syntax-checks the browser extension JavaScript.
 - Added regression coverage for markup sanitization, redirect/header security,
   explorer refresh races, workspace containment, and testcase normalization.
 - Documented the 2026-07-30 full-code audit and its remaining live/browser,
-  multi-window, Windows/WSL, `leetcode.cn`, bundling, and development-tool proof
+  multi-window, Windows/WSL, `leetcode.cn`, and development-tool proof
   gaps.
 
 ## [0.20.0]
