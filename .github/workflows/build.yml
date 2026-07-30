@@ -26,6 +26,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        run: npm test
+
       - name: VSCE Package
         run: npm run build
 
@@ -47,6 +50,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       - name: VSCE Package
         run: npm run build

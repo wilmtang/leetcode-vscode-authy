@@ -33,8 +33,10 @@ npm run lint
 npm run test:integration
 ```
 
-`npm test` is offline. It compiles `tsconfig.test.json` and runs mapper,
-renderer/XSS, and solution-file round-trip tests.
+`npm test` is offline. It compiles `tsconfig.test.json`, runs mapper,
+renderer/XSS, request-security, cache-concurrency, path/testcase, and
+solution-file round-trip tests, then syntax-checks the browser extension's
+JavaScript entry points.
 
 `npm run test:integration` hits the live LeetCode API only when a local auth
 fixture exists. Without one, the live suite self-skips.
@@ -198,6 +200,11 @@ npm run auth-sync:build:chrome
 
 ## Audit Notes
 
+The latest complete review is
+[Full Code Audit — 2026-07-30](audits/2026-07-30-full-code-audit.md). It records
+the fixed findings, exact verification, accepted boundaries, development-tool
+advisory residue, and the live-auth proof gap.
+
 Do not re-report these as new findings unless the underlying design changes:
 
 - Auth sync's no-secret local POST behavior is an accepted zero-config tradeoff; the optional shared secret is the stronger local boundary.
@@ -225,3 +232,6 @@ Still fair game in future reviews:
 - Explorer cache invalidation
 - Auth-sync concurrency and ownership handoff
 - `leetcode.cn` restoration
+- Migration from deprecated TSLint and upstream minimatch/brace-expansion
+  advisory resolution in the development toolchain
+- VSIX bundling to reduce the packaged file count

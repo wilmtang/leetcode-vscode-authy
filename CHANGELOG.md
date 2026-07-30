@@ -3,6 +3,52 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+### Security
+- Disabled command URIs in every webview and enabled JavaScript only in panels
+  that require the extension's `postMessage` protocol.
+- Replaced regex-only remote-markup filtering with a parser-based HTML
+  allow-list that rejects active tags, event handlers, malformed attributes,
+  and unsafe URL schemes.
+- Stopped Axios and curl from following redirects while carrying LeetCode
+  cookies or replayed authorization headers; rejected hop-by-hop, oversized,
+  and control-character-bearing auth-sync header values.
+- Verify a newly synced LeetCode session before replacing the last known-good
+  keychain credential, and ignore background verification responses for a
+  credential that has since rotated.
+- Constrain generated solution paths to the selected workspace and sanitize
+  remote metadata used as filename segments.
+- Pass WSL path-conversion arguments directly to the process without invoking a
+  command shell.
+- Exclude local environment files and logs from VSIX packaging.
+- Updated runtime dependencies so `npm audit --omit=dev` reports zero
+  vulnerabilities.
+
+### Fixed
+- Serialize browser/server auth-sync updates instead of dropping or racing a
+  newer login, and add a browser-side request timeout plus callback error
+  propagation.
+- Preserve a forced explorer refresh that arrives during an older catalog
+  request.
+- Preserve literal `\n` inside JSON string testcases while still decoding the
+  documented single-line manual-input separator.
+- Await keychain/global-state writes and deletes, validate cached header value
+  types, and avoid redundant auth status-change events.
+- Schedule telemetry received during an in-flight send for a later flush and
+  bound telemetry requests with a timeout.
+- Treat tag/company picker cancellation as file-generation cancellation, open
+  profile links with a VS Code `Uri`, and align the `showDescription` setting
+  descriptions with its four values.
+
+### Changed
+- CI and VS Code release validation now run the offline suite before packaging.
+  `npm test` also syntax-checks the browser extension JavaScript.
+- Added regression coverage for markup sanitization, redirect/header security,
+  explorer refresh races, workspace containment, and testcase normalization.
+- Documented the 2026-07-30 full-code audit and its remaining live/browser,
+  multi-window, Windows/WSL, `leetcode.cn`, bundling, and development-tool proof
+  gaps.
+
 ## [0.20.0]
 ### Fixed
 - Fixed auth-sync cooldown being bypassed too eagerly for unchanged sessions. Automatic syncs now correctly respect the configured cooldown unless the login session fingerprint changes or headers are captured for the first time.
