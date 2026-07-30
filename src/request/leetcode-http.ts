@@ -12,6 +12,8 @@ const CURL_STATUS_MARKER: string = "\n__LEETCODE_HTTP_STATUS__:";
 // Default per-request timeout so a hung socket cannot stall a refresh (now 30+
 // requests). Callers can override via the axios config's own `timeout`.
 const DEFAULT_TIMEOUT_MS: number = 30000;
+const MAX_COOKIE_HEADER_BYTES: number = 32 * 1024;
+const MAX_REPLAYED_HEADER_BYTES: number = 8 * 1024;
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -83,6 +85,11 @@ export interface ICheckResult {
 export interface IRequestContext {
     label: string;
     logMode?: boolean;
+}
+
+export interface IHeaderOverrides {
+    browserRequestHeaders?: IBrowserRequestHeaders;
+    browserUserAgent?: string;
 }
 
 interface ICurlResponse {
@@ -215,6 +222,10 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
         response = await axios({
             timeout: DEFAULT_TIMEOUT_MS,
             ...config,
+            // All API URLs are already canonical. Following a redirect while
+            // carrying Cookie/Authorization risks forwarding credentials to a
+            // different origin.
+            maxRedirects: 0,
             validateStatus: () => true,
         });
     } catch (error) {
@@ -306,7 +317,6 @@ function executeCurl(config: AxiosRequestConfig): Promise<ICurlResponse> {
         const configLines: string[] = [
             "silent",                 // -sS: quiet, but still print transport errors
             "show-error",
-            "location",               // -L: follow redirects
             "compressed",
             `max-time ${timeoutSeconds}`,
             `request ${method}`,
@@ -381,7 +391,10 @@ function curlConfigQuote(value: string): string {
 // Auth headers
 // ---------------------------------------------------------------------------
 
-export function createHeaders(cookie: string, referer: string): { [key: string]: string } {
+export function createHeaders(cookie: string, referer: string, overrides?: IHeaderOverrides): { [key: string]: string } {
+    if (!isSafeHeaderValue(cookie, MAX_COOKIE_HEADER_BYTES)) {
+        throw new DirectApiUnsupportedError("Synced cookie contains invalid or excessive header data.");
+    }
     const sessionCookie: string | undefined = getCookieValue(cookie, "LEETCODE_SESSION");
     const csrfToken: string | undefined = getCookieValue(cookie, "csrftoken");
     if (!sessionCookie || !csrfToken) {
@@ -402,12 +415,16 @@ export function createHeaders(cookie: string, referer: string): { [key: string]:
         "X-CSRFToken": csrfToken,
     };
 
-    const browserUserAgent: string | undefined = globalState.getBrowserUserAgent();
-    if (browserUserAgent) {
+    const browserUserAgent: string | undefined = overrides
+        ? overrides.browserUserAgent
+        : globalState.getBrowserUserAgent();
+    if (browserUserAgent && isSafeHeaderValue(browserUserAgent, MAX_REPLAYED_HEADER_BYTES)) {
         headers["User-Agent"] = browserUserAgent;
     }
 
-    const browserRequestHeaders: IBrowserRequestHeaders | undefined = globalState.getBrowserRequestHeaders();
+    const browserRequestHeaders: IBrowserRequestHeaders | undefined = overrides
+        ? overrides.browserRequestHeaders
+        : globalState.getBrowserRequestHeaders();
     if (browserRequestHeaders) {
         mergeBrowserRequestHeaders(headers, browserRequestHeaders);
     }
@@ -428,7 +445,10 @@ function mergeBrowserRequestHeaders(headers: { [key: string]: string }, browserR
             continue;
         }
 
-        headers[canonicalKey] = browserRequestHeaders[key];
+        const value: string = browserRequestHeaders[key];
+        if (isSafeHeaderValue(value, MAX_REPLAYED_HEADER_BYTES)) {
+            headers[canonicalKey] = value;
+        }
     }
 }
 
@@ -437,7 +457,6 @@ function canonicalHeaderName(name: string): string | undefined {
         "accept": "Accept",
         "accept-language": "Accept-Language",
         "authorization": "Authorization",
-        "connection": "Connection",
         "dnt": "DNT",
         "priority": "Priority",
         "sec-ch-ua": "Sec-CH-UA",
@@ -453,7 +472,6 @@ function canonicalHeaderName(name: string): string | undefined {
         "sec-fetch-mode": "Sec-Fetch-Mode",
         "sec-fetch-site": "Sec-Fetch-Site",
         "sec-gpc": "Sec-GPC",
-        "te": "TE",
         "user-agent": "User-Agent",
     };
 
@@ -504,4 +522,8 @@ function getErrorMessage(error: unknown): string {
     }
 
     return String(error);
+}
+
+function isSafeHeaderValue(value: string, maxBytes: number): boolean {
+    return !/[\0\r\n]/.test(value) && Buffer.byteLength(value, "utf8") <= maxBytes;
 }

@@ -14,6 +14,8 @@ import { describePortOwner, IAuthSyncPortConflict } from "./authSyncPortInspecto
 const DEFAULT_PORT: number = 17899;
 const HOST: string = "127.0.0.1";
 const MAX_BODY_BYTES: number = 64 * 1024;
+const MAX_COOKIE_BYTES: number = 32 * 1024;
+const MAX_HEADER_VALUE_BYTES: number = 8 * 1024;
 const SECRET_HEADER: string = "x-leetcode-authsync-secret";
 const CONTROL_HEADER: string = "x-leetcode-authsync-control-token";
 const AUTH_SYNC_SERVICE: string = "vscode-leetcode-auth-sync";
@@ -62,6 +64,7 @@ class AuthSyncServer implements vscode.Disposable {
     private port: number | undefined;
     private mode: AuthSyncServerMode = "stopped";
     private pending: Promise<unknown> = Promise.resolve();
+    private authUpdatePending: Promise<unknown> = Promise.resolve();
     private heartbeatTimer: NodeJS.Timer | undefined;
     private observerTimer: NodeJS.Timer | undefined;
     private observerCheckInFlight: boolean = false;
@@ -122,6 +125,12 @@ class AuthSyncServer implements vscode.Disposable {
     private enqueue<T>(operation: () => Promise<T>): Promise<T> {
         const next: Promise<T> = this.pending.then(operation, operation);
         this.pending = next.then(() => undefined, () => undefined);
+        return next;
+    }
+
+    private enqueueAuthUpdate<T>(operation: () => Promise<T>): Promise<T> {
+        const next: Promise<T> = this.authUpdatePending.then(operation, operation);
+        this.authUpdatePending = next.then(() => undefined, () => undefined);
         return next;
     }
 
@@ -414,38 +423,43 @@ class AuthSyncServer implements vscode.Disposable {
         }
 
         const body: IAuthSyncRequestBody = await this.readJsonBody(req);
-        const cookie: string = typeof body.cookie === "string" ? body.cookie.trim() : "";
-        const browserUserAgent: string | undefined = this.getBrowserUserAgent(req, body);
-        const browserRequestHeaders: IBrowserRequestHeaders | undefined = this.getBrowserRequestHeaders(body);
+        await this.enqueueAuthUpdate(async () => {
+            const cookie: string = typeof body.cookie === "string" ? body.cookie.trim() : "";
+            const browserUserAgent: string | undefined = this.getBrowserUserAgent(req, body);
+            const browserRequestHeaders: IBrowserRequestHeaders | undefined = this.getBrowserRequestHeaders(body);
 
-        if (!this.hasLeetCodeSessionCookie(cookie)) {
-            this.sendJson(res, 400, { ok: false, error: "Request did not include a valid LeetCode login session cookie." }, true, req);
-            return;
-        }
-
-        const payloadHash: string = this.getSessionPayloadHash(cookie);
-
-        if (payloadHash === this.lastPayloadHash) {
-            leetCodeChannel.appendLine(`[auth-sync] Cookie update received (session unchanged). Reason: ${this.getSafeReason(body.reason)}.`);
-        } else {
-            this.lastPayloadHash = payloadHash;
-            this.logCookieUpdate(cookie, body.reason);
-            if (browserUserAgent) {
-                leetCodeChannel.appendLine("[auth-sync] Captured browser user agent for direct judge requests.");
+            if (!this.hasLeetCodeSessionCookie(cookie)) {
+                this.sendJson(res, 400, { ok: false, error: "Request did not include a valid LeetCode login session cookie." }, true, req);
+                return;
             }
-            if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
-                leetCodeChannel.appendLine(`[auth-sync] Captured ${Object.keys(browserRequestHeaders).length} browser request headers for direct judge requests.`);
-            }
-        }
-        if (leetCodeManager.getStatus() === UserStatus.SignedOut) {
-            await leetCodeManager.updateSessionFromCookie(cookie, browserUserAgent, browserRequestHeaders);
-        } else {
-            await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders);
-        }
-        await globalState.setAuthSyncLastSyncedAt(Date.now());
-        this.onDidSyncEmitter.fire();
 
-        this.sendJson(res, 200, { ok: true, message: "LeetCode cookie synced." }, true, req);
+            const payloadHash: string = this.getSessionPayloadHash(cookie);
+            const currentCookie: string | undefined = globalState.getCookie();
+            const sessionChanged: boolean = !currentCookie || this.getSessionPayloadHash(currentCookie) !== payloadHash;
+
+            if (payloadHash === this.lastPayloadHash) {
+                leetCodeChannel.appendLine(`[auth-sync] Cookie update received (session unchanged). Reason: ${this.getSafeReason(body.reason)}.`);
+            } else {
+                this.lastPayloadHash = payloadHash;
+                this.logCookieUpdate(cookie, body.reason);
+                if (browserUserAgent) {
+                    leetCodeChannel.appendLine("[auth-sync] Captured browser user agent for direct judge requests.");
+                }
+                if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
+                    leetCodeChannel.appendLine(`[auth-sync] Captured ${Object.keys(browserRequestHeaders).length} browser request headers for direct judge requests.`);
+                }
+            }
+
+            if (leetCodeManager.getStatus() === UserStatus.SignedOut || sessionChanged) {
+                await leetCodeManager.updateSessionFromCookie(cookie, browserUserAgent, browserRequestHeaders);
+            } else {
+                await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders);
+            }
+            await globalState.setAuthSyncLastSyncedAt(Date.now());
+            this.onDidSyncEmitter.fire();
+
+            this.sendJson(res, 200, { ok: true, message: "LeetCode cookie synced." }, true, req);
+        });
     }
 
     private handleHealth(res: http.ServerResponse): void {
@@ -508,7 +522,12 @@ class AuthSyncServer implements vscode.Disposable {
                 }
 
                 try {
-                    resolve(JSON.parse(data || "{}") as IAuthSyncRequestBody);
+                    const parsed: unknown = JSON.parse(data || "{}");
+                    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                        reject(createAuthSyncRequestError(400, "JSON request body must be an object."));
+                        return;
+                    }
+                    resolve(parsed as IAuthSyncRequestBody);
                 } catch (error) {
                     reject(createAuthSyncRequestError(400, "Invalid JSON request body."));
                 }
@@ -519,7 +538,11 @@ class AuthSyncServer implements vscode.Disposable {
     }
 
     private hasLeetCodeSessionCookie(cookie: string): boolean {
-        if (!cookie) {
+        if (
+            !cookie ||
+            /[\0\r\n]/.test(cookie) ||
+            Buffer.byteLength(cookie, "utf8") > MAX_COOKIE_BYTES
+        ) {
             return false;
         }
 
@@ -546,12 +569,14 @@ class AuthSyncServer implements vscode.Disposable {
 
     private getBrowserUserAgent(req: http.IncomingMessage, body: IAuthSyncRequestBody): string | undefined {
         if (typeof body.userAgent === "string" && body.userAgent.trim()) {
-            return body.userAgent.trim();
+            const bodyUserAgent: string = body.userAgent.trim();
+            return this.isSafeHeaderValue(bodyUserAgent) ? bodyUserAgent : undefined;
         }
 
         const headerValue: string | string[] | undefined = req.headers["user-agent"];
         const userAgent: string | undefined = Array.isArray(headerValue) ? headerValue[0] : headerValue;
-        return userAgent && userAgent.trim() ? userAgent.trim() : undefined;
+        const requestUserAgent: string | undefined = userAgent && userAgent.trim() ? userAgent.trim() : undefined;
+        return requestUserAgent && this.isSafeHeaderValue(requestUserAgent) ? requestUserAgent : undefined;
     }
 
     private getBrowserRequestHeaders(body: IAuthSyncRequestBody): IBrowserRequestHeaders | undefined {
@@ -564,7 +589,7 @@ class AuthSyncServer implements vscode.Disposable {
         for (const key of Object.keys(rawHeaders)) {
             const normalizedKey: string = key.toLowerCase();
             const value: unknown = rawHeaders[key];
-            if (!this.isReplayableLeetCodeHeader(normalizedKey) || typeof value !== "string") {
+            if (!this.isReplayableLeetCodeHeader(normalizedKey) || typeof value !== "string" || !this.isSafeHeaderValue(value)) {
                 continue;
             }
 
@@ -579,7 +604,6 @@ class AuthSyncServer implements vscode.Disposable {
             "accept",
             "accept-language",
             "authorization",
-            "connection",
             "dnt",
             "priority",
             "sec-ch-ua",
@@ -595,9 +619,12 @@ class AuthSyncServer implements vscode.Disposable {
             "sec-fetch-mode",
             "sec-fetch-site",
             "sec-gpc",
-            "te",
             "user-agent",
         ].indexOf(name) >= 0;
+    }
+
+    private isSafeHeaderValue(value: string): boolean {
+        return !/[\0\r\n]/.test(value) && Buffer.byteLength(value, "utf8") <= MAX_HEADER_VALUE_BYTES;
     }
 
     private hasUsableCookieToken(value: string | undefined): boolean {
@@ -612,14 +639,18 @@ class AuthSyncServer implements vscode.Disposable {
     private logCookieUpdate(cookie: string, reason: string | undefined): void {
         const names: string = cookie
             .split(";")
-            .map((part: string) => part.trim().split("=")[0])
+            .map((part: string) => part.trim().split("=")[0].replace(/[^!#$%&'*+\-.^_`|~0-9A-Za-z]/g, ""))
             .filter((name: string) => !!name)
+            .slice(0, 20)
             .join(", ");
         leetCodeChannel.appendLine(`[auth-sync] Received cookie update. Cookie names: ${names}. Reason: ${this.getSafeReason(reason)}.`);
     }
 
     private getSafeReason(reason: string | undefined): string {
-        return typeof reason === "string" && reason ? reason : "unspecified";
+        if (typeof reason !== "string" || !reason) {
+            return "unspecified";
+        }
+        return reason.replace(/[\0\r\n\t]/g, " ").trim().slice(0, 80) || "unspecified";
     }
 
     // Fingerprints the login identity only (LEETCODE_SESSION + csrftoken),

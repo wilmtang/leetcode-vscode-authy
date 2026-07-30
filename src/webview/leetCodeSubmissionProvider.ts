@@ -5,6 +5,7 @@ import { ViewColumn } from "vscode";
 import { openKeybindingsEditor, promptHintMessage } from "../utils/uiUtils";
 import { ILeetCodeWebviewOption, LeetCodeWebview } from "./LeetCodeWebview";
 import { markdownEngine } from "./markdownEngine";
+import { sanitizeHtml } from "./textRenderer";
 
 class LeetCodeSubmissionProvider extends LeetCodeWebview {
 
@@ -36,16 +37,16 @@ class LeetCodeSubmissionProvider extends LeetCodeWebview {
                 this.result[key].join("\n"),
                 "```",
             ].join("\n"));
-        const body: string = markdownEngine.render([
+        const body: string = sanitizeHtml(markdownEngine.render([
             title,
             ...messages,
             ...sections,
-        ].join("\n"));
+        ].join("\n")));
         return `
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; script-src vscode-resource:; style-src vscode-resource:;"/>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src vscode-resource:;"/>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 ${styles}

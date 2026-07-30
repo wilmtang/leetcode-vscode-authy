@@ -21,8 +21,11 @@ export abstract class LeetCodeWebview implements Disposable {
         const { title, viewColumn, preserveFocus } = this.getWebviewOption();
         if (!this.panel) {
             this.panel = window.createWebviewPanel(this.viewType, title, { viewColumn, preserveFocus }, {
-                enableScripts: true,
-                enableCommandUris: true,
+                enableScripts: this.scriptsEnabled,
+                // Problem descriptions and community solutions are remote,
+                // untrusted content. None of these panels needs command: links;
+                // actions use postMessage instead.
+                enableCommandUris: false,
                 enableFindWidget: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: markdownEngine.localResourceRoots,
@@ -60,6 +63,10 @@ export abstract class LeetCodeWebview implements Disposable {
     }
 
     protected async onDidReceiveMessage(_message: any): Promise<void> { /* no special rule */ }
+
+    protected get scriptsEnabled(): boolean {
+        return false;
+    }
 
     protected abstract getWebviewOption(): ILeetCodeWebviewOption;
 

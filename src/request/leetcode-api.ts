@@ -1,4 +1,4 @@
-import { globalState, UserDataType } from "../globalState";
+import { globalState, IBrowserRequestHeaders, UserDataType } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { getUrl, ProblemState } from "../shared";
 import { createHeaders, DirectApiUnsupportedError, requestJson } from "./leetcode-http";
@@ -370,12 +370,19 @@ export async function getQuestionDetail(titleSlug: string, needTranslation: bool
 // Single source of truth for the signed-in user's status. Goes through
 // requestJson so it inherits the axios -> curl Cloudflare fallback that the
 // submit/test paths use (the former LcAxios-based query-user-data.ts had none).
-export async function fetchUserStatus(): Promise<UserDataType> {
-    const cookie: string = getRequiredCookie();
+export async function fetchUserStatus(
+    cookieOverride?: string,
+    browserUserAgent?: string,
+    browserRequestHeaders?: IBrowserRequestHeaders,
+): Promise<UserDataType> {
+    const cookie: string = cookieOverride || getRequiredCookie();
     const response: IGraphqlResponse<IUserStatusData> = await requestJson<IGraphqlResponse<IUserStatusData>>({
         method: "POST",
         url: getUrl("userGraphql"),
-        headers: createHeaders(cookie, `${getUrl("base")}/`),
+        headers: createHeaders(cookie, `${getUrl("base")}/`, {
+            browserRequestHeaders,
+            browserUserAgent,
+        }),
         data: {
             query: [
                 "query globalData {",

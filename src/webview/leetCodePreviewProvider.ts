@@ -8,7 +8,7 @@ import { ILeetCodeQuestionDetail } from "../request/leetcode-api";
 import { Endpoint, getUrl, IProblem } from "../shared";
 import { ILeetCodeWebviewOption, LeetCodeWebview } from "./LeetCodeWebview";
 import { markdownEngine } from "./markdownEngine";
-import { renderDescriptionHtml } from "./textRenderer";
+import { renderDescriptionHtml, sanitizeHtml } from "./textRenderer";
 
 class LeetCodePreviewProvider extends LeetCodeWebview {
     protected readonly viewType: string = "leetcode.preview";
@@ -25,6 +25,10 @@ class LeetCodePreviewProvider extends LeetCodeWebview {
         this.node = node;
         this.sideMode = isSideMode;
         this.showWebviewInternal();
+    }
+
+    protected get scriptsEnabled(): boolean {
+        return true;
     }
 
     protected getWebviewOption(): ILeetCodeWebviewOption {
@@ -69,27 +73,29 @@ class LeetCodePreviewProvider extends LeetCodeWebview {
                 </style>`,
         };
         const { title, url, category, difficulty, likes, dislikes, body } = this.description;
-        const head: string = markdownEngine.render(`# [${title}](${url})`);
-        const info: string = markdownEngine.render(
+        const head: string = sanitizeHtml(markdownEngine.render(`# [${title}](${url})`));
+        const info: string = sanitizeHtml(markdownEngine.render(
             [
                 `| Category | Difficulty | Likes | Dislikes |`,
                 `| :------: | :--------: | :---: | :------: |`,
                 `| ${category} | ${difficulty} | ${likes} | ${dislikes} |`,
-            ].join("\n")
-        );
-        const tags: string = [
+            ].join("\n"),
+        ));
+        const tags: string = sanitizeHtml([
             `<details>`,
             `<summary><strong>Tags</strong></summary>`,
             markdownEngine.render(this.description.tags.map((t: string) => `[\`${t}\`](${this.getTagLink(t)})`).join(" | ")),
             `</details>`,
-        ].join("\n");
-        const companies: string = [
+        ].join("\n"));
+        const companies: string = sanitizeHtml([
             `<details>`,
             `<summary><strong>Companies</strong></summary>`,
             markdownEngine.render(this.description.companies.map((c: string) => `\`${c}\``).join(" | ")),
             `</details>`,
-        ].join("\n");
-        const links: string = markdownEngine.render(`[Submissions](${this.getSubmissionsLink(url)}) | [Solution](${this.getSolutionsLink(url)})`);
+        ].join("\n"));
+        const links: string = sanitizeHtml(markdownEngine.render(
+            `[Submissions](${this.getSubmissionsLink(url)}) | [Solution](${this.getSolutionsLink(url)})`,
+        ));
         // Nonce the extension's own inline script so the CSP can drop
         // 'unsafe-inline' for scripts — any script/handler injected through the
         // untrusted description HTML then cannot execute, even if the sanitizer is
@@ -99,7 +105,7 @@ class LeetCodePreviewProvider extends LeetCodeWebview {
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src vscode-resource: 'nonce-${nonce}'; style-src vscode-resource: 'unsafe-inline'; font-src vscode-resource:;"/>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}'; style-src vscode-resource: 'unsafe-inline'; font-src vscode-resource:;"/>
                 ${markdownEngine.getStyles()}
                 ${markdownEngine.getKatexStyle()}
                 ${!this.sideMode ? button.style : ""}

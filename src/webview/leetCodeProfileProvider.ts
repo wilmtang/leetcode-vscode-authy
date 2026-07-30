@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import * as crypto from "crypto";
-import { commands, ViewColumn } from "vscode";
+import { commands, Uri, ViewColumn } from "vscode";
 import { AUTH_SYNC_CAPTION, IAuthSyncSummary } from "../auth/authSyncSummary";
 import {
     ILeetCodeBeats,
@@ -105,6 +105,10 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
 
     public failSection(id: ProfileSectionId, message: string): void {
         this.postSection(id, "error", errorNote(message));
+    }
+
+    protected get scriptsEnabled(): boolean {
+        return true;
     }
 
     protected getWebviewOption(): ILeetCodeWebviewOption {
@@ -303,7 +307,7 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
             case "OpenProfile":
                 if (this.username) {
                     const url: string = `${getUrl("base")}/u/${encodeURIComponent(this.username)}/`;
-                    await commands.executeCommand("vscode.open", url);
+                    await commands.executeCommand("vscode.open", Uri.parse(url));
                 }
                 break;
             default:

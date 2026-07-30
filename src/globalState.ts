@@ -76,26 +76,34 @@ class GlobalState {
         );
     }
 
-    public setCookie(cookie: string): Thenable<void> {
+    public async setCookie(cookie: string): Promise<void> {
+        await this.context.secrets.store(CookieSecretKey, cookie);
         this.cookieCache = cookie;
-        return this.context.secrets.store(CookieSecretKey, cookie);
     }
     public getCookie(): string | undefined {
         return this.cookieCache;
     }
 
-    public setBrowserUserAgent(userAgent: string): Thenable<void> {
+    public async setBrowserUserAgent(userAgent: string | undefined): Promise<void> {
+        if (userAgent === undefined) {
+            await this.context.secrets.delete(BrowserUserAgentSecretKey);
+        } else {
+            await this.context.secrets.store(BrowserUserAgentSecretKey, userAgent);
+        }
         this.browserUserAgentCache = userAgent;
-        return this.context.secrets.store(BrowserUserAgentSecretKey, userAgent);
     }
     public getBrowserUserAgent(): string | undefined {
         return this.browserUserAgentCache;
     }
 
-    public setBrowserRequestHeaders(headers: IBrowserRequestHeaders): Thenable<void> {
-        this.browserRequestHeadersCache = headers;
+    public async setBrowserRequestHeaders(headers: IBrowserRequestHeaders | undefined): Promise<void> {
         // SecretStorage holds strings only, so the header map is JSON-encoded.
-        return this.context.secrets.store(BrowserRequestHeadersSecretKey, JSON.stringify(headers));
+        if (headers === undefined) {
+            await this.context.secrets.delete(BrowserRequestHeadersSecretKey);
+        } else {
+            await this.context.secrets.store(BrowserRequestHeadersSecretKey, JSON.stringify(headers));
+        }
+        this.browserRequestHeadersCache = headers;
     }
     public getBrowserRequestHeaders(): IBrowserRequestHeaders | undefined {
         return this.browserRequestHeadersCache;
@@ -110,7 +118,7 @@ class GlobalState {
         return typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : undefined;
     }
 
-    public setUserStatus(userStatus: UserDataType): any {
+    public setUserStatus(userStatus: UserDataType): Thenable<void> {
         return this._state.update(UserStatusKey, userStatus);
     }
 
@@ -141,28 +149,29 @@ class GlobalState {
     }
 
     // Clears the synced credentials (cache + keychain). Returns a promise so
-    // callers that need the secret gone before continuing can await it; the
-    // legacy Memento copies are best-effort cleared too in case migration was
-    // skipped on this machine.
+    // callers that need the secret gone before continuing can await it; legacy
+    // Memento copies are cleared too in case migration was skipped.
     public removeCookie(): Thenable<void> {
         return this.clearSecrets();
     }
 
-    public removeAll(): Thenable<void> {
-        void this._state.update(UserStatusKey, undefined);
-        void this._state.update(AuthSyncLastSyncedAtKey, undefined);
-        return this.clearSecrets();
+    public async removeAll(): Promise<void> {
+        await Promise.all([
+            this._state.update(UserStatusKey, undefined),
+            this._state.update(AuthSyncLastSyncedAtKey, undefined),
+            this.clearSecrets(),
+        ]);
     }
 
-    private clearSecrets(): Thenable<void> {
+    private async clearSecrets(): Promise<void> {
+        // Clear any leftover legacy plaintext values as well.
+        await Promise.all([
+            ...SECRET_KEYS.map((key: string) => this._state.update(key, undefined)),
+            ...SECRET_KEYS.map((key: string) => this.context.secrets.delete(key)),
+        ]);
         this.cookieCache = undefined;
         this.browserUserAgentCache = undefined;
         this.browserRequestHeadersCache = undefined;
-        // Best-effort clear of any leftover legacy plaintext values as well.
-        for (const key of SECRET_KEYS) {
-            void this._state.update(key, undefined);
-        }
-        return Promise.all(SECRET_KEYS.map((key: string) => this.context.secrets.delete(key))).then(() => undefined);
     }
 
     // Loads the keychain values into the synchronous cache. Bad JSON in the
@@ -181,7 +190,18 @@ class GlobalState {
         }
         try {
             const parsed: unknown = JSON.parse(raw);
-            return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as IBrowserRequestHeaders : undefined;
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                return undefined;
+            }
+            const parsedObject: { [key: string]: unknown } = parsed as { [key: string]: unknown };
+            const headers: IBrowserRequestHeaders = {};
+            for (const key of Object.keys(parsedObject)) {
+                const value: unknown = parsedObject[key];
+                if (typeof value === "string") {
+                    headers[key] = value;
+                }
+            }
+            return Object.keys(headers).length > 0 ? headers : undefined;
         } catch (error) {
             return undefined;
         }

@@ -1,7 +1,7 @@
 // Copyright (c) jdneo. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import * as hljs from "highlight.js";
+import hljs from "highlight.js";
 import * as MarkdownIt from "markdown-it";
 import * as os from "os";
 import * as path from "path";
@@ -104,7 +104,7 @@ class MarkdownEngine implements vscode.Disposable {
                 }
                 if (lang && hljs.getLanguage(lang)) {
                     try {
-                        return hljs.highlight(lang, code, true).value;
+                        return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
                     } catch (error) { /* do not highlight */ }
                 }
                 return ""; // use external default escaping
@@ -113,14 +113,8 @@ class MarkdownEngine implements vscode.Disposable {
 
         this.addCodeBlockHighlight(md);
         this.addImageUrlCompletion(md);
-        // NOTE: we intentionally keep markdown-it's DEFAULT validateLink (which
-        // blocks javascript:/vbscript:/data: links). Earlier code widened it to
-        // also allow file: URLs; that was removed because the only untrusted
-        // markdown rendered through this engine is the community-solution body,
-        // where a file: link is a phishing / NTLM-leak vector (e.g.
-        // file://attacker-host/share on Windows) with no legitimate use. The
-        // problem description is rendered as HTML via renderDescriptionHtml(), not
-        // through markdown-it, so nothing depends on file: support. (A2-6.)
+        // Keep markdown-it's default validateLink and run rendered remote markup
+        // through textRenderer's parser-based allow-list as a second boundary.
         return md;
     }
 

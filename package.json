@@ -353,8 +353,10 @@
                             "None"
                         ],
                         "enumDescriptions": [
-                            "Show the problem description in a new webview window",
-                            "Show the problem description in the file's comment"
+                            "Show the problem description in a new webview window.",
+                            "Show the problem description in the solution file's comments.",
+                            "Show the problem description in both a webview and the solution file's comments.",
+                            "Do not show the problem description."
                         ],
                         "scope": "application",
                         "description": "Specify where to show the description."
@@ -364,7 +366,7 @@
                         "default": false,
                         "scope": "application",
                         "description": "[Deprecated] Include problem description in comments.",
-                        "deprecationMessage": "This setting will be deprecated in 0.17.0, please use 'leetcode.showDescription' instead"
+                        "deprecationMessage": "Deprecated. Use 'leetcode.showDescription' instead."
                     },
                     "leetcode.hint.setDefaultLanguage": {
                         "type": "boolean",
@@ -764,7 +766,8 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "test": "tsc -p ./tsconfig.test.json && mocha",
+        "test": "tsc -p ./tsconfig.test.json && mocha && npm run test:browser",
+        "test:browser": "node --check browser-extension/background.js && node --check browser-extension/options.js && node --check browser-extension/popup.js",
         "test:integration": "tsc -p ./tsconfig.test.json && mocha --config .mocharc.integration.json",
         "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",
         "scripts:help": "node scripts/local.js --help",
@@ -785,21 +788,35 @@
         "@types/markdown-it": "^14.1.2",
         "@types/mocha": "^2.2.42",
         "@types/node": "^14.14.33",
+        "@types/sanitize-html": "2.6.2",
         "@types/vscode": "1.57.0",
-        "@vscode/vsce": "^3.9.1",
-        "adm-zip": "^0.5.17",
+        "@vscode/vsce": "^3.9.2",
+        "adm-zip": "^0.6.0",
         "mocha": "^11.7.6",
-        "ovsx": "^1.0.0",
+        "ovsx": "^1.0.2",
         "tslint": "^5.20.1",
         "typescript": "^4.3.2",
-        "web-ext": "^10.3.0"
+        "web-ext": "^10.5.0"
     },
     "dependencies": {
-        "axios": "^1.16.1",
+        "axios": "^1.19.0",
         "fs-extra": "^10.0.0",
-        "highlight.js": "^10.7.2",
+        "highlight.js": "^11.11.1",
         "katex": "^0.16.47",
         "lodash": "^4.18.1",
-        "markdown-it": "^14.2.0"
+        "markdown-it": "^14.3.0",
+        "sanitize-html": "2.16.0"
+    },
+    "overrides": {
+        "firefox-profile": {
+            "adm-zip": "0.6.0"
+        },
+        "fx-runner": {
+            "shell-quote": "1.10.0"
+        },
+        "mocha": {
+            "diff": "8.0.3",
+            "serialize-javascript": "7.0.5"
+        }
     }
 }

@@ -77,6 +77,24 @@ export async function getActiveFilePath(uri?: vscode.Uri): Promise<string | unde
     return wsl.useWsl() ? wsl.toWslPath(textEditor.document.uri.fsPath) : textEditor.document.uri.fsPath;
 }
 
+export function resolvePathWithinRoot(root: string, candidate: string): string {
+    const resolvedRoot: string = path.resolve(root);
+    const resolvedCandidate: string = path.resolve(candidate);
+    const relative: string = path.relative(resolvedRoot, resolvedCandidate);
+    if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+        throw new Error(`Configured problem path escapes the selected LeetCode workspace: ${resolvedCandidate}`);
+    }
+    return resolvedCandidate;
+}
+
+export function sanitizePathSegment(value: string): string {
+    const sanitized: string = (value || "")
+        .replace(/[<>:"/\\|?*\0-\x1f]/g, "-")
+        .replace(/[. ]+$/g, "")
+        .trim();
+    return sanitized && sanitized !== "." && sanitized !== ".." ? sanitized : "_";
+}
+
 function isSubFolder(from: string, to: string): boolean {
     const relative: string = path.relative(from, to);
     if (relative === "") {

@@ -117,7 +117,7 @@ export async function showDirectorySelectDialog(fsPath?: string): Promise<vscode
 }
 
 export async function openUrl(url: string): Promise<void> {
-    vscode.commands.executeCommand("vscode.open", vscode.Uri.parse(url));
+    await vscode.commands.executeCommand("vscode.open", vscode.Uri.parse(url));
 }
 
 export enum DialogType {

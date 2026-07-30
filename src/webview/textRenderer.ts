@@ -2,19 +2,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { KatexOptions, renderToString } from "katex";
+import sanitizeHtmlLibrary = require("sanitize-html");
 
 // Shared rendering primitives for the problem description (HTML) and the
 // community solutions (markdown). Adapted from better-leetcode's textRenderer:
 // pull LaTeX math ($…$ / $$…$$ / \(…\) / \[…\]) into placeholders → render it
 // with KaTeX (literal fallback on failure) → XSS-sanitize the surrounding markup
-// (scripts/handlers stripped, iframes whitelisted to LeetCode) → splice the
-// rendered math back. The description is already HTML, so it skips markdown; the
-// solution provider runs markdown-it between extract and sanitize.
+// with a strict allow-list → splice the rendered math back at sanitized marker
+// elements. The description is already HTML, so it skips markdown; the solution
+// provider runs markdown-it between extract and sanitize.
 
-// Alphanumeric so it survives markdown-it untouched (a leading-space token would
-// get trimmed when it starts a line).
-const PLACEHOLDER_RE: RegExp = /LCMATHPLACEHOLDER(\d+)ENDLCMATH/g;
-const LEETCODE_IFRAME_HOSTS: RegExp = /^(https?:)?\/\/([a-z0-9-]+\.)*(leetcode\.com|leetcode\.cn)\//i;
+// A real marker element keeps restoration in HTML element/text context. A plain
+// token could also survive inside an href/src attribute, where replacing it
+// with KaTeX markup after sanitization would create malformed HTML.
+const PLACEHOLDER_RE: RegExp = /<span data-lc-math-placeholder="(\d+)"><\/span>/g;
+const HTML_TAG_SPLIT_RE: RegExp = /(<\/?[A-Za-z][^>]*>|<!--[\s\S]*?-->)/g;
+const ALLOWED_TAGS: string[] = [
+    "a", "abbr", "b", "blockquote", "br", "code", "del", "details", "div",
+    "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "kbd",
+    "li", "mark", "ol", "p", "pre", "s", "small", "span", "strong", "sub",
+    "summary", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "tr",
+    "u", "ul",
+];
 
 export interface IMathExtraction {
     text: string;
@@ -56,34 +65,56 @@ export function stripMarkdownHtmlComments(input: string): string {
         .join("\n");
 }
 
-// Defense-in-depth alongside the webview CSP: remove the obvious script-injection
-// vectors from the untrusted description/solution markup.
+// Parse and allow-list untrusted description/solution markup. A regex-only
+// sanitizer misses browser-normalized forms such as unquoted attributes and
+// entity-encoded schemes, so use a real HTML parser and fail closed on tags,
+// attributes, and URL schemes.
 export function sanitizeHtml(input: string): string {
-    let output: string = input;
-    output = output.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "");
-    output = output.replace(/<script\b[^>]*>/gi, "");
-    output = output.replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "");
-    // Strip inline event handlers (on*=...).
-    output = output.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-    // Neutralize dangerous URL schemes in href/src: javascript:/vbscript: (script
-    // execution) and file: (a phishing / NTLM-leak vector in untrusted
-    // community-solution markup — see the markdownEngine validateLink note). (A2-6.)
-    output = output.replace(/(href|src)\s*=\s*("(?:javascript|vbscript|file):[^"]*"|'(?:javascript|vbscript|file):[^']*')/gi, "$1=\"#\"");
-    // Only keep iframes pointing at LeetCode (embedded explainers); drop the rest.
-    output = output.replace(/<iframe\b[^>]*>(?:[\s\S]*?<\/iframe\s*>)?/gi, (tag: string): string => {
-        const srcMatch: RegExpMatchArray | null = tag.match(/\bsrc\s*=\s*"([^"]*)"|\bsrc\s*=\s*'([^']*)'/i);
-        const src: string = srcMatch ? (srcMatch[1] || srcMatch[2] || "") : "";
-        return LEETCODE_IFRAME_HOSTS.test(src) ? tag : "";
+    return sanitizeHtmlLibrary(input, {
+        allowedTags: ALLOWED_TAGS,
+        allowedAttributes: {
+            a: ["href", "name", "rel", "title"],
+            code: ["class"],
+            details: ["open"],
+            div: ["class"],
+            img: ["alt", "height", "src", "title", "width"],
+            pre: ["class"],
+            span: ["class", "data-lc-math-placeholder"],
+            table: ["class"],
+            td: ["colspan", "rowspan"],
+            th: ["colspan", "rowspan", "scope"],
+        },
+        allowedSchemes: ["http", "https", "mailto"],
+        allowedSchemesByTag: {
+            img: ["data", "http", "https"],
+        },
+        allowProtocolRelative: true,
+        transformTags: {
+            a: (_tagName: string, attribs: { [key: string]: string }) => ({
+                tagName: "a",
+                attribs: {
+                    ...attribs,
+                    rel: "noopener noreferrer",
+                },
+            }),
+        },
     });
-    return output;
 }
 
 function replaceMath(input: string, pattern: RegExp, displayMode: boolean, store: string[]): string {
-    return input.replace(pattern, (_match: string, tex: string): string => {
-        const index: number = store.length;
-        store.push(renderMath(tex, displayMode));
-        return `LCMATHPLACEHOLDER${index}ENDLCMATH`;
-    });
+    return input
+        .split(HTML_TAG_SPLIT_RE)
+        .map((part: string): string => {
+            if (/^<\/?[A-Za-z]|^<!--/.test(part)) {
+                return part;
+            }
+            return part.replace(pattern, (_match: string, tex: string): string => {
+                const index: number = store.length;
+                store.push(renderMath(tex, displayMode));
+                return `<span data-lc-math-placeholder="${index}"></span>`;
+            });
+        })
+        .join("");
 }
 
 function renderMath(tex: string, displayMode: boolean): string {

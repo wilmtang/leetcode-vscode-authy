@@ -40,18 +40,38 @@ describe("renderDescriptionHtml", () => {
         assert.ok(html.indexOf("onerror") < 0, "event handler attribute should be removed");
     });
 
-    it("neutralizes javascript: and file: URLs in href/src (A2-6)", () => {
+    it("removes dangerous quoted, unquoted, encoded, and command URL schemes", () => {
         const js: string = renderDescriptionHtml(`<a href="javascript:alert(1)">x</a>`);
         assert.ok(js.indexOf("javascript:") < 0, "javascript: URL should be neutralized");
         const file: string = renderDescriptionHtml(`<a href="file://attacker-host/share">x</a>`);
         assert.ok(file.indexOf("file:") < 0, "file: URL should be neutralized");
+        const unquoted: string = renderDescriptionHtml(`<img src=javascript:alert(1)>`);
+        assert.ok(unquoted.indexOf("javascript:") < 0, "unquoted javascript: URL should be removed");
+        const encoded: string = renderDescriptionHtml(`<a href="javascript&#58;alert(1)">x</a>`);
+        assert.ok(encoded.indexOf("javascript") < 0, "entity-encoded javascript: URL should be removed");
+        const command: string = renderDescriptionHtml(`<a href="command:workbench.action.closeWindow">x</a>`);
+        assert.ok(command.indexOf("command:") < 0, "command: URL should be removed");
     });
 
-    it("keeps LeetCode iframes but drops foreign ones", () => {
-        const kept: string = renderDescriptionHtml(`<iframe src="https://leetcode.com/playground/x/shared"></iframe>`);
-        assert.ok(kept.indexOf("<iframe") >= 0, "LeetCode iframe should be preserved");
-        const dropped: string = renderDescriptionHtml(`<iframe src="https://evil.example.com/x"></iframe>`);
-        assert.ok(dropped.indexOf("<iframe") < 0, "foreign iframe should be removed");
+    it("drops active or navigation-capable markup", () => {
+        const html: string = renderDescriptionHtml([
+            `<iframe src="https://leetcode.com/playground/x/shared"></iframe>`,
+            `<meta http-equiv="refresh" content="0;url=https://example.com">`,
+            `<form action="https://example.com"><button>Go</button></form>`,
+            `<p style="position:fixed">safe text</p>`,
+        ].join(""));
+        assert.ok(html.indexOf("<iframe") < 0, "iframes should be removed");
+        assert.ok(html.indexOf("<meta") < 0, "meta navigation should be removed");
+        assert.ok(html.indexOf("<form") < 0, "forms should be removed");
+        assert.ok(html.indexOf("style=") < 0, "remote inline styles should be removed");
+        assert.ok(html.indexOf("safe text") >= 0, "text inside allowed markup should remain");
+    });
+
+    it("does not restore KaTeX markup inside an HTML attribute", () => {
+        const html: string = renderDescriptionHtml(`<a href="$x$">link</a>`);
+        assert.ok(!/href="[^"]*<span/i.test(html), "KaTeX markup must not be injected into href");
+        assert.ok(html.indexOf("katex") < 0, "attribute-delimited math should not render");
+        assert.ok(html.indexOf('href="$x$"') >= 0, "attribute value should remain well-formed");
     });
 
     it("wraps <pre> blocks in <code> for highlighting", () => {

@@ -26,7 +26,7 @@ import {
     promptForSignIn,
     promptHintMessage,
 } from "../utils/uiUtils";
-import { getActiveFilePath, selectWorkspaceFolder } from "../utils/workspaceUtils";
+import { getActiveFilePath, resolvePathWithinRoot, sanitizePathSegment, selectWorkspaceFolder } from "../utils/workspaceUtils";
 import * as wsl from "../utils/wslUtils";
 import { leetCodePreviewProvider } from "../webview/leetCodePreviewProvider";
 import { leetCodeSolutionProvider } from "../webview/leetCodeSolutionProvider";
@@ -232,6 +232,7 @@ async function showProblemInternal(node: IProblem): Promise<void> {
                 leetCodeChannel.appendLine("Showing problem canceled by user.");
                 return;
             }
+            finalPath = resolvePathWithinRoot(workspaceFolder, finalPath);
         }
 
         finalPath = wsl.useWsl() ? await wsl.toWinPath(finalPath) : finalPath;
@@ -316,21 +317,29 @@ async function showDescriptionView(node: IProblem, detail?: ILeetCodeQuestionDet
 async function resolveRelativePath(relativePath: string, node: IProblem, selectedLanguage: string): Promise<string> {
     let tag: string = "";
     if (/\$\{tag\}/i.test(relativePath)) {
-        tag = (await resolveTagForProblem(node)) || "";
+        const selectedTag: string | undefined = await resolveTagForProblem(node);
+        if (selectedTag === undefined) {
+            return "";
+        }
+        tag = selectedTag;
     }
 
     let company: string = "";
     if (/\$\{company\}/i.test(relativePath)) {
-        company = (await resolveCompanyForProblem(node)) || "";
+        const selectedCompany: string | undefined = await resolveCompanyForProblem(node);
+        if (selectedCompany === undefined) {
+            return "";
+        }
+        company = selectedCompany;
     }
 
     return relativePath.replace(/\$\{(.*?)\}/g, (_substring: string, ...args: string[]) => {
         const placeholder: string = args[0].toLowerCase().trim();
         switch (placeholder) {
             case "id":
-                return node.id;
+                return sanitizePathSegment(node.id);
             case "name":
-                return node.name;
+                return sanitizePathSegment(node.name);
             case "camelcasename":
                 return _.camelCase(node.name);
             case "pascalcasename":
@@ -346,11 +355,11 @@ async function resolveRelativePath(relativePath: string, node: IProblem, selecte
             case "language":
                 return selectedLanguage;
             case "difficulty":
-                return node.difficulty.toLocaleLowerCase();
+                return sanitizePathSegment(node.difficulty.toLocaleLowerCase());
             case "tag":
-                return tag;
+                return sanitizePathSegment(tag);
             case "company":
-                return company;
+                return sanitizePathSegment(company);
             default:
                 const errorMsg: string = `The config '${placeholder}' is not supported.`;
                 leetCodeChannel.appendLine(errorMsg);

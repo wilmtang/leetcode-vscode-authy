@@ -40,19 +40,19 @@ class LeetCodeSolutionProvider extends LeetCodeWebview {
         const styles: string = markdownEngine.getStyles();
         const katexStyle: string = markdownEngine.getKatexStyle();
         const { title, url, author, authorSlug, upvotes } = this.article;
-        const head: string = markdownEngine.render(`# [${title}](${url})`);
+        const head: string = sanitizeHtml(markdownEngine.render(`# [${title}](${url})`));
         const authorLink: string = authorSlug ? `[${author}](${getUrl("base")}/u/${authorSlug}/)` : author;
-        const info: string = markdownEngine.render([
+        const info: string = sanitizeHtml(markdownEngine.render([
             `|  Author  |  Votes   |`,
             `| :------: | :------: |`,
             `| ${authorLink}  | ${upvotes} |`,
-        ].join("\n"));
+        ].join("\n")));
         const body: string = this.renderArticleBody(this.article.content);
         return `
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src vscode-resource:; style-src vscode-resource: 'unsafe-inline'; font-src vscode-resource:;"/>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src vscode-resource: 'unsafe-inline'; font-src vscode-resource:;"/>
                 ${styles}
                 ${katexStyle}
             </head>

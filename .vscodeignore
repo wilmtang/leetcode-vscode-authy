@@ -1,6 +1,11 @@
 .vscode/**
 .vscode-test/**
 .github/**
+.env
+.env.*
+*.log
+AGENTS.md
+_config.yml
 browser-extension/**
 dist/**
 docs/**
