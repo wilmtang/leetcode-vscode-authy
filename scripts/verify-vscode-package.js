@@ -28,6 +28,12 @@ if (unexpectedRequires.length > 0) {
     fail(`Bundle retains unexpected package imports: ${unexpectedRequires.join(", ")}`);
 }
 
+require(path.join(repoRoot, "src", "test", "support", "register-vscode.js"));
+const extensionExports = require(bundlePath);
+if (typeof extensionExports.activate !== "function" || typeof extensionExports.deactivate !== "function") {
+    fail("Bundle does not load with the VS Code API stub or export activate/deactivate.");
+}
+
 const bundleBytes = fs.statSync(bundlePath).size;
 if (bundleBytes > maximumBundleBytes) {
     fail(`Bundle is ${(bundleBytes / 1024 / 1024).toFixed(2)} MiB; limit is ${maximumBundleBytes / 1024 / 1024} MiB.`);
