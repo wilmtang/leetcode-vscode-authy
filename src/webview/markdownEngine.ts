@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import hljs from "highlight.js";
-import * as MarkdownIt from "markdown-it";
+import MarkdownIt = require("markdown-it");
 import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
@@ -37,8 +37,9 @@ class MarkdownEngine implements vscode.Disposable {
     // the webview so the math rendered by textRenderer is styled. The relative
     // `fonts/…` URLs inside katex.min.css resolve against this same root.
     public get katexDistDir(): string {
-        // Compiled location: <ext>/out/src/webview/markdownEngine.js
-        return path.join(__dirname, "..", "..", "..", "node_modules", "katex", "dist");
+        // Bundled location: <ext>/out/extension.js. The build copies only the
+        // stylesheet and fonts that the webview needs beside the bundle.
+        return path.join(__dirname, "katex");
     }
 
     public getKatexStyle(): string {

@@ -45,7 +45,7 @@
         "onCommand:leetcode.problems.sort",
         "onView:leetCodeExplorer"
     ],
-    "main": "./out/src/extension",
+    "main": "./out/extension.js",
     "contributes": {
         "commands": [
             {
@@ -763,7 +763,8 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run compile && npm run bundle",
+        "bundle": "node scripts/build-vscode-extension.js",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "test": "tsc -p ./tsconfig.test.json && mocha && npm run test:browser",
@@ -778,7 +779,7 @@
         "auth-sync:build:chrome": "node scripts/build-browser-extension-package.js --browser chrome",
         "auth-sync:publish:chrome": "node scripts/publish-chrome-web-store.js",
         "release:vscode:local": "npm run lint && npm run build -- --out dist/vscode-leetcode-auth-sync.vsix",
-        "build": "vsce package --githubBranch main",
+        "build": "vsce package --githubBranch main --no-dependencies",
         "publish:vscode:marketplace": "vsce publish --githubBranch main",
         "publish:vscode:open-vsx": "ovsx publish"
     },
@@ -792,6 +793,7 @@
         "@types/vscode": "1.57.0",
         "@vscode/vsce": "^3.9.2",
         "adm-zip": "^0.6.0",
+        "esbuild": "^0.28.1",
         "mocha": "^11.7.6",
         "ovsx": "^1.0.2",
         "tslint": "^5.20.1",

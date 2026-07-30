@@ -12,7 +12,8 @@ docs/**
 scripts/**
 web-ext-artifacts/**
 out/test/**
-out/src/test/**
+out/src/**
+node_modules/**
 test/**
 src/**
 .mocharc.json

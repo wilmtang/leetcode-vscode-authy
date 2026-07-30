@@ -16,7 +16,7 @@ if (!commandExists(codeCommand)) {
 fs.mkdirSync(distPath, { recursive: true });
 
 console.log("Packaging VSIX with @vscode/vsce...");
-run("npm", ["exec", "--yes", "--package", "@vscode/vsce", "--", "vsce", "package", "--out", vsixPath]);
+run("npm", ["exec", "--yes", "--package", "@vscode/vsce", "--", "vsce", "package", "--no-dependencies", "--out", vsixPath]);
 
 console.log("Removing the old stock LeetCode extension ID if it is installed...");
 run(codeCommand, ["--uninstall-extension", "leetcode.vscode-leetcode"], { allowFailure: true });

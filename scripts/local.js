@@ -14,11 +14,11 @@ const localCommands = {
     },
     "vscode:dev": {
         description: "Compile and launch a VS Code extension-development host.",
-        steps: [[npmCmd, ["run", "compile"]], [nodeCmd, ["scripts/start-vscode-auth-sync-dev.js"]]],
+        steps: [[npmCmd, ["run", "vscode:prepublish"]], [nodeCmd, ["scripts/start-vscode-auth-sync-dev.js"]]],
     },
     "vscode:install": {
         description: "Compile, package, and install the extension into local VS Code.",
-        steps: [[npmCmd, ["run", "compile"]], [nodeCmd, ["scripts/install-vscode-auth-sync-extension.js"]]],
+        steps: [[nodeCmd, ["scripts/install-vscode-auth-sync-extension.js"]]],
     },
     "chrome:dev": {
         description: "Launch Chrome with the unpacked browser extension.",
@@ -39,7 +39,7 @@ const localCommands = {
 };
 
 const scriptNotes = [
-    ["vscode:prepublish", "VSCE lifecycle hook. Runs automatically before VSIX package/publish."],
+    ["vscode:prepublish", "VSCE lifecycle hook. Type-checks, bundles, and copies runtime assets before package/publish."],
     ["build", "Packages the VS Code extension VSIX; it also triggers vscode:prepublish."],
     ["release:vscode:local", "Local release dry-run: lint first, then package dist/vscode-leetcode-auth-sync.vsix."],
     ["publish:vscode:marketplace", "Publish a prepared VSIX to the Microsoft VS Code Marketplace."],
