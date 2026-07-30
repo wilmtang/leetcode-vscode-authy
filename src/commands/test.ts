@@ -9,6 +9,7 @@ import { testSolutionWithSyncedCookie } from "../request/test-solution";
 import { IQuickItemEx, UserStatus } from "../shared";
 import { DialogType, promptForOpenOutputChannel, showFileSelectDialog } from "../utils/uiUtils";
 import { getActiveFilePath } from "../utils/workspaceUtils";
+import { decodeInlineTestcase } from "../utils/testcaseUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
 
 function runTest(filePath: string, testString?: string): Thenable<string> {
@@ -70,7 +71,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
                     ignoreFocusOut: true,
                 });
                 if (testString) {
-                    result = await runTest(filePath, testString);
+                    result = await runTest(filePath, decodeInlineTestcase(testString));
                 }
                 break;
             case ":file":

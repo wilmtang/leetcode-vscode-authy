@@ -3,6 +3,19 @@ All notable changes to the "LeetCode VS Code Auth Sync" browser extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+### Security
+- Reject hop-by-hop browser headers instead of replaying them to LeetCode.
+
+### Fixed
+- Queue auth-sync requests in arrival order so a newer login is not discarded
+  while an earlier session is being verified.
+- Abort a loopback sync after 45 seconds and report a distinct timeout result.
+- Propagate Chrome storage/cookie callback failures instead of treating them as
+  successful operations.
+- Prefer URL-scoped LeetCode cookies so unrelated path cookies cannot produce
+  duplicate session-cookie names.
+
 ## [0.1.6]
 ### Fixed
 - Fixed an issue where the background cooldown was bypassed too eagerly, causing excessive `leetcode-xhr` syncs and noisy logs for an unchanged session. Automatic syncs now correctly respect the configured cooldown (default 30 minutes) unless the login session fingerprint or header presence materially changes.

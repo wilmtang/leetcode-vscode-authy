@@ -9,7 +9,7 @@ import { Category, defaultProblem, IProblem, ProblemState, SortingStrategy } fro
 import { shouldHideSolvedProblem } from "../utils/settingUtils";
 import { LeetCodeNode } from "./LeetCodeNode";
 
-class ExplorerNodeManager implements Disposable {
+export class ExplorerNodeManager implements Disposable {
     private explorerNodeMap: Map<string, LeetCodeNode> = new Map<string, LeetCodeNode>();
     private companySet: Set<string> = new Set<string>();
     private tagSet: Set<string> = new Set<string>();
@@ -17,12 +17,15 @@ class ExplorerNodeManager implements Disposable {
     // toggles) rebuild the trees locally instead of re-fetching ~3,000 problems.
     private cachedProblems: IProblem[] | undefined;
     private fetchInFlight: Promise<void> | undefined;
+    private refetchAfterCurrent: boolean = false;
+
+    public constructor(private readonly problemLoader: () => Promise<IProblem[]> = list.listProblems) { }
 
     // `force` re-fetches the catalog from the API; otherwise the trees are
     // rebuilt from the cached catalog (or fetched once if the cache is empty).
     public async refreshCache(force: boolean = true): Promise<void> {
         if (force || !this.cachedProblems) {
-            await this.fetchProblems();
+            await this.fetchProblems(force);
         }
         this.rebuild();
     }
@@ -44,19 +47,33 @@ class ExplorerNodeManager implements Disposable {
         }
     }
 
-    private async fetchProblems(): Promise<void> {
-        // De-duplicate overlapping refreshes so two quick `statusChanged` events
-        // do not fire two concurrent catalog fetches.
-        if (!this.fetchInFlight) {
-            this.fetchInFlight = (async (): Promise<void> => {
-                try {
-                    this.cachedProblems = await list.listProblems();
-                } finally {
-                    this.fetchInFlight = undefined;
-                }
-            })();
+    private async fetchProblems(force: boolean): Promise<void> {
+        // De-duplicate overlapping work, but do not lose a *forced* refresh that
+        // arrives while an older account/endpoint fetch is in flight. The owner
+        // drains one additional fetch after the current one; further force
+        // requests coalesce into that pending pass.
+        if (this.fetchInFlight) {
+            if (force) {
+                this.refetchAfterCurrent = true;
+            }
+            await this.fetchInFlight;
+            return;
         }
-        await this.fetchInFlight;
+
+        const operation: Promise<void> = (async (): Promise<void> => {
+            do {
+                this.refetchAfterCurrent = false;
+                this.cachedProblems = await this.problemLoader();
+            } while (this.refetchAfterCurrent);
+        })();
+        this.fetchInFlight = operation;
+        try {
+            await operation;
+        } finally {
+            if (this.fetchInFlight === operation) {
+                this.fetchInFlight = undefined;
+            }
+        }
     }
 
     private rebuild(): void {
@@ -200,6 +217,7 @@ class ExplorerNodeManager implements Disposable {
         this.companySet.clear();
         this.tagSet.clear();
         this.cachedProblems = undefined;
+        this.refetchAfterCurrent = false;
     }
 
     private sortSubCategoryNodes(subCategoryNodes: LeetCodeNode[], category: Category): void {

@@ -81,11 +81,14 @@ class TrackData implements ITrackData {
     public reportUrl: string = getReportUrl();
 
     private sendTimer: NodeJS.Timeout | undefined;
+    private submitAfterCurrent: boolean = false;
 
     public report = (reportItems: IReportData | IReportData[]): void => {
         if (!getAllowReportDataConfig()) return;
 
-        this.sendTimer && clearTimeout(this.sendTimer);
+        if (this.sendTimer) {
+            clearTimeout(this.sendTimer);
+        }
 
         if (!Array.isArray(reportItems)) {
             reportItems = [reportItems];
@@ -98,7 +101,11 @@ class TrackData implements ITrackData {
                 anonymous_id: item.anonymous_id ?? randomId,
             });
         });
-        this.sendTimer = setTimeout(this.submitReport, 800);
+        if (this.isSubmit) {
+            this.submitAfterCurrent = true;
+        } else {
+            this.sendTimer = setTimeout(this.submitReport, 800);
+        }
     };
 
     public submitReport = async (): Promise<void> => {
@@ -116,11 +123,16 @@ class TrackData implements ITrackData {
                     "Content-Type": "application/x-www-form-urlencoded",
                     "x-timezone": getTimeZone(),
                 },
+                timeout: 10000,
             });
         } catch (e) {
             this.reportCache = this.reportCache.concat(JSON.parse(dataList));
         } finally {
             this.isSubmit = false;
+            if (this.submitAfterCurrent) {
+                this.submitAfterCurrent = false;
+                this.sendTimer = setTimeout(this.submitReport, 800);
+            }
         }
     };
 }

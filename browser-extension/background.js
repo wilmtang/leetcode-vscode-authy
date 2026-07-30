@@ -20,11 +20,12 @@ const DEV_CAPTURE_KEYS = {
     devCapturedPayload: null,
     devCapturedAt: 0,
 };
+const SYNC_REQUEST_TIMEOUT_MS = 45 * 1000;
 
 const api = typeof chrome !== "undefined" ? chrome : browser;
 
 let syncTimer = null;
-let syncInFlight = null;
+let syncQueue = Promise.resolve();
 let lastAutomaticCookieProbeAt = 0;
 
 async function getSettings() {
@@ -97,29 +98,27 @@ async function getLeetCodeCookieHeader() {
 }
 
 async function getCookiesForLeetCode() {
-    const byDomain = await cookiesGetAll({ domain: "leetcode.com" });
     const byUrl = await cookiesGetAll({ url: "https://leetcode.com/" });
-    const uniqueCookies = new Map();
-
-    for (const cookie of [...byDomain, ...byUrl]) {
-        uniqueCookies.set(`${cookie.name}:${cookie.domain}:${cookie.path}`, cookie);
+    if (byUrl.length > 0) {
+        // URL-scoped lookup mirrors what the browser may actually send to the
+        // LeetCode origin. A domain-wide merge also included unrelated path
+        // cookies and could create duplicate session-cookie names.
+        return byUrl;
     }
 
-    return Array.from(uniqueCookies.values());
+    // Compatibility fallback for browsers that fail the URL-scoped query even
+    // after host permission has been granted.
+    return cookiesGetAll({ domain: "leetcode.com" });
 }
 
 async function syncNow(reason = "manual", cookieOverride = "", requestHeadersOverride = null) {
-    if (syncInFlight) {
-        return { ok: false, skipped: true, error: "Sync already in progress." };
-    }
-
-    syncInFlight = syncNowInternal(reason, cookieOverride, requestHeadersOverride);
-
-    try {
-        return await syncInFlight;
-    } finally {
-        syncInFlight = null;
-    }
+    // Preserve arrival order. Returning "already in progress" used to drop the
+    // newest account/session update when a prior validation was still running.
+    const operation = syncQueue
+        .catch(() => undefined)
+        .then(() => syncNowInternal(reason, cookieOverride, requestHeadersOverride));
+    syncQueue = operation.then(() => undefined, () => undefined);
+    return operation;
 }
 
 async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
@@ -186,11 +185,19 @@ async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
     }
 
     let response;
+    let data = {};
+    let timedOut = false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+    }, SYNC_REQUEST_TIMEOUT_MS);
 
     try {
         response = await fetch(`http://127.0.0.1:${settings.port}/auth/update`, {
             method: "POST",
             headers,
+            signal: controller.signal,
             body: JSON.stringify({
                 cookie,
                 requestHeaders: replayableRequestHeaders,
@@ -200,11 +207,22 @@ async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
                 updatedAt: Date.now(),
             }),
         });
+        const responseText = await response.text();
+        try {
+            data = JSON.parse(responseText || "{}");
+        } catch (error) {
+            data = {};
+        }
     } catch (error) {
-        return recordSyncFailure(getFetchFailureMessage(settings.port), syncReason, "vscode-unavailable", settings);
+        return recordSyncFailure(
+            timedOut ? getFetchTimeoutMessage(settings.port) : getFetchFailureMessage(settings.port),
+            syncReason,
+            timedOut ? "vscode-timeout" : "vscode-unavailable",
+            settings
+        );
+    } finally {
+        clearTimeout(timeout);
     }
-
-    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
         return recordSyncFailure(getServerFailureMessage(response.status, data.error), syncReason, "server-error", settings);
@@ -420,6 +438,10 @@ function getFetchFailureMessage(port) {
     return `No VS Code LeetCode auth sync server was found on port ${port}. Open VS Code with the LeetCode extension enabled, or set the same auth sync port in both places.`;
 }
 
+function getFetchTimeoutMessage(port) {
+    return `The VS Code LeetCode auth sync server on port ${port} did not respond within ${SYNC_REQUEST_TIMEOUT_MS / 1000} seconds. Check the LeetCode output channel, then try again.`;
+}
+
 function getServerFailureMessage(status, error) {
     const serverMessage = typeof error === "string" && error ? error : "";
     const lowerServerMessage = serverMessage.toLowerCase();
@@ -444,7 +466,14 @@ function storageGet(defaults) {
         return browser.storage.local.get(defaults);
     }
 
-    return new Promise((resolve) => chrome.storage.local.get(defaults, resolve));
+    return new Promise((resolve, reject) => chrome.storage.local.get(defaults, (values) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+            reject(new Error(error.message));
+            return;
+        }
+        resolve(values);
+    }));
 }
 
 function storageSet(values) {
@@ -452,7 +481,14 @@ function storageSet(values) {
         return browser.storage.local.set(values);
     }
 
-    return new Promise((resolve) => chrome.storage.local.set(values, resolve));
+    return new Promise((resolve, reject) => chrome.storage.local.set(values, () => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+            reject(new Error(error.message));
+            return;
+        }
+        resolve();
+    }));
 }
 
 function cookiesGetAll(query) {
@@ -460,7 +496,14 @@ function cookiesGetAll(query) {
         return browser.cookies.getAll(query);
     }
 
-    return new Promise((resolve) => chrome.cookies.getAll(query, resolve));
+    return new Promise((resolve, reject) => chrome.cookies.getAll(query, (cookies) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+            reject(new Error(error.message));
+            return;
+        }
+        resolve(cookies);
+    }));
 }
 
 function getBrowserUserAgent() {
@@ -540,7 +583,6 @@ function isReplayableLeetCodeHeader(name) {
         "accept",
         "accept-language",
         "authorization",
-        "connection",
         "dnt",
         "priority",
         "sec-ch-ua",
@@ -556,7 +598,6 @@ function isReplayableLeetCodeHeader(name) {
         "sec-fetch-mode",
         "sec-fetch-site",
         "sec-gpc",
-        "te",
         "user-agent",
     ].includes(name);
 }

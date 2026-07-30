@@ -2,6 +2,7 @@ import { globalState } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { getUrl } from "../shared";
 import { sleep } from "../utils/toolUtils";
+import { normalizeTestcase } from "../utils/testcaseUtils";
 import {
     createHeaders,
     DirectApiUnsupportedError,
@@ -106,10 +107,6 @@ async function runCode(meta: ISolutionFileMeta, question: IQuestionDetail, testc
     }
 
     throw new Error("LeetCode rejected the run because requests were sent too quickly.");
-}
-
-function normalizeTestcase(testcase: string): string {
-    return testcase.replace(/\r\n|\r/g, "\n").replace(/\\n/g, "\n").trim();
 }
 
 function getDefaultTestcases(question: IQuestionDetail): string[] {
