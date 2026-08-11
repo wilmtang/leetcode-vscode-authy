@@ -211,7 +211,13 @@ npm run auth-sync:build:chrome
 
 ## Audit Notes
 
-The latest complete review is
+The active remediation plan is
+[Code, Performance, Engineering, and UX Audit Plan — 2026-08-11](plans/2026-08-11-code-performance-ux-audit-plan.md).
+It records 16 source-confirmed finding groups against `30154f3`, their execution
+order, deterministic regression requirements, intentional non-changes, and
+environment-dependent proof gaps. The audit changed no runtime code.
+
+The previous complete remediation review is
 [Full Code Audit — 2026-07-30](audits/2026-07-30-full-code-audit.md). It records
 the fixed findings, exact verification, accepted boundaries, development-tool
 advisory residue, and the live-auth proof gap.
