@@ -62,6 +62,27 @@ describe("leetcode HTTP security boundaries", () => {
             /invalid or excessive header data/,
         );
     });
+
+    it("aborts an in-flight node request when its operation is cancelled", async () => {
+        const hanging: http.Server = http.createServer(() => { /* leave the response open */ });
+        await listen(hanging);
+        let cancelled: boolean = false;
+        const startedAt: number = Date.now();
+        try {
+            const port: number = (hanging.address() as AddressInfo).port;
+            setTimeout(() => { cancelled = true; }, 50);
+            await assert.rejects(
+                requestJson({ method: "GET", url: `http://127.0.0.1:${port}/hang` }, {
+                    label: "cancellation regression",
+                    isCancelled: () => cancelled,
+                }),
+                /cancelled/i,
+            );
+            assert.ok(Date.now() - startedAt < 1000, "cancellation must not wait for the transport timeout");
+        } finally {
+            await close(hanging);
+        }
+    });
 });
 
 function listen(server: http.Server): Promise<void> {

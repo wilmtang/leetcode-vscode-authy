@@ -194,7 +194,7 @@ export async function verifyResult(id: string, cookie: string, referer: string, 
             return result;
         }
 
-        await sleep(1000);
+        await sleep(1000, isCancelled);
         throwIfCancelled(isCancelled);
     }
 
@@ -212,10 +212,19 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
     }
 
     let response: AxiosResponse<T>;
+    const cancelSource = context.isCancelled ? axios.CancelToken.source() : undefined;
+    const cancellationTimer: NodeJS.Timer | undefined = cancelSource && context.isCancelled
+        ? setInterval(() => {
+            if (context.isCancelled!()) {
+                cancelSource.cancel("Operation cancelled.");
+            }
+        }, 25)
+        : undefined;
     try {
         response = await axios({
-            timeout: DEFAULT_TIMEOUT_MS,
             ...config,
+            timeout: typeof config.timeout === "number" && config.timeout > 0 ? config.timeout : DEFAULT_TIMEOUT_MS,
+            cancelToken: cancelSource ? cancelSource.token : config.cancelToken,
             // All API URLs are already canonical. Following a redirect while
             // carrying Cookie/Authorization risks forwarding credentials to a
             // different origin.
@@ -226,6 +235,10 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
         const message: string = getErrorMessage(error);
         leetCodeChannel.appendLine(`[http] Failure cause: node/axios transport error (${context.label}): ${message}`);
         throw new Error(`node/axios request failed (${context.label}): ${message}`);
+    } finally {
+        if (cancellationTimer) {
+            clearInterval(cancellationTimer);
+        }
     }
 
     // Cloudflare commonly serves its "Just a moment..." challenge with 503 (and
@@ -265,7 +278,7 @@ function throwIfCancelled(isCancelled?: () => boolean): void {
 async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequestContext): Promise<T> {
     let response: ICurlResponse;
     try {
-        response = await executeCurl(config);
+        response = await executeCurl(config, context.isCancelled);
     } catch (error) {
         const message: string = getErrorMessage(error);
         leetCodeChannel.appendLine(`[http] Failure cause: curl transport error (${context.label}): ${message}`);
@@ -286,20 +299,21 @@ async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequ
         throw new Error(`curl http error (${context.label}) [code=${response.status}]`);
     }
 
+    let data: T;
     try {
-        const data: T = JSON.parse(response.body) as T;
-        throwIfCancelled(context.isCancelled);
-        if (context.logMode) {
-            leetCodeChannel.appendLine(`[http] curl request succeeded (${context.label}).`);
-        }
-        return data;
+        data = JSON.parse(response.body) as T;
     } catch (error) {
         leetCodeChannel.appendLine(`[http] Failure cause: curl returned non-JSON response (${context.label}).`);
         throw new Error(`curl JSON parse failed (${context.label}). Response: ${response.body.slice(0, 200)}`);
     }
+    throwIfCancelled(context.isCancelled);
+    if (context.logMode) {
+        leetCodeChannel.appendLine(`[http] curl request succeeded (${context.label}).`);
+    }
+    return data;
 }
 
-function executeCurl(config: AxiosRequestConfig): Promise<ICurlResponse> {
+function executeCurl(config: AxiosRequestConfig, isCancelled?: () => boolean): Promise<ICurlResponse> {
     return new Promise<ICurlResponse>((resolve: (response: ICurlResponse) => void, reject: (error: Error) => void): void => {
         const url: string | undefined = config.url;
         if (!url) {
@@ -348,25 +362,55 @@ function executeCurl(config: AxiosRequestConfig): Promise<ICurlResponse> {
             configLines.push(`data-raw ${curlConfigQuote(body)}`);
         }
 
+        let settled: boolean = false;
+        let cancellationTimer: NodeJS.Timer | undefined;
+        const finishError = (error: Error): void => {
+            if (!settled) {
+                settled = true;
+                if (cancellationTimer) {
+                    clearInterval(cancellationTimer);
+                }
+                reject(error);
+            }
+        };
+        const finishResponse = (response: ICurlResponse): void => {
+            if (!settled) {
+                settled = true;
+                if (cancellationTimer) {
+                    clearInterval(cancellationTimer);
+                }
+                resolve(response);
+            }
+        };
         const child: cp.ChildProcess = cp.execFile("curl", ["-K", "-"], { maxBuffer: 10 * 1024 * 1024 }, (error: cp.ExecException | null, stdout: string, stderr: string) => {
             if (error) {
-                reject(new Error(`curl request failed: ${stderr || error.message}`));
+                finishError(new Error(`curl request failed: ${stderr || error.message}`));
                 return;
             }
 
             const markerIndex: number = stdout.lastIndexOf(CURL_STATUS_MARKER);
             if (markerIndex < 0) {
-                reject(new Error("curl response did not include an HTTP status code."));
+                finishError(new Error("curl response did not include an HTTP status code."));
                 return;
             }
 
             const body: string = stdout.slice(0, markerIndex);
             const status: number = parseInt(stdout.slice(markerIndex + CURL_STATUS_MARKER.length).trim(), 10);
-            resolve({ body, status });
+            finishResponse({ body, status });
         });
 
+        if (isCancelled) {
+            cancellationTimer = setInterval(() => {
+                if (isCancelled()) {
+                    child.kill();
+                    finishError(new Error("Operation cancelled."));
+                }
+            }, 25);
+        }
+
         if (!child.stdin) {
-            reject(new Error("Unable to pass the curl config on stdin."));
+            child.kill();
+            finishError(new Error("Unable to pass the curl config on stdin."));
             return;
         }
         // If curl exits before reading all of stdin, the resulting EPIPE is benign —

@@ -88,7 +88,7 @@ async function submitCode(
             throw new Error(task.error);
         }
 
-        await sleep(delaySeconds * 1000);
+        await sleep(delaySeconds * 1000, isCancelled);
         delaySeconds++;
     }
 

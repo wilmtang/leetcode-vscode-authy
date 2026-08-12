@@ -1,5 +1,26 @@
-export function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+export function sleep(ms: number, isCancelled?: () => boolean): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        if (isCancelled && isCancelled()) {
+            reject(new Error("Operation cancelled."));
+            return;
+        }
+        let cancellationTimer: NodeJS.Timer | undefined;
+        const timeout: NodeJS.Timer = setTimeout(() => {
+            if (cancellationTimer) {
+                clearInterval(cancellationTimer);
+            }
+            resolve();
+        }, ms);
+        if (isCancelled) {
+            cancellationTimer = setInterval(() => {
+                if (isCancelled()) {
+                    clearTimeout(timeout);
+                    clearInterval(cancellationTimer!);
+                    reject(new Error("Operation cancelled."));
+                }
+            }, Math.min(50, Math.max(10, ms)));
+        }
+    });
 }
 
 export function parseQuery(query: string): { [key: string]: string } {
