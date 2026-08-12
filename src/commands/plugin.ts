@@ -5,8 +5,7 @@ import * as vscode from "vscode";
 import { leetCodeTreeDataProvider } from "../explorer/LeetCodeTreeDataProvider";
 import { IQuickItemEx } from "../shared";
 import { Endpoint, SortingStrategy } from "../shared";
-import { DialogType, promptForOpenOutputChannel, promptForSignIn } from "../utils/uiUtils";
-import { deleteCache } from "./cache";
+import { DialogType, promptForOpenOutputChannel } from "../utils/uiUtils";
 
 export async function switchEndpoint(): Promise<void> {
     const isCnEnabled: boolean = getLeetCodeEndpoint() === Endpoint.LeetCodeCN;
@@ -38,14 +37,6 @@ export async function switchEndpoint(): Promise<void> {
         vscode.window.showInformationMessage(`Switched the endpoint to ${endpoint}`);
     } catch (error) {
         await promptForOpenOutputChannel("Failed to switch endpoint. Please open the output channel for details.", DialogType.error);
-    }
-
-    try {
-        await vscode.commands.executeCommand("leetcode.signout");
-        await deleteCache();
-        await promptForSignIn();
-    } catch (error) {
-        await promptForOpenOutputChannel("Failed to sign in. Please open the output channel for details.", DialogType.error);
     }
 }
 

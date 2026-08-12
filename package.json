@@ -406,7 +406,11 @@
                             "leetcode",
                             "leetcode-cn"
                         ],
-                        "description": "Endpoint of the user account."
+                        "enumDescriptions": [
+                            "Supported endpoint for browser auth sync and live-tested workflows.",
+                            "Experimental and currently incomplete; browser auth sync supports leetcode.com only."
+                        ],
+                        "description": "Endpoint of the user account. Changing it signs out and invalidates endpoint-specific data."
                     },
                     "leetcode.useEndpointTranslation": {
                         "type": "boolean",

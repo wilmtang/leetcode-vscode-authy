@@ -1,7 +1,9 @@
 import { URLSearchParams } from "url";
-import { FileDecoration, FileDecorationProvider, ProviderResult, ThemeColor, Uri, workspace, WorkspaceConfiguration } from "vscode";
+import { EventEmitter, FileDecoration, FileDecorationProvider, ProviderResult, ThemeColor, Uri, workspace, WorkspaceConfiguration } from "vscode";
 
 export class LeetCodeTreeItemDecorationProvider implements FileDecorationProvider {
+    private readonly changedEmitter: EventEmitter<Uri | Uri[] | undefined> = new EventEmitter<Uri | Uri[] | undefined>();
+    public readonly onDidChangeFileDecorations = this.changedEmitter.event;
     private readonly DIFFICULTY_BADGE_LABEL: { [key: string]: string } = {
         easy: "E",
         medium: "M",
@@ -29,6 +31,10 @@ export class LeetCodeTreeItemDecorationProvider implements FileDecorationProvide
             badge: this.DIFFICULTY_BADGE_LABEL[difficulty],
             color: this.ITEM_COLOR[difficulty],
         };
+    }
+
+    public refresh(): void {
+        this.changedEmitter.fire(undefined);
     }
 
     private isDifficultyBadgeEnabled(): boolean {

@@ -25,7 +25,7 @@ import { leetCodeTreeItemDecorationProvider } from "./explorer/LeetCodeTreeItemD
 import { leetCodeChannel } from "./leetCodeChannel";
 import { leetCodeManager } from "./leetCodeManager";
 import { leetCodeStatusBarController } from "./statusbar/leetCodeStatusBarController";
-import { DialogType, promptForOpenOutputChannel } from "./utils/uiUtils";
+import { DialogType, promptForOpenOutputChannel, promptForSignIn } from "./utils/uiUtils";
 import { leetCodePreviewProvider } from "./webview/leetCodePreviewProvider";
 import { leetCodeProfileProvider } from "./webview/leetCodeProfileProvider";
 import { leetCodeSolutionProvider } from "./webview/leetCodeSolutionProvider";
@@ -33,6 +33,7 @@ import { leetCodeSubmissionProvider } from "./webview/leetCodeSubmissionProvider
 import { markdownEngine } from "./webview/markdownEngine";
 import TrackData from "./utils/trackingUtils";
 import { globalState } from "./globalState";
+import { getConfigurationTransition } from "./configurationCoordinator";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     try {
@@ -61,6 +62,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         context.subscriptions.push(globalState.onDidChangeAuthSession((snapshot) => {
             leetCodeManager.reconcileAuthSession(snapshot);
             if (snapshot.state === "signed-out") {
+                profile.invalidateProfileRequests();
                 leetCodeProfileProvider.showSignedOut();
             } else if (leetCodeProfileProvider.isOpen()) {
                 void profile.showUserProfile();
@@ -131,6 +133,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 ) {
                     void restartAuthSyncServer(false);
                 }
+                void handleLeetCodeConfigurationChange(event);
             }),
             authSyncServer
         );
@@ -141,6 +144,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     } catch (error) {
         leetCodeChannel.appendLine(error.toString());
         promptForOpenOutputChannel("Extension initialization failed. Please open output channel for details.", DialogType.error);
+    }
+}
+
+async function handleLeetCodeConfigurationChange(event: vscode.ConfigurationChangeEvent): Promise<void> {
+    const keys: string[] = [
+        "leetcode.endpoint",
+        "leetcode.useEndpointTranslation",
+        "leetcode.hideSolved",
+        "leetcode.problems.sortStrategy",
+        "leetcode.colorizeProblems",
+    ];
+    for (const key of keys) {
+        if (!event.affectsConfiguration(key)) {
+            continue;
+        }
+        switch (getConfigurationTransition(key)) {
+            case "auth-and-catalog":
+                await leetCodeManager.signOut();
+                explorerNodeManager.invalidate();
+                if (plugin.getLeetCodeEndpoint() === "leetcode-cn") {
+                    vscode.window.showWarningMessage("leetcode.cn support is experimental and currently incomplete. Auto Cookie Sync supports leetcode.com only.");
+                }
+                leetCodeTreeDataProvider.refresh(false);
+                await promptForSignIn();
+                break;
+            case "catalog-refetch":
+                explorerNodeManager.invalidate();
+                await leetCodeTreeDataProvider.refresh(true);
+                break;
+            case "tree-rebuild":
+                await leetCodeTreeDataProvider.refresh(false);
+                break;
+            case "decorations":
+                leetCodeTreeItemDecorationProvider.refresh();
+                break;
+            default:
+                break;
+        }
     }
 }
 

@@ -14,6 +14,9 @@ import {
 import { UserStatus } from "../shared";
 import { promptForSignIn } from "../utils/uiUtils";
 import { IProfileSyncStatus, leetCodeProfileProvider, ProfileSectionId } from "../webview/leetCodeProfileProvider";
+import { ProfileRequestCoordinator } from "../webview/profileRequestCoordinator";
+
+const profileRequests: ProfileRequestCoordinator = new ProfileRequestCoordinator();
 
 // Status bar action: render the signed-in user's public profile (solved counts
 // by difficulty, ranking, recent AC, language stats) plus the local cookie-sync
@@ -34,6 +37,11 @@ export async function showUserProfile(): Promise<void> {
     }
 
     const cached: UserDataType | undefined = globalState.getUserStatus();
+    const authRevision: number | undefined = globalState.getAuthSession() && globalState.getAuthSession()!.revision;
+    if (authRevision === undefined) {
+        return;
+    }
+    const owner = profileRequests.begin(authRevision);
     leetCodeProfileProvider.open({
         username,
         avatar: (cached && cached.avatar) || "",
@@ -41,19 +49,29 @@ export async function showUserProfile(): Promise<void> {
     });
 
     // No Promise.all: each query renders its section independently as it lands.
-    void fetchSection("header", () => fetchProfileIdentity(username), (data) => leetCodeProfileProvider.updateIdentity(data));
-    void fetchSection("totals", () => fetchProfileStats(username), (data) => leetCodeProfileProvider.updateStats(data));
-    void fetchSection("recent", () => fetchProfileRecent(username), (data) => leetCodeProfileProvider.updateRecent(data));
-    void fetchSection("languages", () => fetchProfileLanguages(username), (data) => leetCodeProfileProvider.updateLanguages(data));
+    void fetchSection(owner, "header", () => fetchProfileIdentity(username), (data) => leetCodeProfileProvider.updateIdentity(data));
+    void fetchSection(owner, "totals", () => fetchProfileStats(username), (data) => leetCodeProfileProvider.updateStats(data));
+    void fetchSection(owner, "recent", () => fetchProfileRecent(username), (data) => leetCodeProfileProvider.updateRecent(data));
+    void fetchSection(owner, "languages", () => fetchProfileLanguages(username), (data) => leetCodeProfileProvider.updateLanguages(data));
 }
 
-async function fetchSection<T>(id: ProfileSectionId, fetch: () => Promise<T>, apply: (data: T) => void): Promise<void> {
+async function fetchSection<T>(owner: { authRevision: number; generation: number }, id: ProfileSectionId, fetch: () => Promise<T>, apply: (data: T) => void): Promise<void> {
     try {
-        apply(await fetch());
+        const data: T = await fetch();
+        if (profileRequests.isCurrent(owner, globalState.getAuthSession() && globalState.getAuthSession()!.revision)) {
+            apply(data);
+        }
     } catch (error) {
+        if (!profileRequests.isCurrent(owner, globalState.getAuthSession() && globalState.getAuthSession()!.revision)) {
+            return;
+        }
         leetCodeChannel.appendLine(`[profile] section "${id}" failed: ${String(error)}`);
         leetCodeProfileProvider.failSection(id, "Couldn't load this section — see the LeetCode output channel.");
     }
+}
+
+export function invalidateProfileRequests(): void {
+    profileRequests.invalidate();
 }
 
 // Current sync status for the signed-in user, shaped for the panel. Exported so
