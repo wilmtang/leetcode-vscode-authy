@@ -1,7 +1,7 @@
 // Copyright (c) jdneo. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-export type AuthIntentKind = "automatic-sync" | "manual-cookie" | "uri" | "refresh" | "sign-out";
+export type AuthIntentKind = "automatic-sync" | "manual-cookie" | "remote-sync" | "uri" | "refresh" | "sign-out";
 
 export interface IAuthIntent {
     readonly kind: AuthIntentKind;

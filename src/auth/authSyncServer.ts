@@ -424,6 +424,13 @@ class AuthSyncServer implements vscode.Disposable {
 
         const body: IAuthSyncRequestBody = await this.readJsonBody(req);
         await this.enqueueAuthUpdate(async () => {
+            if (leetCodeManager.isAutomaticSyncSuspended()) {
+                this.sendJson(res, 409, {
+                    ok: false,
+                    error: "Automatic sync is suspended after explicit sign-out. Choose Sign In > Auto Cookie Sync in VS Code to resume.",
+                }, true, req);
+                return;
+            }
             const cookie: string = typeof body.cookie === "string" ? body.cookie.trim() : "";
             const browserUserAgent: string | undefined = this.getBrowserUserAgent(req, body);
             const browserRequestHeaders: IBrowserRequestHeaders | undefined = this.getBrowserRequestHeaders(body);

@@ -74,9 +74,15 @@ module.exports = {
         parse(value) { return { toString() { return value; } }; },
     },
     EventEmitter: class EventEmitter {
-        event() { return undefined; }
-        fire() { return undefined; }
-        dispose() { return undefined; }
+        constructor() {
+            this.listeners = [];
+            this.event = (listener) => {
+                this.listeners.push(listener);
+                return { dispose: () => { this.listeners = this.listeners.filter((entry) => entry !== listener); } };
+            };
+        }
+        fire(value) { for (const listener of this.listeners.slice()) { listener(value); } }
+        dispose() { this.listeners = []; }
     },
     Disposable: class Disposable {
         dispose() { return undefined; }

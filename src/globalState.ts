@@ -65,6 +65,11 @@ class GlobalState {
     // refreshing it on every write — and on cross-window keychain changes — lets
     // those getters stay synchronous without holding credentials in the Memento.
     private authSessionCache: IAuthSessionSnapshot | undefined;
+    private readonly authSessionChangedEmitter: vscode.EventEmitter<IAuthSessionSnapshot> = new vscode.EventEmitter<IAuthSessionSnapshot>();
+    private pendingLocalAuthRecord: string | undefined;
+    private hydrationGeneration: number = 0;
+
+    public readonly onDidChangeAuthSession: vscode.Event<IAuthSessionSnapshot> = this.authSessionChangedEmitter.event;
 
     // Must be awaited before any cookie/header read. extension.ts awaits this
     // before wiring sign-in or starting the auth-sync server.
@@ -72,7 +77,7 @@ class GlobalState {
         this.context = context;
         this._state = this.context.globalState;
         await this.migrateAuthSession();
-        await this.hydrateAuthSessionCache();
+        await this.hydrateAuthSessionCache(false);
         // A sibling VS Code window (or an external keychain edit) can rotate the
         // synced cookie; re-hydrate so this window's cache never serves a stale
         // credential after another window re-syncs. (Replaces the implicit
@@ -80,7 +85,10 @@ class GlobalState {
         context.subscriptions.push(
             context.secrets.onDidChange((event: vscode.SecretStorageChangeEvent) => {
                 if (event.key === AuthSessionSecretKey) {
-                    void this.hydrateAuthSessionCache();
+                    if (this.pendingLocalAuthRecord) {
+                        return;
+                    }
+                    void this.hydrateAuthSessionCache(true);
                 }
             }),
         );
@@ -236,14 +244,29 @@ class GlobalState {
             version: 1,
             revision: snapshot.revision > 0 ? snapshot.revision : this.nextRevision(),
         });
-        await this.context.secrets.store(AuthSessionSecretKey, JSON.stringify(normalized));
-        this.authSessionCache = normalized;
+        const serialized: string = JSON.stringify(normalized);
+        this.pendingLocalAuthRecord = serialized;
+        try {
+            await this.context.secrets.store(AuthSessionSecretKey, serialized);
+            this.authSessionCache = normalized;
+        } finally {
+            this.pendingLocalAuthRecord = undefined;
+        }
         return this.cloneAuthSession(normalized);
     }
 
-    private async hydrateAuthSessionCache(): Promise<void> {
+    private async hydrateAuthSessionCache(notify: boolean): Promise<void> {
+        const generation: number = ++this.hydrationGeneration;
         const raw: string | undefined = await this.context.secrets.get(AuthSessionSecretKey);
-        this.authSessionCache = this.parseAuthSession(raw);
+        if (generation !== this.hydrationGeneration) {
+            return;
+        }
+        const next: IAuthSessionSnapshot | undefined = this.parseAuthSession(raw);
+        const previous: string | undefined = this.authSessionCache && JSON.stringify(this.authSessionCache);
+        this.authSessionCache = next;
+        if (notify && next && previous !== JSON.stringify(next)) {
+            this.authSessionChangedEmitter.fire(this.cloneAuthSession(next));
+        }
     }
 
     private parseHeaders(raw: string | undefined): IBrowserRequestHeaders | undefined {

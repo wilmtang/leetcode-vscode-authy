@@ -58,6 +58,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // hydrates the keychain-backed cookie/header cache (and migrates any legacy
         // plaintext credentials) that getCookie()/createHeaders() read synchronously.
         await globalState.initialize(context);
+        context.subscriptions.push(globalState.onDidChangeAuthSession((snapshot) => {
+            leetCodeManager.reconcileAuthSession(snapshot);
+            if (snapshot.state === "signed-out") {
+                leetCodeProfileProvider.showSignedOut();
+            } else if (leetCodeProfileProvider.isOpen()) {
+                void profile.showUserProfile();
+            }
+        }));
 
         context.subscriptions.push(
             leetCodeStatusBarController,

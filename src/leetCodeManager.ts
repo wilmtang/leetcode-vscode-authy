@@ -31,6 +31,7 @@ class LeetCodeManager extends EventEmitter {
     private userStatus: UserStatus;
     private readonly authSyncSignInTimeoutMs: number = 2 * 60 * 1000;
     private readonly authIntents: AuthIntentCoordinator = new AuthIntentCoordinator();
+    private appliedAuthRevision: number | undefined;
 
     constructor() {
         super();
@@ -44,9 +45,17 @@ class LeetCodeManager extends EventEmitter {
     // instant, offline-tolerant cold start, then verified directly in the
     // background; with no cache we verify synchronously.
     public async getLoginStatus(): Promise<void> {
-        const cookie: string | undefined = globalState.getCookie();
-        const cached: UserDataType | undefined = globalState.getUserStatus();
+        const snapshot = globalState.getAuthSession();
+        if (snapshot && snapshot.state === "signed-out") {
+            this.appliedAuthRevision = snapshot.revision;
+            this.currentUser = undefined;
+            this.userStatus = UserStatus.SignedOut;
+            return;
+        }
+        const cookie: string | undefined = snapshot && snapshot.cookie;
+        const cached: UserDataType | undefined = snapshot && snapshot.identity;
         if (cookie && cached && cached.isSignedIn && cached.username) {
+            this.appliedAuthRevision = snapshot && snapshot.revision;
             this.currentUser = cached.username;
             this.userStatus = UserStatus.SignedIn;
             this.emit("statusChanged");
@@ -122,6 +131,9 @@ class LeetCodeManager extends EventEmitter {
         browserRequestHeaders?: IBrowserRequestHeaders,
         kind: AuthIntentKind = "manual-cookie",
     ): Promise<void> {
+        if (kind === "automatic-sync" && this.isAutomaticSyncSuspended()) {
+            throw new Error("Automatic browser sync is suspended after explicit sign-out. Choose Sign In to resume it.");
+        }
         const intent: IAuthIntent = this.authIntents.begin(kind);
         // Validate the candidate credential before replacing the last known-good
         // keychain entry. This also lets an account switch update the displayed
@@ -137,7 +149,8 @@ class LeetCodeManager extends EventEmitter {
         // A replacement session must not retain browser metadata captured for
         // the previous account. Headerless same-session refreshes use
         // updateSyncedBrowserData() below and intentionally preserve it.
-        await this.authIntents.commit(intent, () => globalState.setSignedInSession(cookie, data, browserUserAgent, browserRequestHeaders));
+        const committed = await this.authIntents.commit(intent, () => globalState.setSignedInSession(cookie, data, browserUserAgent, browserRequestHeaders));
+        this.appliedAuthRevision = committed.revision;
         this.currentUser = data.username;
         this.userStatus = UserStatus.SignedIn;
         if (changed) {
@@ -147,8 +160,12 @@ class LeetCodeManager extends EventEmitter {
     }
 
     public async updateSyncedBrowserData(cookie: string, browserUserAgent?: string, browserRequestHeaders?: IBrowserRequestHeaders): Promise<void> {
+        if (this.isAutomaticSyncSuspended()) {
+            throw new Error("Automatic browser sync is suspended after explicit sign-out. Choose Sign In to resume it.");
+        }
         const intent: IAuthIntent = this.authIntents.begin("automatic-sync");
-        await this.authIntents.commit(intent, () => globalState.updateSignedInSession(cookie, browserUserAgent, browserRequestHeaders));
+        const committed = await this.authIntents.commit(intent, () => globalState.updateSignedInSession(cookie, browserUserAgent, browserRequestHeaders));
+        this.appliedAuthRevision = committed.revision;
     }
 
     public async handleUriSignIn(uri: vscode.Uri): Promise<void> {
@@ -238,7 +255,8 @@ class LeetCodeManager extends EventEmitter {
         // globalState. There is no CLI session to tear down.
         const intent: IAuthIntent = this.authIntents.begin("sign-out");
         const changed: boolean = this.currentUser !== undefined || this.userStatus !== UserStatus.SignedOut;
-        await this.authIntents.commit(intent, () => globalState.setSignedOutSession(false));
+        const committed = await this.authIntents.commit(intent, () => globalState.setSignedOutSession(true));
+        this.appliedAuthRevision = committed.revision;
         this.currentUser = undefined;
         this.userStatus = UserStatus.SignedOut;
         if (changed) {
@@ -255,10 +273,39 @@ class LeetCodeManager extends EventEmitter {
         return this.currentUser;
     }
 
+    public isAutomaticSyncSuspended(): boolean {
+        const snapshot = globalState.getAuthSession();
+        return !!snapshot && snapshot.state === "signed-out" && snapshot.intentionalSignOut;
+    }
+
+    public reconcileAuthSession(snapshot: import("./globalState").IAuthSessionSnapshot): void {
+        if (this.appliedAuthRevision === snapshot.revision) {
+            return;
+        }
+        this.authIntents.begin("remote-sync");
+        this.appliedAuthRevision = snapshot.revision;
+        const nextUser: string | undefined = snapshot.state === "signed-in" && snapshot.identity
+            ? snapshot.identity.username
+            : undefined;
+        const nextStatus: UserStatus = nextUser ? UserStatus.SignedIn : UserStatus.SignedOut;
+        const changed: boolean = nextUser !== this.currentUser || nextStatus !== this.userStatus;
+        this.currentUser = nextUser;
+        this.userStatus = nextStatus;
+        if (changed || snapshot.state === "signed-in") {
+            this.emit("statusChanged");
+        }
+    }
+
     private async handleAuthSyncSignIn(): Promise<void> {
         if (this.currentUser) {
             vscode.window.showInformationMessage(`Already signed in as ${this.currentUser}.`);
             return;
+        }
+
+        if (this.isAutomaticSyncSuspended()) {
+            const intent: IAuthIntent = this.authIntents.begin("automatic-sync");
+            const committed = await this.authIntents.commit(intent, () => globalState.setSignedOutSession(false));
+            this.appliedAuthRevision = committed.revision;
         }
 
         if (!globalState.getAuthSyncLastSyncedAt()) {

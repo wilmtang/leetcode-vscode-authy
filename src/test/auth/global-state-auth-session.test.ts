@@ -147,6 +147,46 @@ describe("atomic auth session storage", () => {
         assert.strictEqual(requestHeaders["User-Agent"], "agent-a");
     });
 
+    it("rehydrates and emits each remotely written snapshot once", async () => {
+        const memento: TestMemento = new TestMemento();
+        const secrets: TestSecretStorage = new TestSecretStorage();
+        await globalState.initialize(context(memento, secrets));
+        const observed: IAuthSessionSnapshot[] = [];
+        const subscription: vscode.Disposable = globalState.onDidChangeAuthSession((snapshot: IAuthSessionSnapshot) => observed.push(snapshot));
+        const remote: IAuthSessionSnapshot = {
+            version: 1,
+            revision: Date.now() + 0.25,
+            state: "signed-in",
+            intentionalSignOut: false,
+            cookie: "LEETCODE_SESSION=b; csrftoken=b",
+            identity: { ...identity, username: "account-b" },
+        };
+
+        await secrets.store(authSessionKey, JSON.stringify(remote));
+        await new Promise<void>((resolve: () => void) => setImmediate(resolve));
+        await secrets.store(authSessionKey, JSON.stringify(remote));
+        await new Promise<void>((resolve: () => void) => setImmediate(resolve));
+
+        subscription.dispose();
+        assert.strictEqual(observed.length, 1);
+        assert.strictEqual(observed[0].identity && observed[0].identity!.username, "account-b");
+        assert.strictEqual(globalState.getAuthSession()!.revision, remote.revision);
+        assert.strictEqual(globalState.getAuthSession()!.cookie, remote.cookie);
+    });
+
+    it("keeps an intentional sign-out suspended across reinitialization", async () => {
+        const memento: TestMemento = new TestMemento();
+        const secrets: TestSecretStorage = new TestSecretStorage();
+        await globalState.initialize(context(memento, secrets));
+        await globalState.setSignedOutSession(true);
+
+        await globalState.initialize(context(memento, secrets));
+
+        const snapshot: IAuthSessionSnapshot | undefined = globalState.getAuthSession();
+        assert.strictEqual(snapshot && snapshot.state, "signed-out");
+        assert.strictEqual(snapshot && snapshot.intentionalSignOut, true);
+    });
+
     it("does not delete legacy fields when the atomic migration write fails", async () => {
         const memento: TestMemento = new TestMemento();
         const secrets: TestSecretStorage = new TestSecretStorage();

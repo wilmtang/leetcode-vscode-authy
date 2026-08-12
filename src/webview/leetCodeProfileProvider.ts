@@ -75,6 +75,22 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
         this.showWebviewInternal();
     }
 
+    public showSignedOut(): void {
+        if (!this.panel) {
+            return;
+        }
+        this.initial = undefined;
+        this.username = "";
+        this.ready = false;
+        this.pending = [];
+        this.panel.title = "LeetCode Profile";
+        this.panel.webview.html = this.emptyContent();
+    }
+
+    public isOpen(): boolean {
+        return !!this.panel;
+    }
+
     public updateIdentity(identity: IProfileIdentity): void {
         this.username = identity.username || this.username;
         if (this.panel) {
