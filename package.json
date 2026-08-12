@@ -772,7 +772,7 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "test": "tsc -p ./tsconfig.test.json && mocha && npm run test:browser && npm run test:package",
-        "test:browser": "node --check browser-extension/background.js && node --check browser-extension/options.js && node --check browser-extension/popup.js",
+        "test:browser": "node --check browser-extension/background.js && node --check browser-extension/options.js && node --check browser-extension/popup.js && node scripts/test-browser-ui.js",
         "test:package": "npm run bundle && node scripts/verify-vscode-package.js",
         "test:integration": "tsc -p ./tsconfig.test.json && mocha --config .mocharc.integration.json",
         "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",

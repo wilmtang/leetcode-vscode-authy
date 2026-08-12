@@ -97,7 +97,13 @@ copyFixtureButton.addEventListener("click", async () => {
 });
 
 clearFixtureButton.addEventListener("click", async () => {
-    await sendMessage({ type: "clearDevPayload" });
+    clearFixtureButton.disabled = true;
+    const result = await sendMessage({ type: "clearDevPayload" });
+    clearFixtureButton.disabled = false;
+    if (!result.ok) {
+        setStatus(result.error || "Could not clear the captured payload.", "error");
+        return;
+    }
     setStatus("Captured payload cleared.", "success");
     await refreshDevSection();
 });
