@@ -3,6 +3,11 @@
 
 import { EventEmitter } from "events";
 import * as vscode from "vscode";
+import {
+    AuthIntentCoordinator,
+    AuthIntentKind,
+    IAuthIntent,
+} from "./auth/authIntentCoordinator";
 import { leetCodeChannel } from "./leetCodeChannel";
 import { Endpoint, IQuickItemEx, urls, urlsCn, UserStatus } from "./shared";
 import { DialogType, openUrl, promptForOpenOutputChannel } from "./utils/uiUtils";
@@ -25,6 +30,7 @@ class LeetCodeManager extends EventEmitter {
     private currentUser: string | undefined;
     private userStatus: UserStatus;
     private readonly authSyncSignInTimeoutMs: number = 2 * 60 * 1000;
+    private readonly authIntents: AuthIntentCoordinator = new AuthIntentCoordinator();
 
     constructor() {
         super();
@@ -56,10 +62,11 @@ class LeetCodeManager extends EventEmitter {
     // error is treated as transient/offline and keeps any cached identity so a
     // flaky network does not sign the user out.
     private async refreshUserStatus(): Promise<void> {
+        const intent: IAuthIntent = this.authIntents.capture("refresh");
         try {
             const cookie: string | undefined = globalState.getCookie();
             if (!cookie) {
-                await this.applySignedOut();
+                await this.applySignedOut(intent);
                 return;
             }
 
@@ -67,7 +74,7 @@ class LeetCodeManager extends EventEmitter {
             // A browser sync may rotate the credential while this background
             // verification is in flight. Never apply a response for an obsolete
             // cookie over the newer account state.
-            if (globalState.getCookie() !== cookie) {
+            if (!this.authIntents.isCurrent(intent) || globalState.getCookie() !== cookie) {
                 return;
             }
             if (data.isSignedIn && data.username) {
@@ -75,28 +82,35 @@ class LeetCodeManager extends EventEmitter {
                 // (e.g. the background refresh after a cached cold start) must not
                 // trigger another full catalog refetch.
                 const changed: boolean = this.currentUser !== data.username || this.userStatus !== UserStatus.SignedIn;
+                this.authIntents.assertCurrent(intent);
                 await globalState.setUserStatus(data);
+                this.authIntents.assertCurrent(intent);
                 this.currentUser = data.username;
                 this.userStatus = UserStatus.SignedIn;
                 if (changed) {
                     this.emit("statusChanged");
                 }
             } else {
-                await this.applySignedOut();
+                await this.applySignedOut(intent);
             }
         } catch (error) {
+            if (!this.authIntents.isCurrent(intent)) {
+                return;
+            }
             // Transient/offline error: keep any cached identity and stay quiet (no
             // state change, so no refresh). Only a definitive loss clears state.
             leetCodeChannel.appendLine(`[auth] Could not verify LeetCode session: ${error}`);
             if (!this.currentUser) {
-                await this.applySignedOut();
+                await this.applySignedOut(intent);
             }
         }
     }
 
-    private async applySignedOut(): Promise<void> {
+    private async applySignedOut(intent: IAuthIntent): Promise<void> {
+        this.authIntents.assertCurrent(intent);
         const changed: boolean = this.currentUser !== undefined || this.userStatus !== UserStatus.SignedOut;
         await globalState.removeAll();
+        this.authIntents.assertCurrent(intent);
         this.currentUser = undefined;
         this.userStatus = UserStatus.SignedOut;
         if (changed) {
@@ -104,12 +118,19 @@ class LeetCodeManager extends EventEmitter {
         }
     }
 
-    public async updateSessionFromCookie(cookie: string, browserUserAgent?: string, browserRequestHeaders?: IBrowserRequestHeaders): Promise<void> {
+    public async updateSessionFromCookie(
+        cookie: string,
+        browserUserAgent?: string,
+        browserRequestHeaders?: IBrowserRequestHeaders,
+        kind: AuthIntentKind = "manual-cookie",
+    ): Promise<void> {
+        const intent: IAuthIntent = this.authIntents.begin(kind);
         // Validate the candidate credential before replacing the last known-good
         // keychain entry. This also lets an account switch update the displayed
         // identity atomically instead of leaving a stale username beside a new
         // cookie when validation fails.
         const data: UserDataType = await fetchUserStatus(cookie, browserUserAgent, browserRequestHeaders);
+        this.authIntents.assertCurrent(intent);
         if (!data.isSignedIn || !data.username) {
             throw new Error("LeetCode did not return a signed-in user for the synced cookie.");
         }
@@ -119,9 +140,13 @@ class LeetCodeManager extends EventEmitter {
         // the previous account. Headerless same-session refreshes use
         // updateSyncedBrowserData() below and intentionally preserve it.
         await globalState.setCookie(cookie);
+        this.authIntents.assertCurrent(intent);
         await globalState.setBrowserUserAgent(browserUserAgent);
+        this.authIntents.assertCurrent(intent);
         await globalState.setBrowserRequestHeaders(browserRequestHeaders);
+        this.authIntents.assertCurrent(intent);
         await globalState.setUserStatus(data);
+        this.authIntents.assertCurrent(intent);
         this.currentUser = data.username;
         this.userStatus = UserStatus.SignedIn;
         if (changed) {
@@ -131,12 +156,16 @@ class LeetCodeManager extends EventEmitter {
     }
 
     public async updateSyncedBrowserData(cookie: string, browserUserAgent?: string, browserRequestHeaders?: IBrowserRequestHeaders): Promise<void> {
+        const intent: IAuthIntent = this.authIntents.begin("automatic-sync");
         await globalState.setCookie(cookie);
+        this.authIntents.assertCurrent(intent);
         if (browserUserAgent) {
             await globalState.setBrowserUserAgent(browserUserAgent);
+            this.authIntents.assertCurrent(intent);
         }
         if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
             await globalState.setBrowserRequestHeaders(browserRequestHeaders);
+            this.authIntents.assertCurrent(intent);
         }
     }
 
@@ -151,7 +180,7 @@ class LeetCodeManager extends EventEmitter {
                     return;
                 }
 
-                await this.updateSessionFromCookie(cookie);
+                await this.updateSessionFromCookie(cookie, undefined, undefined, "uri");
 
             });
         } catch (error) {
@@ -225,8 +254,10 @@ class LeetCodeManager extends EventEmitter {
     public async signOut(): Promise<void> {
         // Sign-out is now purely local: clear the synced cookie/identity from
         // globalState. There is no CLI session to tear down.
+        const intent: IAuthIntent = this.authIntents.begin("sign-out");
         const changed: boolean = this.currentUser !== undefined || this.userStatus !== UserStatus.SignedOut;
         await globalState.removeAll();
+        this.authIntents.assertCurrent(intent);
         this.currentUser = undefined;
         this.userStatus = UserStatus.SignedOut;
         if (changed) {

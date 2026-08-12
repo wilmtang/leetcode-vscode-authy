@@ -451,7 +451,7 @@ class AuthSyncServer implements vscode.Disposable {
             }
 
             if (leetCodeManager.getStatus() === UserStatus.SignedOut || sessionChanged) {
-                await leetCodeManager.updateSessionFromCookie(cookie, browserUserAgent, browserRequestHeaders);
+                await leetCodeManager.updateSessionFromCookie(cookie, browserUserAgent, browserRequestHeaders, "automatic-sync");
             } else {
                 await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders);
             }
