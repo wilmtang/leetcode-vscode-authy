@@ -159,8 +159,8 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}'; style-src 'unsafe-inline';" />
-                <style>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}';" />
+                <style nonce="${nonce}">
                     body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 1.5rem; }
                     h1, h2 { margin-bottom: 0.5rem; }
                     a { color: var(--vscode-textLink-foreground); text-decoration: none; }
@@ -182,9 +182,7 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
                     .totals .denom { color: var(--vscode-descriptionForeground); font-size: 1rem; }
                     .difficulty-row { display: grid; grid-template-columns: 70px 1fr 110px; align-items: center; gap: 0.75rem; margin: 0.5rem 0; }
                     .difficulty-row .label { font-weight: 600; }
-                    .difficulty-row.easy .label { color: #00b8a3; }
-                    .difficulty-row.medium .label { color: #ffb700; }
-                    .difficulty-row.hard .label { color: #ff375f; }
+                    .difficulty-row .label { color: var(--vscode-foreground); }
                     .bar { background: var(--vscode-progressBar-background, rgba(127,127,127,0.2)); height: 8px; border-radius: 4px; overflow: hidden; }
                     .bar .fill { height: 100%; }
                     .easy .fill { background: #00b8a3; }
@@ -218,6 +216,7 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
                     .skeleton-line.short { width: 40%; }
                     .skeleton-line.wide { width: 85%; }
                     @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.65; } }
+                    @media (prefers-reduced-motion: reduce) { .skeleton-line { animation: none; } }
                 </style>
             </head>
             <body>
@@ -236,22 +235,22 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
 
                 <div class="grid">
                     <div class="card totals loading" id="card-totals">
-                        <div id="sec-totals">${skeleton(4)}</div>
+                        <div id="sec-totals" role="status" aria-live="polite" aria-busy="true">${skeleton(4)}</div>
                     </div>
 
                     <div class="card loading" id="card-about">
                         <h2>About</h2>
-                        <div id="sec-about">${skeleton(4)}</div>
+                        <div id="sec-about" role="status" aria-live="polite" aria-busy="true">${skeleton(4)}</div>
                     </div>
 
                     <div class="card loading" id="card-languages">
                         <h2>Languages</h2>
-                        <div id="sec-languages">${skeleton(3)}</div>
+                        <div id="sec-languages" role="status" aria-live="polite" aria-busy="true">${skeleton(3)}</div>
                     </div>
 
                     <div class="card loading" id="card-recent">
                         <h2>Recent Accepted</h2>
-                        <div id="sec-recent">${skeleton(3)}</div>
+                        <div id="sec-recent" role="status" aria-live="polite" aria-busy="true">${skeleton(3)}</div>
                     </div>
                 </div>
 
@@ -286,6 +285,7 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
                         const el = document.getElementById("sec-" + m.id);
                         if (!el) { return; }
                         el.innerHTML = m.html;
+                        el.setAttribute("aria-busy", "false");
                         const card = el.closest(".card");
                         if (card) {
                             card.classList.remove("loading");
@@ -356,10 +356,7 @@ class LeetCodeProfileProvider extends LeetCodeWebview {
         return `
             <!DOCTYPE html>
             <html>
-            <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none';" />
-                <style>body { font-family: var(--vscode-font-family); padding: 1.5rem; }</style>
-            </head>
+            <head><meta http-equiv="Content-Security-Policy" content="default-src 'none';" /></head>
             <body><p>Sign in to LeetCode to see your profile.</p></body>
             </html>
         `;
@@ -560,7 +557,7 @@ function buildRecentRows(submissions: ILeetCodeRecentSubmission[], base: string)
             return `<tr><td><a href="${escapeAttribute(url)}">${escapeHtml(entry.title)}</a></td><td class="num">${escapeHtml(formatRelativeTimestamp(entry.timestamp))}</td></tr>`;
         })
         .join("");
-    return `<table>${rows}</table>`;
+    return `<table><caption>Recent accepted submissions</caption><thead><tr><th scope="col">Problem</th><th scope="col">Submitted</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function buildLanguageRows(languages: ILeetCodeLanguageCount[]): string {
@@ -574,7 +571,7 @@ function buildLanguageRows(languages: ILeetCodeLanguageCount[]): string {
             `<tr><td>${escapeHtml(entry.languageName)}</td><td class="num">${entry.problemsSolved}</td></tr>`,
         )
         .join("");
-    return `<table>${rows}</table>`;
+    return `<table><caption>Problems solved by language</caption><thead><tr><th scope="col">Language</th><th scope="col">Solved</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function formatRelativeTimestamp(timestampSeconds: number): string {

@@ -96,10 +96,10 @@ class MarkdownEngine implements vscode.Disposable {
         return this.engine.render(md, env);
     }
 
-    public getStyles(): string {
+    public getStyles(nonce?: string): string {
         return [
             this.getBuiltinStyles(),
-            this.getSettingsStyles(),
+            this.getSettingsStyles(nonce),
         ].join(os.EOL);
     }
 
@@ -114,11 +114,12 @@ class MarkdownEngine implements vscode.Disposable {
         return styles.map((style: vscode.Uri) => `<link rel="stylesheet" type="text/css" href="${style.toString()}">`).join(os.EOL);
     }
 
-    private getSettingsStyles(): string {
+    private getSettingsStyles(nonce?: string): string {
         return [
-            `<style>`,
+            `<style${nonce ? ` nonce="${nonce}"` : ""}>`,
             `body {`,
-            `    ${this.config.fontFamily ? `font-family: ${this.config.fontFamily};` : ``}`,
+            `    ${this.config.fontFamily ? `font-family: ${serializeCssFontFamily(this.config.fontFamily)};` : ``}`,
+            `    tab-size: 4;`,
             `    ${isNaN(this.config.fontSize) ? `` : `font-size: ${this.config.fontSize}px;`}`,
             `    ${isNaN(this.config.lineHeight) ? `` : `line-height: ${this.config.lineHeight};`}`,
             `}`,
@@ -212,6 +213,15 @@ class MarkdownConfiguration {
         }
         return fontFamily;
     }
+}
+
+// Serialize a setting into a CSS declaration value without allowing it to end
+// the declaration or the enclosing style element. Escaping every non-identifier
+// character as a CSS code point preserves quoted family names and separators.
+export function serializeCssFontFamily(value: string): string {
+    return (value || "").replace(/[^a-zA-Z0-9 _-]/g, (character: string) =>
+        `\\${character.charCodeAt(0).toString(16)} `,
+    );
 }
 
 export const markdownEngine: MarkdownEngine = new MarkdownEngine();

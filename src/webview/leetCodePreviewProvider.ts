@@ -105,11 +105,11 @@ class LeetCodePreviewProvider extends LeetCodeWebview {
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}'; style-src vscode-resource: 'unsafe-inline'; font-src vscode-resource:;"/>
-                ${markdownEngine.getStyles()}
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}'; style-src vscode-resource: 'nonce-${nonce}'; font-src vscode-resource:;"/>
+                ${markdownEngine.getStyles(nonce)}
                 ${markdownEngine.getKatexStyle()}
-                ${!this.sideMode ? button.style : ""}
-                <style>
+                ${!this.sideMode ? button.style.replace("<style>", `<style nonce="${nonce}">`) : ""}
+                <style nonce="${nonce}">
                     code { white-space: pre-wrap; }
                 </style>
             </head>

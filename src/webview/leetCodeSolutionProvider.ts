@@ -1,6 +1,7 @@
 // Copyright (c) jdneo. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import * as crypto from "crypto";
 import { ViewColumn } from "vscode";
 import { ILeetCodeSolutionArticle } from "../request/leetcode-api";
 import { getUrl } from "../shared";
@@ -37,7 +38,8 @@ class LeetCodeSolutionProvider extends LeetCodeWebview {
     }
 
     protected getWebviewContent(): string {
-        const styles: string = markdownEngine.getStyles();
+        const nonce: string = crypto.randomBytes(16).toString("base64");
+        const styles: string = markdownEngine.getStyles(nonce);
         const katexStyle: string = markdownEngine.getKatexStyle();
         const { title, url, author, authorSlug, upvotes } = this.article;
         const head: string = sanitizeHtml(markdownEngine.render(`# [${title}](${url})`));
@@ -52,11 +54,11 @@ class LeetCodeSolutionProvider extends LeetCodeWebview {
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src vscode-resource: 'unsafe-inline'; font-src vscode-resource:;"/>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src vscode-resource: 'nonce-${nonce}'; font-src vscode-resource:;"/>
                 ${styles}
                 ${katexStyle}
             </head>
-            <body class="vscode-body 'scrollBeyondLastLine' 'wordWrap' 'showEditorSelection'" style="tab-size:4">
+            <body class="vscode-body scrollBeyondLastLine wordWrap showEditorSelection">
                 ${head}
                 ${info}
                 ${body}

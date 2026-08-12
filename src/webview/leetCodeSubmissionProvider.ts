@@ -1,6 +1,7 @@
 // Copyright (c) jdneo. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import * as crypto from "crypto";
 import { ViewColumn, workspace } from "vscode";
 import { openKeybindingsEditor, promptHintMessage } from "../utils/uiUtils";
 import { ILeetCodeWebviewOption, LeetCodeWebview } from "./LeetCodeWebview";
@@ -28,7 +29,8 @@ class LeetCodeSubmissionProvider extends LeetCodeWebview {
     }
 
     protected getWebviewContent(): string {
-        const styles: string = markdownEngine.getStyles();
+        const nonce: string = crypto.randomBytes(16).toString("base64");
+        const styles: string = markdownEngine.getStyles(nonce);
         const title: string = `## ${this.result.messages[0]}`;
         const messages: string[] = this.result.messages.slice(1).map((m: string) => `* ${m}`);
         const sections: string[] = Object.keys(this.result)
@@ -48,12 +50,12 @@ class LeetCodeSubmissionProvider extends LeetCodeWebview {
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src vscode-resource:;"/>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src vscode-resource: 'nonce-${nonce}'; font-src vscode-resource:;"/>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 ${styles}
             </head>
-            <body class="vscode-body 'scrollBeyondLastLine' 'wordWrap' 'showEditorSelection'" style="tab-size:4">
+            <body class="vscode-body scrollBeyondLastLine wordWrap showEditorSelection">
                 ${body}
             </body>
             </html>

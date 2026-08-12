@@ -17,9 +17,9 @@
     --divider: #ececf1;
     --field-bg: #ffffff;
     --field-border: #cdced5;
-    --primary: #e85d1c;
-    --primary-hover: #d6520f;
-    --primary-border: #d6520f;
+    --primary: #a83b08;
+    --primary-hover: #8f3004;
+    --primary-border: #8f3004;
     --on-primary: #ffffff;
     --secondary-bg: #ffffff;
     --secondary-hover: #f1f1f5;
@@ -46,9 +46,9 @@
         --divider: #2e2e37;
         --field-bg: #25252d;
         --field-border: #464650;
-        --primary: #f56e22;
-        --primary-hover: #e76319;
-        --primary-border: #ff8442;
+        --primary: #a83b08;
+        --primary-hover: #8f3004;
+        --primary-border: #c4490b;
         --on-primary: #ffffff;
         --secondary-bg: #2a2a32;
         --secondary-hover: #33333d;
@@ -402,4 +402,15 @@ input:focus-visible,
 summary:focus-visible {
     outline: 2px solid var(--primary-border);
     outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

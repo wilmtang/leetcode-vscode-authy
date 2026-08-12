@@ -63,7 +63,9 @@ export class LeetCodeTreeDataProvider implements vscode.TreeDataProvider<LeetCod
         }
 
         return {
-            label: element.isProblem ? `[${element.id}] ${element.name}` + this.parsePremiumUnLockIconPath(element) : element.name,
+            label: element.isProblem
+                ? `[${element.id}] ${element.name}${this.getProblemStateText(element)}${this.parsePremiumUnLockIconPath(element)}`
+                : element.name,
             tooltip: this.getSubCategoryTooltip(element),
             collapsibleState: element.isProblem ? vscode.TreeItemCollapsibleState.None : vscode.TreeItemCollapsibleState.Collapsed,
             iconPath: this.parseIconPathFromProblemState(element),
@@ -134,6 +136,20 @@ export class LeetCodeTreeDataProvider implements vscode.TreeDataProvider<LeetCod
             default:
                 return "";
         }
+    }
+
+    private getProblemStateText(element: LeetCodeNode): string {
+        const { isPremium } = globalState.getUserStatus() ?? {};
+        if (element.state === ProblemState.AC) {
+            return " — Solved";
+        }
+        if (element.state === ProblemState.NotAC) {
+            return " — Attempted";
+        }
+        if (element.locked && !isPremium) {
+            return " — Locked";
+        }
+        return "";
     }
 
     private parsePremiumUnLockIconPath(element: LeetCodeNode): string {

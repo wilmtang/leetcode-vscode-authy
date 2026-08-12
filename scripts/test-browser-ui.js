@@ -75,6 +75,27 @@ async function testPopupClearFailure() {
     assert.strictEqual(get("status").className, "status error");
 }
 
+function testPrimaryButtonContrastAndReducedMotion() {
+    const css = fs.readFileSync(path.join(__dirname, "..", "browser-extension", "styles.css"), "utf8");
+    const primaryColors = Array.from(css.matchAll(/--primary:\s*(#[0-9a-f]{6})/gi), (match) => match[1]);
+    assert.strictEqual(primaryColors.length, 2, "light and dark primary colors must both be declared");
+    for (const primary of primaryColors) {
+        assert.ok(contrastRatio(primary, "#ffffff") >= 4.5, `${primary} must meet WCAG AA against white text`);
+    }
+    assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+}
+
+function contrastRatio(first, second) {
+    const luminance = (hex) => {
+        const channels = hex.slice(1).match(/../g).map((value) => parseInt(value, 16) / 255);
+        const linear = channels.map((value) => value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4));
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    };
+    const lighter = Math.max(luminance(first), luminance(second));
+    const darker = Math.min(luminance(first), luminance(second));
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
 function runScript(relativePath, globals) {
     const filename = path.join(__dirname, "..", relativePath);
     vm.runInNewContext(fs.readFileSync(filename, "utf8"), globals, { filename });
@@ -83,5 +104,6 @@ function runScript(relativePath, globals) {
 Promise.resolve()
     .then(testOptionsRollback)
     .then(testPopupClearFailure)
+    .then(testPrimaryButtonContrastAndReducedMotion)
     .then(() => console.log("Browser UI persistence tests passed."))
     .catch((error) => { console.error(error); process.exitCode = 1; });
