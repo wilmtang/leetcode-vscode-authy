@@ -377,10 +377,12 @@ export async function fetchUserStatus(
     cookieOverride?: string,
     browserUserAgent?: string,
     browserRequestHeaders?: IBrowserRequestHeaders,
+    timeoutMs?: number,
 ): Promise<UserDataType> {
     const cookie: string = cookieOverride || getRequiredCookie();
     const response: IGraphqlResponse<IUserStatusData> = await requestJson<IGraphqlResponse<IUserStatusData>>({
         method: "POST",
+        timeout: timeoutMs,
         url: getUrl("userGraphql"),
         headers: createHeaders(cookie, `${getUrl("base")}/`, {
             browserRequestHeaders,

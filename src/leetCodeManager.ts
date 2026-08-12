@@ -26,12 +26,20 @@ const installChromeAction: string = "Install Chrome";
 const installFirefoxAction: string = "Install Firefox";
 const showAuthSyncStatusAction: string = "Show Auth Sync Status";
 
+interface IAuthUpdateGuard {
+    deadlineAt: number;
+    isCancelled: () => boolean;
+}
+
+type AuthSyncWaitOutcome = "signedIn" | "timedOut" | "cancelled" | "unavailable";
+
 class LeetCodeManager extends EventEmitter {
     private currentUser: string | undefined;
     private userStatus: UserStatus;
     private readonly authSyncSignInTimeoutMs: number = 2 * 60 * 1000;
     private readonly authIntents: AuthIntentCoordinator = new AuthIntentCoordinator();
     private appliedAuthRevision: number | undefined;
+    private authSyncWaitInFlight: Promise<AuthSyncWaitOutcome> | undefined;
 
     constructor() {
         super();
@@ -130,6 +138,7 @@ class LeetCodeManager extends EventEmitter {
         browserUserAgent?: string,
         browserRequestHeaders?: IBrowserRequestHeaders,
         kind: AuthIntentKind = "manual-cookie",
+        guard?: IAuthUpdateGuard,
     ): Promise<void> {
         if (kind === "automatic-sync" && this.isAutomaticSyncSuspended()) {
             throw new Error("Automatic browser sync is suspended after explicit sign-out. Choose Sign In to resume it.");
@@ -139,7 +148,11 @@ class LeetCodeManager extends EventEmitter {
         // keychain entry. This also lets an account switch update the displayed
         // identity atomically instead of leaving a stale username beside a new
         // cookie when validation fails.
-        const data: UserDataType = await fetchUserStatus(cookie, browserUserAgent, browserRequestHeaders);
+        const timeoutMs: number | undefined = guard ? Math.max(1, guard.deadlineAt - Date.now()) : undefined;
+        const data: UserDataType = await fetchUserStatus(cookie, browserUserAgent, browserRequestHeaders, timeoutMs);
+        if (guard && (guard.isCancelled() || Date.now() >= guard.deadlineAt)) {
+            throw new Error("Auth sync request expired before validation completed.");
+        }
         this.authIntents.assertCurrent(intent);
         if (!data.isSignedIn || !data.username) {
             throw new Error("LeetCode did not return a signed-in user for the synced cookie.");
@@ -315,7 +328,7 @@ class LeetCodeManager extends EventEmitter {
             }
         }
 
-        const signedIn: boolean = await vscode.window.withProgress(
+        const outcome: AuthSyncWaitOutcome = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
                 title: "Waiting for browser cookie sync...",
@@ -329,7 +342,7 @@ class LeetCodeManager extends EventEmitter {
             }
         );
 
-        if (!signedIn) {
+        if (outcome === "timedOut" || outcome === "unavailable") {
             await this.showAuthSyncNoSyncWarning();
         }
     }
@@ -364,8 +377,9 @@ class LeetCodeManager extends EventEmitter {
                 }
                 return false;
             case continueWaitingAction:
-            default:
                 return true;
+            default:
+                return false;
         }
     }
 
@@ -400,13 +414,17 @@ class LeetCodeManager extends EventEmitter {
         }
     }
 
-    private waitForAuthSyncSignIn(token: vscode.CancellationToken): Promise<boolean> {
-        return new Promise<boolean>((resolve: (signedIn: boolean) => void) => {
+    private waitForAuthSyncSignIn(token: vscode.CancellationToken): Promise<AuthSyncWaitOutcome> {
+        if (!vscode.workspace.getConfiguration("leetcode").get<boolean>("authSync.enabled", true)) {
+            return Promise.resolve("unavailable");
+        }
+        if (this.authSyncWaitInFlight) {
+            return this.authSyncWaitInFlight;
+        }
+        const operation: Promise<AuthSyncWaitOutcome> = new Promise<AuthSyncWaitOutcome>((resolve: (outcome: AuthSyncWaitOutcome) => void) => {
             let timeout: NodeJS.Timer | undefined;
-            let pollInterval: NodeJS.Timer | undefined;
             let cancellationSubscription: vscode.Disposable | undefined;
             let resolved: boolean = false;
-            let pollInFlight: boolean = false;
 
             const cleanup = (): void => {
                 this.removeListener("statusChanged", onStatusChanged);
@@ -414,54 +432,35 @@ class LeetCodeManager extends EventEmitter {
                     clearTimeout(timeout);
                     timeout = undefined;
                 }
-                if (pollInterval) {
-                    clearInterval(pollInterval);
-                    pollInterval = undefined;
-                }
                 if (cancellationSubscription) {
                     cancellationSubscription.dispose();
                     cancellationSubscription = undefined;
                 }
             };
 
-            const finish = (signedIn: boolean): void => {
+            const finish = (outcome: AuthSyncWaitOutcome): void => {
                 if (resolved) {
                     return;
                 }
                 resolved = true;
                 cleanup();
-                resolve(signedIn);
+                resolve(outcome);
             };
 
             const onStatusChanged = (): void => {
                 if (this.userStatus === UserStatus.SignedIn && !!this.currentUser) {
-                    finish(true);
-                }
-            };
-
-            const pollLoginStatus = async (): Promise<void> => {
-                if (resolved || pollInFlight) {
-                    return;
-                }
-
-                pollInFlight = true;
-                try {
-                    await this.getLoginStatus();
-                } finally {
-                    pollInFlight = false;
-                    onStatusChanged();
+                    finish("signedIn");
                 }
             };
 
             this.on("statusChanged", onStatusChanged);
-            cancellationSubscription = token.onCancellationRequested(() => finish(false));
-            timeout = setTimeout(() => finish(false), this.authSyncSignInTimeoutMs);
-            pollInterval = setInterval(() => {
-                void pollLoginStatus();
-            }, 2000);
+            cancellationSubscription = token.onCancellationRequested(() => finish("cancelled"));
+            timeout = setTimeout(() => finish("timedOut"), this.authSyncSignInTimeoutMs);
             onStatusChanged();
-            void pollLoginStatus();
         });
+        this.authSyncWaitInFlight = operation;
+        operation.then(() => { this.authSyncWaitInFlight = undefined; }, () => { this.authSyncWaitInFlight = undefined; });
+        return operation;
     }
 
     public getAuthLoginUrl(): string {

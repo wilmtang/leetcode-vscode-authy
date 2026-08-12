@@ -3,6 +3,7 @@
 
 import * as crypto from "crypto";
 import * as http from "http";
+import * as net from "net";
 import * as path from "path";
 import * as vscode from "vscode";
 import { globalState, IAuthSyncOwnerRecord, IBrowserRequestHeaders } from "../globalState";
@@ -24,6 +25,9 @@ const RELEASE_PATH: string = "/auth/release";
 const DEFAULT_HEARTBEAT_SECONDS: number = 30;
 const DEFAULT_OBSERVER_CHECK_SECONDS: number = 60;
 const FORCE_RELEASE_TIMEOUT_MS: number = 10 * 1000;
+const REQUEST_BODY_TIMEOUT_MS: number = 10 * 1000;
+const AUTH_UPDATE_DEADLINE_MS: number = 35 * 1000;
+const GRACEFUL_SHUTDOWN_MS: number = 2 * 1000;
 const EXTENSION_ORIGIN_SCHEMES: string[] = ["chrome-extension:", "moz-extension:", "safari-web-extension:"];
 const LOOPBACK_HOSTS: Set<string> = new Set<string>(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
@@ -75,6 +79,8 @@ class AuthSyncServer implements vscode.Disposable {
     private readonly startedAt: number = Date.now();
     private readonly controlToken: string = crypto.randomBytes(24).toString("hex");
     private lastPayloadHash: string | undefined;
+    private readonly sockets: Set<net.Socket> = new Set<net.Socket>();
+    private serverGeneration: number = 0;
     // Fires after the browser extension pushes a fresh auth payload (cookie +
     // request headers + user agent) and lastSyncedAt is bumped. Lets the status
     // bar refresh its "Last auth sync" tooltip on every sync, not just on the
@@ -166,6 +172,7 @@ class AuthSyncServer implements vscode.Disposable {
     }
 
     private async stopInternal(): Promise<void> {
+        this.serverGeneration++;
         this.stopHeartbeatTimer();
         this.stopObserverTimer();
 
@@ -183,7 +190,23 @@ class AuthSyncServer implements vscode.Disposable {
         this.port = undefined;
 
         await new Promise<void>((resolve: () => void) => {
-            server.close(() => resolve());
+            let finished: boolean = false;
+            const finish = (): void => {
+                if (!finished) {
+                    finished = true;
+                    resolve();
+                }
+            };
+            const timer: NodeJS.Timer = setTimeout(() => {
+                for (const socket of this.sockets) {
+                    socket.destroy();
+                }
+                finish();
+            }, GRACEFUL_SHUTDOWN_MS);
+            server.close(() => {
+                clearTimeout(timer);
+                finish();
+            });
         });
 
         await globalState.clearAuthSyncOwner(this.windowId);
@@ -270,6 +293,7 @@ class AuthSyncServer implements vscode.Disposable {
     }
 
     private async listenLocal(port: number): Promise<void> {
+        const generation: number = ++this.serverGeneration;
         const server: http.Server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
             this.handleRequest(req, res).catch((error: Error) => {
                 if (isAuthSyncRequestError(error)) {
@@ -280,6 +304,12 @@ class AuthSyncServer implements vscode.Disposable {
                 leetCodeChannel.appendLine(`[auth-sync] ${String(error)}`);
                 this.sendJson(res, 500, { ok: false, error: "Internal server error." }, true, req);
             });
+        });
+        server.headersTimeout = REQUEST_BODY_TIMEOUT_MS;
+        server.requestTimeout = REQUEST_BODY_TIMEOUT_MS + 5000;
+        server.on("connection", (socket: net.Socket) => {
+            this.sockets.add(socket);
+            socket.once("close", () => this.sockets.delete(socket));
         });
 
         this.server = server;
@@ -304,7 +334,18 @@ class AuthSyncServer implements vscode.Disposable {
             });
         });
 
-        await this.writeOwnerHeartbeat();
+        try {
+            await this.writeOwnerHeartbeat();
+        } catch (error) {
+            if (generation === this.serverGeneration) {
+                await this.closeServerImmediately(server);
+                await globalState.clearAuthSyncOwner(this.windowId);
+                this.server = undefined;
+                this.port = undefined;
+                this.mode = "stopped";
+            }
+            throw error;
+        }
         this.startHeartbeatTimer();
         this.stopObserverTimer();
     }
@@ -423,7 +464,18 @@ class AuthSyncServer implements vscode.Disposable {
         }
 
         const body: IAuthSyncRequestBody = await this.readJsonBody(req);
+        const deadlineAt: number = Date.now() + AUTH_UPDATE_DEADLINE_MS;
+        let clientDisconnected: boolean = false;
+        req.once("aborted", () => { clientDisconnected = true; });
+        res.once("close", () => {
+            if (!res.writableEnded) {
+                clientDisconnected = true;
+            }
+        });
         await this.enqueueAuthUpdate(async () => {
+            if (clientDisconnected || Date.now() >= deadlineAt) {
+                return;
+            }
             if (leetCodeManager.isAutomaticSyncSuspended()) {
                 this.sendJson(res, 409, {
                     ok: false,
@@ -458,7 +510,13 @@ class AuthSyncServer implements vscode.Disposable {
             }
 
             if (leetCodeManager.getStatus() === UserStatus.SignedOut || sessionChanged) {
-                await leetCodeManager.updateSessionFromCookie(cookie, browserUserAgent, browserRequestHeaders, "automatic-sync");
+                await leetCodeManager.updateSessionFromCookie(
+                    cookie,
+                    browserUserAgent,
+                    browserRequestHeaders,
+                    "automatic-sync",
+                    { deadlineAt, isCancelled: () => clientDisconnected },
+                );
             } else {
                 await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders);
             }
@@ -492,7 +550,12 @@ class AuthSyncServer implements vscode.Disposable {
         }
 
         this.sendJson(res, 200, { ok: true, message: "Auth sync listener released." }, false);
-        setTimeout(() => void this.releaseToObserver(), 50);
+        const generation: number = this.serverGeneration;
+        setTimeout(() => {
+            if (generation === this.serverGeneration) {
+                void this.releaseToObserver();
+            }
+        }, 50);
     }
 
     private handleOptions(req: http.IncomingMessage, res: http.ServerResponse): void {
@@ -506,6 +569,22 @@ class AuthSyncServer implements vscode.Disposable {
             let size: number = 0;
             let data: string = "";
             let rejected: boolean = false;
+            const timeout: NodeJS.Timer = setTimeout(() => {
+                fail(createAuthSyncRequestError(408, "Request body timed out."));
+                req.destroy();
+            }, REQUEST_BODY_TIMEOUT_MS);
+
+            const cleanup = (): void => {
+                clearTimeout(timeout);
+            };
+
+            const fail = (error: Error): void => {
+                if (!rejected) {
+                    rejected = true;
+                    cleanup();
+                    reject(error);
+                }
+            };
 
             req.on("data", (chunk: Buffer) => {
                 if (rejected) {
@@ -514,8 +593,7 @@ class AuthSyncServer implements vscode.Disposable {
 
                 size += chunk.length;
                 if (size > MAX_BODY_BYTES) {
-                    rejected = true;
-                    reject(createAuthSyncRequestError(413, "Request body too large."));
+                    fail(createAuthSyncRequestError(413, "Request body too large."));
                     req.resume();
                     return;
                 }
@@ -527,21 +605,30 @@ class AuthSyncServer implements vscode.Disposable {
                 if (rejected) {
                     return;
                 }
+                cleanup();
 
                 try {
                     const parsed: unknown = JSON.parse(data || "{}");
                     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-                        reject(createAuthSyncRequestError(400, "JSON request body must be an object."));
+                        fail(createAuthSyncRequestError(400, "JSON request body must be an object."));
                         return;
                     }
                     resolve(parsed as IAuthSyncRequestBody);
                 } catch (error) {
-                    reject(createAuthSyncRequestError(400, "Invalid JSON request body."));
+                    fail(createAuthSyncRequestError(400, "Invalid JSON request body."));
                 }
             });
 
-            req.on("error", reject);
+            req.on("aborted", () => fail(createAuthSyncRequestError(400, "Request was aborted.")));
+            req.on("error", fail);
         });
+    }
+
+    private closeServerImmediately(server: http.Server): Promise<void> {
+        for (const socket of this.sockets) {
+            socket.destroy();
+        }
+        return new Promise<void>((resolve: () => void) => server.close(() => resolve()));
     }
 
     private hasLeetCodeSessionCookie(cookie: string): boolean {
