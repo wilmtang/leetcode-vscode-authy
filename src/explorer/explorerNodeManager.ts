@@ -18,8 +18,9 @@ export class ExplorerNodeManager implements Disposable {
     private cachedProblems: IProblem[] | undefined;
     private fetchInFlight: Promise<void> | undefined;
     private refetchAfterCurrent: boolean = false;
+    private catalogError: Error | undefined;
 
-    public constructor(private readonly problemLoader: () => Promise<IProblem[]> = list.listProblems) { }
+    public constructor(private readonly problemLoader: () => Promise<list.CatalogLoadResult> = list.listProblems) { }
 
     // `force` re-fetches the catalog from the API; otherwise the trees are
     // rebuilt from the cached catalog (or fetched once if the cache is empty).
@@ -36,6 +37,16 @@ export class ExplorerNodeManager implements Disposable {
     public async getProblems(): Promise<IProblem[]> {
         await this.refreshCache(false /* use cache when present */);
         return this.cachedProblems ? this.cachedProblems.slice() : [];
+    }
+
+    public getCatalogError(): Error | undefined {
+        return this.catalogError;
+    }
+
+    public invalidate(): void {
+        this.cachedProblems = undefined;
+        this.catalogError = undefined;
+        this.rebuild();
     }
 
     // Locally reflect a favorite toggle so the star path can soft-refresh without
@@ -63,7 +74,18 @@ export class ExplorerNodeManager implements Disposable {
         const operation: Promise<void> = (async (): Promise<void> => {
             do {
                 this.refetchAfterCurrent = false;
-                this.cachedProblems = await this.problemLoader();
+                const result: list.CatalogLoadResult = await this.problemLoader();
+                if (result.kind === "success") {
+                    this.cachedProblems = result.problems;
+                    this.catalogError = undefined;
+                } else if (result.kind === "signed-out") {
+                    this.cachedProblems = undefined;
+                    this.catalogError = undefined;
+                } else {
+                    // Retain the last known-good catalog. A failed refresh is not
+                    // evidence that the user's catalog is authentically empty.
+                    this.catalogError = result.error;
+                }
             } while (this.refetchAfterCurrent);
         })();
         this.fetchInFlight = operation;

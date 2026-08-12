@@ -42,6 +42,14 @@ export class LeetCodeTreeDataProvider implements vscode.TreeDataProvider<LeetCod
                 },
             };
         }
+        if (element.id === "catalogError") {
+            return {
+                label: element.name,
+                tooltip: "The last refresh failed. The last known catalog is still shown.",
+                collapsibleState: vscode.TreeItemCollapsibleState.None,
+                command: { command: "leetcode.refreshExplorer", title: "Retry problem catalog" },
+            };
+        }
 
         let contextValue: string;
         if (element.isProblem) {
@@ -75,7 +83,14 @@ export class LeetCodeTreeDataProvider implements vscode.TreeDataProvider<LeetCod
         }
         if (!element) {
             // Root view
-            return explorerNodeManager.getRootNodes();
+            const roots: LeetCodeNode[] = explorerNodeManager.getRootNodes();
+            if (explorerNodeManager.getCatalogError()) {
+                roots.unshift(new LeetCodeNode(Object.assign({}, defaultProblem, {
+                    id: "catalogError",
+                    name: "Catalog refresh failed — Retry",
+                }), false));
+            }
+            return roots;
         } else {
             switch (element.id) {
                 case Category.All:

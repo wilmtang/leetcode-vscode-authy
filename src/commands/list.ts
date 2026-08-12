@@ -9,10 +9,15 @@ import { IProblem, UserStatus } from "../shared";
 import * as settingUtils from "../utils/settingUtils";
 import { DialogType, promptForOpenOutputChannel } from "../utils/uiUtils";
 
-export async function listProblems(): Promise<IProblem[]> {
+export type CatalogLoadResult =
+    | { kind: "success"; problems: IProblem[] }
+    | { kind: "signed-out" }
+    | { kind: "failure"; error: Error };
+
+export async function listProblems(): Promise<CatalogLoadResult> {
     try {
         if (leetCodeManager.getStatus() === UserStatus.SignedOut) {
-            return [];
+            return { kind: "signed-out" };
         }
 
         const useEndpointTranslation: boolean = settingUtils.shouldUseEndpointTranslation();
@@ -28,10 +33,12 @@ export async function listProblems(): Promise<IProblem[]> {
 
         // listProblemsViaApi already returns the catalog sorted ascending by
         // frontend id, so unlike the old CLI text path there is nothing to reverse.
-        return apiProblems.map((problem: ILeetCodeProblem) => toExtensionProblem(problem, favoriteSlugs));
+        return { kind: "success", problems: apiProblems.map((problem: ILeetCodeProblem) => toExtensionProblem(problem, favoriteSlugs)) };
     } catch (error) {
+        const cause: Error = error instanceof Error ? error : new Error(String(error));
+        leetCodeChannel.appendLine(`[problems] Failed to load catalog: ${cause.message}`);
         await promptForOpenOutputChannel("Failed to list problems. Please open the output channel for details.", DialogType.error);
-        return [];
+        return { kind: "failure", error: cause };
     }
 }
 

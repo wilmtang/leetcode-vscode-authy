@@ -279,8 +279,11 @@ async function listProblemsViaRest(cookie: string, options: IListProblemsOptions
         headers: createHeaders(cookie, `${getUrl("base")}/problemset/all/`),
     }, { label: "problem list" });
 
+    if (!response || !Array.isArray(response.stat_status_pairs)) {
+        throw new Error("Bulk REST problem list did not contain stat_status_pairs.");
+    }
     const problemsBySlug: { [titleSlug: string]: ILeetCodeProblem } = {};
-    for (const pair of response.stat_status_pairs || []) {
+    for (const pair of response.stat_status_pairs) {
         const problem: ILeetCodeProblem = mapRestProblem(pair);
         if (!hasProblemIdentity(problem) || (!options.showLocked && problem.locked)) {
             continue;
@@ -1172,8 +1175,19 @@ async function listProblemsByCategory(categorySlug: string, cookie: string, opti
         // No total reported: fall back to safe sequential paging.
         let skip: number = DEFAULT_PAGE_SIZE;
         let hasMore: boolean = firstPage.hasMore;
+        const seenSlugs: Set<string> = new Set<string>(firstPage.problems.map((problem: ILeetCodeProblem) => problem.titleSlug));
+        let pageCount: number = 1;
         while (hasMore) {
+            if (pageCount++ >= 100) {
+                throw new Error("Problem-list pagination exceeded the 100-page safety limit.");
+            }
             const page: IProblemPage = await fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, cookie, needTranslation);
+            const newSlugs: string[] = page.problems.map((problem: ILeetCodeProblem) => problem.titleSlug)
+                .filter((slug: string) => !seenSlugs.has(slug));
+            if (page.hasMore && newSlugs.length === 0) {
+                throw new Error("Problem-list pagination repeated a page without forward progress.");
+            }
+            newSlugs.forEach((slug: string) => seenSlugs.add(slug));
             problems.push(...page.problems);
             skip += DEFAULT_PAGE_SIZE;
             hasMore = page.hasMore;
@@ -1184,6 +1198,9 @@ async function listProblemsByCategory(categorySlug: string, cookie: string, opti
     const skips: number[] = [];
     for (let skip: number = DEFAULT_PAGE_SIZE; skip < firstPage.total; skip += DEFAULT_PAGE_SIZE) {
         skips.push(skip);
+        if (skips.length >= 100) {
+            throw new Error("Problem-list pagination exceeded the 100-page safety limit.");
+        }
     }
     const pages: IProblemPage[] = await mapWithConcurrency(skips, PROBLEM_LIST_CONCURRENCY,
         (skip: number) => fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, cookie, needTranslation));
