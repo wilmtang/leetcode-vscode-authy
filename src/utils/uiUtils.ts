@@ -36,6 +36,24 @@ export async function promptForOpenOutputChannel(message: string, type: DialogTy
     }
 }
 
+export function redactDiagnostic(error: unknown): string {
+    const diagnostic: string = error instanceof Error
+        ? error.stack || `${error.name}: ${error.message}`
+        : String(error);
+    return diagnostic
+        .replace(/(Bearer\s+)[A-Za-z0-9._~+\/=:-]+/gi, "$1[REDACTED]")
+        .replace(/(["']?(?:LEETCODE_SESSION|csrftoken|authorization|cookie|x-leetcode-authsync-secret)["']?\s*[:=]\s*["'])([^"']*)(["'])/gi, "$1[REDACTED]$3")
+        .replace(/((?:LEETCODE_SESSION|csrftoken|authorization|cookie|x-leetcode-authsync-secret)\s*[:=]\s*)([^\s,;}]+)/gi, "$1[REDACTED]");
+}
+
+export async function reportCommandError(operation: string, error: unknown, userMessage?: string): Promise<void> {
+    leetCodeChannel.appendLine(`[${operation}] ${redactDiagnostic(error)}`);
+    await promptForOpenOutputChannel(
+        userMessage || `${operation} failed. Please open the output channel for details.`,
+        DialogType.error,
+    );
+}
+
 export async function promptForSignIn(): Promise<void> {
     const choice: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(
         "Please sign in to LeetCode.",

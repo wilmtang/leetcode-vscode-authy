@@ -5,7 +5,7 @@ import * as vscode from "vscode";
 import { leetCodeTreeDataProvider } from "../explorer/LeetCodeTreeDataProvider";
 import { leetCodeManager } from "../leetCodeManager";
 import { submitSolutionWithSyncedCookie } from "../request/submit-solution";
-import { DialogType, promptForOpenOutputChannel, promptForSignIn } from "../utils/uiUtils";
+import { promptForSignIn, reportCommandError } from "../utils/uiUtils";
 import { getActiveFilePath } from "../utils/workspaceUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
 import { judgeOperationCoordinator } from "./judgeOperationCoordinator";
@@ -34,7 +34,7 @@ export async function submitSolution(uri?: vscode.Uri): Promise<void> {
             leetCodeSubmissionProvider.show(result, "Submission");
         }
     } catch (error) {
-        await promptForOpenOutputChannel("Failed to submit the solution. Please open the output channel for details.", DialogType.error);
+        await reportCommandError("Submit solution", error, "Failed to submit the solution. Please open the output channel for details.");
         return;
     }
 

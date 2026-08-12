@@ -7,7 +7,7 @@ import { leetCodeManager } from "../leetCodeManager";
 import { formatAcceptanceRate, getFavoriteProblemSlugs, ILeetCodeProblem, listProblems as listProblemsViaApi } from "../request/leetcode-api";
 import { IProblem, UserStatus } from "../shared";
 import * as settingUtils from "../utils/settingUtils";
-import { DialogType, promptForOpenOutputChannel } from "../utils/uiUtils";
+import { reportCommandError } from "../utils/uiUtils";
 
 export type CatalogLoadResult =
     | { kind: "success"; problems: IProblem[] }
@@ -36,8 +36,7 @@ export async function listProblems(): Promise<CatalogLoadResult> {
         return { kind: "success", problems: apiProblems.map((problem: ILeetCodeProblem) => toExtensionProblem(problem, favoriteSlugs)) };
     } catch (error) {
         const cause: Error = error instanceof Error ? error : new Error(String(error));
-        leetCodeChannel.appendLine(`[problems] Failed to load catalog: ${cause.message}`);
-        await promptForOpenOutputChannel("Failed to list problems. Please open the output channel for details.", DialogType.error);
+        await reportCommandError("List problems", cause, "Failed to list problems. Please open the output channel for details.");
         return { kind: "failure", error: cause };
     }
 }

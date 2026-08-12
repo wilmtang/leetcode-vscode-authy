@@ -8,13 +8,13 @@ import { LeetCodeNode } from "../explorer/LeetCodeNode";
 import { leetCodeTreeDataProvider } from "../explorer/LeetCodeTreeDataProvider";
 import { addFavoriteQuestion, removeFavoriteQuestion } from "../request/leetcode-api";
 import { hasStarShortcut } from "../utils/settingUtils";
-import { DialogType, promptForOpenOutputChannel } from "../utils/uiUtils";
+import { reportCommandError } from "../utils/uiUtils";
 
 export async function addFavorite(node: LeetCodeNode): Promise<void> {
     try {
         await toggleFavorite(node, true);
     } catch (error) {
-        await promptForOpenOutputChannel("Failed to add the problem to favorite. Please open the output channel for details.", DialogType.error);
+        await reportCommandError("Add favorite", error, "Failed to add the problem to favorite. Please open the output channel for details.");
     }
 }
 
@@ -22,7 +22,7 @@ export async function removeFavorite(node: LeetCodeNode): Promise<void> {
     try {
         await toggleFavorite(node, false);
     } catch (error) {
-        await promptForOpenOutputChannel("Failed to remove the problem from favorite. Please open the output channel for details.", DialogType.error);
+        await reportCommandError("Remove favorite", error, "Failed to remove the problem from favorite. Please open the output channel for details.");
     }
 }
 

@@ -3,11 +3,10 @@
 
 import * as fse from "fs-extra";
 import * as vscode from "vscode";
-import { leetCodeChannel } from "../leetCodeChannel";
 import { leetCodeManager } from "../leetCodeManager";
 import { testSolutionWithSyncedCookie } from "../request/test-solution";
 import { IQuickItemEx, UserStatus } from "../shared";
-import { DialogType, promptForOpenOutputChannel, showFileSelectDialog } from "../utils/uiUtils";
+import { promptForSignIn, reportCommandError, showFileSelectDialog } from "../utils/uiUtils";
 import { getActiveFilePath } from "../utils/workspaceUtils";
 import { decodeInlineTestcase } from "../utils/testcaseUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
@@ -26,7 +25,7 @@ function runTest(filePath: string, operationId: number, testString?: string): Th
 export async function testSolution(uri?: vscode.Uri): Promise<void> {
     try {
         if (leetCodeManager.getStatus() === UserStatus.SignedOut) {
-            await promptForOpenOutputChannel("Sign in to LeetCode before testing a solution.", DialogType.error);
+            await promptForSignIn();
             return;
         }
 
@@ -98,7 +97,6 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
             leetCodeSubmissionProvider.show(result, "Test Result");
         }
     } catch (error) {
-        leetCodeChannel.appendLine(error.toString());
-        await promptForOpenOutputChannel("Failed to test the solution. Please open the output channel for details.", DialogType.error);
+        await reportCommandError("Test solution", error, "Failed to test the solution. Please open the output channel for details.");
     }
 }
