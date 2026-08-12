@@ -26,8 +26,7 @@ import {
     promptForSignIn,
     promptHintMessage,
 } from "../utils/uiUtils";
-import { getActiveFilePath, resolvePathWithinRoot, sanitizePathSegment, selectWorkspaceFolder } from "../utils/workspaceUtils";
-import * as wsl from "../utils/wslUtils";
+import { getActiveFilePath, resolvePathWithinRoot, sanitizePathSegment, selectWorkspaceFolder, writeFileExclusiveWithinRoot } from "../utils/workspaceUtils";
 import { leetCodePreviewProvider } from "../webview/leetCodePreviewProvider";
 import { leetCodeSolutionProvider } from "../webview/leetCodeSolutionProvider";
 import { getLeetCodeEndpoint } from "./plugin";
@@ -235,12 +234,10 @@ async function showProblemInternal(node: IProblem): Promise<void> {
             finalPath = resolvePathWithinRoot(workspaceFolder, finalPath);
         }
 
-        finalPath = wsl.useWsl() ? await wsl.toWinPath(finalPath) : finalPath;
-
         const descriptionConfig: IDescriptionConfiguration = settingUtils.getDescriptionConfiguration();
         const needTranslation: boolean = settingUtils.shouldUseEndpointTranslation();
 
-        const detail: ILeetCodeQuestionDetail | undefined = await generateProblemFile(node, language, finalPath, descriptionConfig.showInComment, needTranslation);
+        const detail: ILeetCodeQuestionDetail | undefined = await generateProblemFile(node, language, workspaceFolder, finalPath, descriptionConfig.showInComment, needTranslation);
         const promises: any[] = [
             vscode.window.showTextDocument(vscode.Uri.file(finalPath), {
                 preview: false,
@@ -272,11 +269,16 @@ async function showProblemInternal(node: IProblem): Promise<void> {
 async function generateProblemFile(
     node: IProblem,
     language: string,
+    workspaceRoot: string,
     filePath: string,
     showDescriptionInComment: boolean,
     needTranslation: boolean,
 ): Promise<ILeetCodeQuestionDetail | undefined> {
     if (await fse.pathExists(filePath)) {
+        const existing: ISolutionFileMeta = await parseSolutionFile(filePath);
+        if (existing.frontendId !== node.id || (node.titleSlug && existing.slug !== node.titleSlug)) {
+            throw new Error(`The configured solution path already belongs to problem ${existing.frontendId} (${existing.slug}). Choose a problem-specific filename.`);
+        }
         return undefined;
     }
 
@@ -299,14 +301,14 @@ async function generateProblemFile(
         vscode.window.showWarningMessage(`LeetCode has no ${language} code template for "${node.name}"; generated an empty file.`);
     }
 
-    await fse.createFile(filePath);
-    await fse.writeFile(filePath, generateSolutionFileContent({
+    const content: string = generateSolutionFileContent({
         detail,
         language,
         frontendId: node.id,
         showDescriptionInComment,
         endpointBase: getUrl("base"),
-    }));
+    });
+    await writeFileExclusiveWithinRoot(workspaceRoot, filePath, content);
 
     return detail;
 }

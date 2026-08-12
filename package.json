@@ -392,12 +392,6 @@
                         "scope": "application",
                         "description": "Show a hint to configure commands key binding."
                     },
-                    "leetcode.useWsl": {
-                        "type": "boolean",
-                        "default": false,
-                        "scope": "application",
-                        "description": "Use the Windows Subsystem for Linux."
-                    },
                     "leetcode.endpoint": {
                         "type": "string",
                         "default": "leetcode",

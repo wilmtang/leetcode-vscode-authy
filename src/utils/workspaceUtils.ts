@@ -8,7 +8,6 @@ import * as vscode from "vscode";
 import { IQuickItemEx } from "../shared";
 import { getWorkspaceConfiguration, getWorkspaceFolder } from "./settingUtils";
 import { showDirectorySelectDialog } from "./uiUtils";
-import * as wsl from "./wslUtils";
 
 export async function selectWorkspaceFolder(): Promise<string> {
     let workspaceFolderSetting: string = getWorkspaceFolder();
@@ -56,7 +55,7 @@ export async function selectWorkspaceFolder(): Promise<string> {
         }
     }
 
-    return wsl.useWsl() ? wsl.toWslPath(workspaceFolderSetting) : workspaceFolderSetting;
+    return workspaceFolderSetting;
 }
 
 export async function getActiveFilePath(uri?: vscode.Uri): Promise<string | undefined> {
@@ -74,7 +73,7 @@ export async function getActiveFilePath(uri?: vscode.Uri): Promise<string | unde
         vscode.window.showWarningMessage("Please save the solution file first.");
         return undefined;
     }
-    return wsl.useWsl() ? wsl.toWslPath(textEditor.document.uri.fsPath) : textEditor.document.uri.fsPath;
+    return textEditor.document.uri.fsPath;
 }
 
 export function resolvePathWithinRoot(root: string, candidate: string): string {
@@ -85,6 +84,44 @@ export function resolvePathWithinRoot(root: string, candidate: string): string {
         throw new Error(`Configured problem path escapes the selected LeetCode workspace: ${resolvedCandidate}`);
     }
     return resolvedCandidate;
+}
+
+export async function writeFileExclusiveWithinRoot(root: string, candidate: string, content: string): Promise<void> {
+    const target: string = resolvePathWithinRoot(root, candidate);
+    const physicalRoot: string = await fse.realpath(root);
+    await assertExistingAncestorWithinRoot(physicalRoot, path.dirname(target));
+    await fse.ensureDir(path.dirname(target));
+    await assertExistingAncestorWithinRoot(physicalRoot, path.dirname(target));
+
+    let handle: number | undefined;
+    try {
+        handle = await fse.open(target, "wx");
+        await fse.writeFile(handle, content, "utf8");
+    } catch (error) {
+        if (handle !== undefined) {
+            await fse.close(handle);
+            handle = undefined;
+            await fse.unlink(target).catch(() => undefined);
+        }
+        throw error;
+    } finally {
+        if (handle !== undefined) {
+            await fse.close(handle);
+        }
+    }
+}
+
+async function assertExistingAncestorWithinRoot(physicalRoot: string, candidateParent: string): Promise<void> {
+    let ancestor: string = candidateParent;
+    while (!await fse.pathExists(ancestor)) {
+        const parent: string = path.dirname(ancestor);
+        if (parent === ancestor) {
+            throw new Error(`Cannot resolve a physical parent for ${candidateParent}`);
+        }
+        ancestor = parent;
+    }
+    const physicalAncestor: string = await fse.realpath(ancestor);
+    resolvePathWithinRoot(physicalRoot, physicalAncestor);
 }
 
 export function sanitizePathSegment(value: string): string {

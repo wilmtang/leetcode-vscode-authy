@@ -119,7 +119,6 @@ That blocks ordinary malicious websites through the Origin/CORS checks, but it i
 | --- | --- | --- |
 | `leetcode.hideSolved` | `false` | Hide solved problems. |
 | `leetcode.defaultLanguage` | `N/A` | Default solution language. |
-| `leetcode.useWsl` | `false` | Use WSL. |
 | `leetcode.endpoint` | `leetcode` | Active endpoint. `leetcode-cn` is currently broken in this project. |
 | `leetcode.workspaceFolder` | `""` | Folder for generated problem files. |
 | `leetcode.filePath` | `""` | Relative folder and filename pattern for problem files. |
