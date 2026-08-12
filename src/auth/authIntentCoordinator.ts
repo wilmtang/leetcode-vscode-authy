@@ -14,6 +14,7 @@ export interface IAuthIntent {
  */
 export class AuthIntentCoordinator {
     private revision: number = 0;
+    private commitTail: Promise<void> = Promise.resolve();
 
     public begin(kind: AuthIntentKind): IAuthIntent {
         this.revision++;
@@ -38,5 +39,14 @@ export class AuthIntentCoordinator {
 
     public getRevision(): number {
         return this.revision;
+    }
+
+    public commit<T>(intent: IAuthIntent, work: () => Promise<T>): Promise<T> {
+        const operation: Promise<T> = this.commitTail.then(async () => {
+            this.assertCurrent(intent);
+            return work();
+        });
+        this.commitTail = operation.then(() => undefined, () => undefined);
+        return operation;
     }
 }

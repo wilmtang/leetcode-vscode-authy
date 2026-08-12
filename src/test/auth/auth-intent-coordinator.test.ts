@@ -42,4 +42,26 @@ describe("AuthIntentCoordinator", () => {
         assert.strictEqual(refresh.revision, login.revision);
         assert.doesNotThrow(() => coordinator.assertCurrent(login));
     });
+
+    it("serializes persistence so a newer sign-out is the final commit", async () => {
+        const coordinator: AuthIntentCoordinator = new AuthIntentCoordinator();
+        const firstStore = deferred<void>();
+        const firstStoreStarted = deferred<void>();
+        const commits: string[] = [];
+        const login: IAuthIntent = coordinator.begin("manual-cookie");
+        const loginCommit: Promise<void> = coordinator.commit(login, async () => {
+            firstStoreStarted.resolve(undefined);
+            await firstStore.promise;
+            commits.push("login");
+        });
+        await firstStoreStarted.promise;
+        const signOut: IAuthIntent = coordinator.begin("sign-out");
+        const signOutCommit: Promise<void> = coordinator.commit(signOut, async () => {
+            commits.push("sign-out");
+        });
+
+        firstStore.resolve(undefined);
+        await Promise.all([loginCommit, signOutCommit]);
+        assert.deepStrictEqual(commits, ["login", "sign-out"]);
+    });
 });

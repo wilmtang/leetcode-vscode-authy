@@ -1,4 +1,4 @@
-import { globalState } from "../globalState";
+import { globalState, IAuthSessionSnapshot } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { getUrl } from "../shared";
 import { sleep } from "../utils/toolUtils";
@@ -12,6 +12,7 @@ import {
     verifyResult,
     ISolutionFileMeta,
     IQuestionDetail,
+    IHeaderOverrides,
 } from "./leetcode-http";
 
 const MAX_SUBMIT_ATTEMPTS: number = 5;
@@ -22,36 +23,50 @@ interface ISubmitTask {
 }
 
 export async function submitSolutionWithSyncedCookie(filePath: string): Promise<string> {
-    const cookie: string | undefined = globalState.getCookie();
-    if (!cookie) {
+    const auth: IAuthSessionSnapshot | undefined = globalState.getAuthSession();
+    if (!auth || auth.state !== "signed-in" || !auth.cookie) {
         throw new DirectApiUnsupportedError("No synced LeetCode cookie is available.");
     }
+    const cookie: string = auth.cookie;
+    const headerOverrides: IHeaderOverrides = {
+        browserUserAgent: auth.browserUserAgent,
+        browserRequestHeaders: auth.browserRequestHeaders,
+    };
 
     const meta: ISolutionFileMeta = await parseSolutionFile(filePath);
     const referer: string = `${getUrl("base")}/problems/${meta.slug}/`;
-    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer);
+    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides);
 
+    assertCurrentAuth(auth);
     leetCodeChannel.appendLine("[submit] Sending solution to LeetCode");
-    const task: ISubmitTask = await submitCode(meta, question, cookie, referer);
+    const task: ISubmitTask = await submitCode(meta, question, cookie, referer, headerOverrides, auth);
     if (!task.submission_id) {
         throw new Error("LeetCode did not return a submission id.");
     }
 
     leetCodeChannel.appendLine("[submit] Waiting for judge result");
-    const result: ICheckResult = await verifyResult(String(task.submission_id), cookie, referer);
+    const result: ICheckResult = await verifyResult(String(task.submission_id), cookie, referer, headerOverrides);
 
     return formatSubmitResult(result);
 }
 
-async function submitCode(meta: ISolutionFileMeta, question: IQuestionDetail, cookie: string, referer: string): Promise<ISubmitTask> {
+async function submitCode(
+    meta: ISolutionFileMeta,
+    question: IQuestionDetail,
+    cookie: string,
+    referer: string,
+    headerOverrides: IHeaderOverrides,
+    auth: IAuthSessionSnapshot,
+): Promise<ISubmitTask> {
     const url: string = `${getUrl("base")}/problems/${meta.slug}/submit/`;
     let delaySeconds: number = 1;
 
     for (let attempt: number = 0; attempt < MAX_SUBMIT_ATTEMPTS; attempt++) {
+        assertCurrentAuth(auth);
         const task: ISubmitTask = await requestJson<ISubmitTask>({
             method: "POST",
             url,
-            headers: createHeaders(cookie, referer),
+            headers: createHeaders(cookie, referer, headerOverrides),
             data: {
                 lang: meta.lang,
                 question_id: question.questionId,
@@ -76,6 +91,12 @@ async function submitCode(meta: ISolutionFileMeta, question: IQuestionDetail, co
     }
 
     throw new Error("LeetCode rejected the submission because requests were sent too quickly.");
+}
+
+function assertCurrentAuth(auth: IAuthSessionSnapshot): void {
+    if (!globalState.isAuthRevisionCurrent(auth.revision)) {
+        throw new DirectApiUnsupportedError("The signed-in LeetCode account changed before this submission could be sent.", false);
+    }
 }
 
 function formatSubmitResult(result: ICheckResult): string {

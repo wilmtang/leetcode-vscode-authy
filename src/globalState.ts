@@ -19,7 +19,8 @@ const AuthSyncOwnerKey = "leetcode-auth-sync-owner";
 const CookieSecretKey = "leetcode-cookie";
 const BrowserUserAgentSecretKey = "leetcode-browser-user-agent";
 const BrowserRequestHeadersSecretKey = "leetcode-browser-request-headers";
-const SECRET_KEYS: string[] = [CookieSecretKey, BrowserUserAgentSecretKey, BrowserRequestHeadersSecretKey];
+const AuthSessionSecretKey = "leetcode-auth-session-v1";
+const LEGACY_SECRET_KEYS: string[] = [CookieSecretKey, BrowserUserAgentSecretKey, BrowserRequestHeadersSecretKey];
 
 export type UserDataType = {
     isSignedIn: boolean;
@@ -44,6 +45,17 @@ export interface IBrowserRequestHeaders {
     [key: string]: string;
 }
 
+export interface IAuthSessionSnapshot {
+    version: 1;
+    revision: number;
+    state: "signed-in" | "signed-out";
+    intentionalSignOut: boolean;
+    cookie?: string;
+    browserUserAgent?: string;
+    browserRequestHeaders?: IBrowserRequestHeaders;
+    identity?: UserDataType;
+}
+
 class GlobalState {
     private context: vscode.ExtensionContext;
     private _state: vscode.Memento;
@@ -52,61 +64,109 @@ class GlobalState {
     // (createHeaders, getRequiredCookie, …). Hydrating a cache at activation and
     // refreshing it on every write — and on cross-window keychain changes — lets
     // those getters stay synchronous without holding credentials in the Memento.
-    private cookieCache: string | undefined;
-    private browserUserAgentCache: string | undefined;
-    private browserRequestHeadersCache: IBrowserRequestHeaders | undefined;
+    private authSessionCache: IAuthSessionSnapshot | undefined;
 
     // Must be awaited before any cookie/header read. extension.ts awaits this
     // before wiring sign-in or starting the auth-sync server.
     public async initialize(context: vscode.ExtensionContext): Promise<void> {
         this.context = context;
         this._state = this.context.globalState;
-        await this.migrateLegacyPlaintextSecrets();
-        await this.hydrateSecretCache();
+        await this.migrateAuthSession();
+        await this.hydrateAuthSessionCache();
         // A sibling VS Code window (or an external keychain edit) can rotate the
         // synced cookie; re-hydrate so this window's cache never serves a stale
         // credential after another window re-syncs. (Replaces the implicit
         // freshness the old Memento getter had by reading on every call.)
         context.subscriptions.push(
             context.secrets.onDidChange((event: vscode.SecretStorageChangeEvent) => {
-                if (SECRET_KEYS.indexOf(event.key) >= 0) {
-                    void this.hydrateSecretCache();
+                if (event.key === AuthSessionSecretKey) {
+                    void this.hydrateAuthSessionCache();
                 }
             }),
         );
     }
 
     public async setCookie(cookie: string): Promise<void> {
-        await this.context.secrets.store(CookieSecretKey, cookie);
-        this.cookieCache = cookie;
+        await this.persistAuthSession({
+            ...this.currentOrSignedOut(),
+            revision: this.nextRevision(),
+            state: "signed-in",
+            intentionalSignOut: false,
+            cookie,
+        });
     }
     public getCookie(): string | undefined {
-        return this.cookieCache;
+        return this.authSessionCache && this.authSessionCache.state === "signed-in"
+            ? this.authSessionCache.cookie
+            : undefined;
     }
 
     public async setBrowserUserAgent(userAgent: string | undefined): Promise<void> {
-        if (userAgent === undefined) {
-            await this.context.secrets.delete(BrowserUserAgentSecretKey);
-        } else {
-            await this.context.secrets.store(BrowserUserAgentSecretKey, userAgent);
-        }
-        this.browserUserAgentCache = userAgent;
+        await this.persistAuthSession({ ...this.currentOrSignedOut(), revision: this.nextRevision(), browserUserAgent: userAgent });
     }
     public getBrowserUserAgent(): string | undefined {
-        return this.browserUserAgentCache;
+        return this.authSessionCache && this.authSessionCache.browserUserAgent;
     }
 
     public async setBrowserRequestHeaders(headers: IBrowserRequestHeaders | undefined): Promise<void> {
-        // SecretStorage holds strings only, so the header map is JSON-encoded.
-        if (headers === undefined) {
-            await this.context.secrets.delete(BrowserRequestHeadersSecretKey);
-        } else {
-            await this.context.secrets.store(BrowserRequestHeadersSecretKey, JSON.stringify(headers));
-        }
-        this.browserRequestHeadersCache = headers;
+        await this.persistAuthSession({ ...this.currentOrSignedOut(), revision: this.nextRevision(), browserRequestHeaders: headers });
     }
     public getBrowserRequestHeaders(): IBrowserRequestHeaders | undefined {
-        return this.browserRequestHeadersCache;
+        return this.authSessionCache && this.cloneHeaders(this.authSessionCache.browserRequestHeaders);
+    }
+
+    public getAuthSession(): IAuthSessionSnapshot | undefined {
+        return this.authSessionCache ? this.cloneAuthSession(this.authSessionCache) : undefined;
+    }
+
+    public isAuthRevisionCurrent(revision: number): boolean {
+        return !!this.authSessionCache && this.authSessionCache.revision === revision;
+    }
+
+    public async setSignedInSession(
+        cookie: string,
+        identity: UserDataType,
+        browserUserAgent?: string,
+        browserRequestHeaders?: IBrowserRequestHeaders,
+    ): Promise<IAuthSessionSnapshot> {
+        return this.persistAuthSession({
+            version: 1,
+            revision: this.nextRevision(),
+            state: "signed-in",
+            intentionalSignOut: false,
+            cookie,
+            browserUserAgent,
+            browserRequestHeaders,
+            identity,
+        });
+    }
+
+    public async updateSignedInSession(
+        cookie: string,
+        browserUserAgent?: string,
+        browserRequestHeaders?: IBrowserRequestHeaders,
+    ): Promise<IAuthSessionSnapshot> {
+        const current: IAuthSessionSnapshot | undefined = this.getAuthSession();
+        if (!current || current.state !== "signed-in" || !current.identity) {
+            throw new Error("Cannot update browser credentials without a validated signed-in session.");
+        }
+        const nextUserAgent: string | undefined = browserUserAgent || current.browserUserAgent;
+        const nextHeaders: IBrowserRequestHeaders | undefined = browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0
+            ? browserRequestHeaders
+            : current.browserRequestHeaders;
+        if (
+            current.cookie === cookie &&
+            current.browserUserAgent === nextUserAgent &&
+            JSON.stringify(current.browserRequestHeaders || {}) === JSON.stringify(nextHeaders || {})
+        ) {
+            return current;
+        }
+        return this.setSignedInSession(
+            cookie,
+            current.identity,
+            nextUserAgent,
+            nextHeaders,
+        );
     }
 
     public setAuthSyncLastSyncedAt(timestamp: number): Thenable<void> {
@@ -119,11 +179,12 @@ class GlobalState {
     }
 
     public setUserStatus(userStatus: UserDataType): Thenable<void> {
-        return this._state.update(UserStatusKey, userStatus);
+        const current: IAuthSessionSnapshot = this.currentOrSignedOut();
+        return this.persistAuthSession({ ...current, revision: this.nextRevision(), identity: userStatus }).then(() => undefined);
     }
 
     public getUserStatus(): UserDataType | undefined {
-        return this._state.get(UserStatusKey);
+        return this.authSessionCache && this.authSessionCache.identity;
     }
 
     public setAuthSyncOwner(owner: IAuthSyncOwnerRecord): Thenable<void> {
@@ -152,36 +213,37 @@ class GlobalState {
     // callers that need the secret gone before continuing can await it; legacy
     // Memento copies are cleared too in case migration was skipped.
     public removeCookie(): Thenable<void> {
-        return this.clearSecrets();
+        return this.setSignedOutSession(false).then(() => undefined);
     }
 
     public async removeAll(): Promise<void> {
-        await Promise.all([
-            this._state.update(UserStatusKey, undefined),
-            this._state.update(AuthSyncLastSyncedAtKey, undefined),
-            this.clearSecrets(),
-        ]);
+        await this.setSignedOutSession(false);
+        await this._state.update(AuthSyncLastSyncedAtKey, undefined);
     }
 
-    private async clearSecrets(): Promise<void> {
-        // Clear any leftover legacy plaintext values as well.
-        await Promise.all([
-            ...SECRET_KEYS.map((key: string) => this._state.update(key, undefined)),
-            ...SECRET_KEYS.map((key: string) => this.context.secrets.delete(key)),
-        ]);
-        this.cookieCache = undefined;
-        this.browserUserAgentCache = undefined;
-        this.browserRequestHeadersCache = undefined;
+    public async setSignedOutSession(intentional: boolean): Promise<IAuthSessionSnapshot> {
+        return this.persistAuthSession({
+            version: 1,
+            revision: this.nextRevision(),
+            state: "signed-out",
+            intentionalSignOut: intentional,
+        });
     }
 
-    // Loads the keychain values into the synchronous cache. Bad JSON in the
-    // headers blob is tolerated (treated as absent) so one corrupt entry can't
-    // wedge activation.
-    private async hydrateSecretCache(): Promise<void> {
-        this.cookieCache = await this.context.secrets.get(CookieSecretKey) || undefined;
-        this.browserUserAgentCache = await this.context.secrets.get(BrowserUserAgentSecretKey) || undefined;
-        const rawHeaders: string | undefined = await this.context.secrets.get(BrowserRequestHeadersSecretKey);
-        this.browserRequestHeadersCache = this.parseHeaders(rawHeaders);
+    private async persistAuthSession(snapshot: IAuthSessionSnapshot): Promise<IAuthSessionSnapshot> {
+        const normalized: IAuthSessionSnapshot = this.normalizeAuthSession({
+            ...snapshot,
+            version: 1,
+            revision: snapshot.revision > 0 ? snapshot.revision : this.nextRevision(),
+        });
+        await this.context.secrets.store(AuthSessionSecretKey, JSON.stringify(normalized));
+        this.authSessionCache = normalized;
+        return this.cloneAuthSession(normalized);
+    }
+
+    private async hydrateAuthSessionCache(): Promise<void> {
+        const raw: string | undefined = await this.context.secrets.get(AuthSessionSecretKey);
+        this.authSessionCache = this.parseAuthSession(raw);
     }
 
     private parseHeaders(raw: string | undefined): IBrowserRequestHeaders | undefined {
@@ -207,21 +269,121 @@ class GlobalState {
         }
     }
 
-    // One-time move of credentials written by pre-A2-1 builds (plaintext Memento)
-    // into the keychain, then delete the plaintext copy. Runs every activation but
-    // no-ops once the Memento keys are gone.
-    private async migrateLegacyPlaintextSecrets(): Promise<void> {
-        for (const key of SECRET_KEYS) {
-            const legacy: unknown = this._state.get(key);
-            if (legacy === undefined || legacy === null) {
-                continue;
-            }
-            const value: string = typeof legacy === "string" ? legacy : JSON.stringify(legacy);
-            if ((await this.context.secrets.get(key)) === undefined) {
-                await this.context.secrets.store(key, value);
-            }
-            await this._state.update(key, undefined);
+    private async migrateAuthSession(): Promise<void> {
+        if (this.parseAuthSession(await this.context.secrets.get(AuthSessionSecretKey))) {
+            await this.clearLegacyAuthFields();
+            return;
         }
+
+        const cookie: string | undefined = await this.readLegacySecret(CookieSecretKey);
+        const browserUserAgent: string | undefined = await this.readLegacySecret(BrowserUserAgentSecretKey);
+        const rawHeaders: string | undefined = await this.readLegacySecret(BrowserRequestHeadersSecretKey);
+        const identity: UserDataType | undefined = this._state.get(UserStatusKey);
+        const snapshot: IAuthSessionSnapshot = cookie && identity && identity.isSignedIn && identity.username
+            ? {
+                version: 1,
+                revision: 1,
+                state: "signed-in",
+                intentionalSignOut: false,
+                cookie,
+                browserUserAgent,
+                browserRequestHeaders: this.parseHeaders(rawHeaders),
+                identity,
+            }
+            : { version: 1, revision: 1, state: "signed-out", intentionalSignOut: false };
+
+        // Store the complete replacement first. If this fails, every legacy field
+        // remains available to the prior extension version; cleanup happens only
+        // after the atomic record is durable.
+        await this.context.secrets.store(AuthSessionSecretKey, JSON.stringify(snapshot));
+        await this.clearLegacyAuthFields();
+    }
+
+    private async clearLegacyAuthFields(): Promise<void> {
+        await Promise.all([
+            this._state.update(UserStatusKey, undefined),
+            ...LEGACY_SECRET_KEYS.map((key: string) => this._state.update(key, undefined)),
+            ...LEGACY_SECRET_KEYS.map((key: string) => this.context.secrets.delete(key)),
+        ]);
+    }
+
+    private async readLegacySecret(key: string): Promise<string | undefined> {
+        const secret: string | undefined = await this.context.secrets.get(key);
+        if (secret !== undefined) {
+            return secret;
+        }
+        const legacy: unknown = this._state.get(key);
+        if (legacy === undefined || legacy === null) {
+            return undefined;
+        }
+        return typeof legacy === "string" ? legacy : JSON.stringify(legacy);
+    }
+
+    private parseAuthSession(raw: string | undefined): IAuthSessionSnapshot | undefined {
+        if (!raw) {
+            return undefined;
+        }
+        try {
+            return this.normalizeAuthSession(JSON.parse(raw) as IAuthSessionSnapshot);
+        } catch (error) {
+            return undefined;
+        }
+    }
+
+    private normalizeAuthSession(value: IAuthSessionSnapshot): IAuthSessionSnapshot {
+        if (!value || value.version !== 1 || !Number.isFinite(value.revision) || value.revision < 1) {
+            throw new Error("Stored LeetCode authentication snapshot is invalid.");
+        }
+        if (value.state === "signed-out") {
+            return {
+                version: 1,
+                revision: value.revision,
+                state: "signed-out",
+                intentionalSignOut: !!value.intentionalSignOut,
+            };
+        }
+        if (value.state !== "signed-in" || !value.cookie || !value.identity || !value.identity.username) {
+            throw new Error("Stored LeetCode signed-in snapshot is incomplete.");
+        }
+        return {
+            version: 1,
+            revision: value.revision,
+            state: "signed-in",
+            intentionalSignOut: false,
+            cookie: value.cookie,
+            browserUserAgent: value.browserUserAgent,
+            browserRequestHeaders: this.cloneHeaders(value.browserRequestHeaders),
+            identity: { ...value.identity },
+        };
+    }
+
+    private currentOrSignedOut(): IAuthSessionSnapshot {
+        return this.getAuthSession() || {
+            version: 1,
+            revision: 1,
+            state: "signed-out",
+            intentionalSignOut: false,
+        };
+    }
+
+    private nextRevision(): number {
+        const current: number = this.authSessionCache ? this.authSessionCache.revision : 0;
+        // SecretStorage is shared by sibling extension hosts but offers no CAS.
+        // A timestamp plus random fraction makes concurrently-created revisions
+        // distinct while retaining a numeric, increasing per-window revision.
+        return Math.max(current + 1, Date.now() + Math.random());
+    }
+
+    private cloneAuthSession(snapshot: IAuthSessionSnapshot): IAuthSessionSnapshot {
+        return {
+            ...snapshot,
+            browserRequestHeaders: this.cloneHeaders(snapshot.browserRequestHeaders),
+            identity: snapshot.identity ? { ...snapshot.identity } : undefined,
+        };
+    }
+
+    private cloneHeaders(headers: IBrowserRequestHeaders | undefined): IBrowserRequestHeaders | undefined {
+        return headers ? { ...headers } : undefined;
     }
 }
 

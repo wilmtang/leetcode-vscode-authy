@@ -1,4 +1,4 @@
-import { globalState } from "../globalState";
+import { globalState, IAuthSessionSnapshot } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { getUrl } from "../shared";
 import { sleep } from "../utils/toolUtils";
@@ -9,6 +9,7 @@ import {
     getQuestionDetail,
     ICheckResult,
     IQuestionDetail,
+    IHeaderOverrides,
     ISolutionFileMeta,
     parseSolutionFile,
     requestJson,
@@ -39,14 +40,19 @@ interface ICaseResult {
 }
 
 export async function testSolutionWithSyncedCookie(filePath: string, testString?: string): Promise<string> {
-    const cookie: string | undefined = globalState.getCookie();
-    if (!cookie) {
+    const auth: IAuthSessionSnapshot | undefined = globalState.getAuthSession();
+    if (!auth || auth.state !== "signed-in" || !auth.cookie) {
         throw new DirectApiUnsupportedError("No synced LeetCode cookie is available.");
     }
+    const cookie: string = auth.cookie;
+    const headerOverrides: IHeaderOverrides = {
+        browserUserAgent: auth.browserUserAgent,
+        browserRequestHeaders: auth.browserRequestHeaders,
+    };
 
     const meta: ISolutionFileMeta = await parseSolutionFile(filePath);
     const referer: string = `${getUrl("base")}/problems/${meta.slug}/`;
-    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer);
+    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides);
     const defaultTestcases: string[] = getDefaultTestcases(question);
     const testcase: string = normalizeTestcase(testString || defaultTestcases.join("\n"));
     const testcaseList: string[] = testString ? splitTestcases(testcase, question) : defaultTestcases;
@@ -59,29 +65,39 @@ export async function testSolutionWithSyncedCookie(filePath: string, testString?
     }
 
     leetCodeChannel.appendLine("Sending code to judge");
-    const task: IRunCodeTask = await runCode(meta, question, testcase, cookie, referer);
+    assertCurrentAuth(auth);
+    const task: IRunCodeTask = await runCode(meta, question, testcase, cookie, referer, headerOverrides, auth);
     if (!task.interpret_id) {
         throw new Error("LeetCode did not return an interpret id.");
     }
 
     leetCodeChannel.appendLine("Waiting for judge result");
-    const actual: ICheckResult = await verifyResult(task.interpret_id, cookie, referer);
+    const actual: ICheckResult = await verifyResult(task.interpret_id, cookie, referer, headerOverrides);
     const expected: ICheckResult | undefined = task.interpret_expected_id
-        ? await verifyResult(task.interpret_expected_id, cookie, referer)
+        ? await verifyResult(task.interpret_expected_id, cookie, referer, headerOverrides)
         : undefined;
 
     return formatTestResult(actual, expected, testcase, testcaseList);
 }
 
-async function runCode(meta: ISolutionFileMeta, question: IQuestionDetail, testcase: string, cookie: string, referer: string): Promise<IRunCodeTask> {
+async function runCode(
+    meta: ISolutionFileMeta,
+    question: IQuestionDetail,
+    testcase: string,
+    cookie: string,
+    referer: string,
+    headerOverrides: IHeaderOverrides,
+    auth: IAuthSessionSnapshot,
+): Promise<IRunCodeTask> {
     const url: string = `${getUrl("base")}/problems/${meta.slug}/interpret_solution/`;
     let delaySeconds: number = 1;
 
     for (let attempt: number = 0; attempt < 5; attempt++) {
+        assertCurrentAuth(auth);
         const task: IRunCodeTask = await requestJson<IRunCodeTask>({
             method: "POST",
             url,
-            headers: createHeaders(cookie, referer),
+            headers: createHeaders(cookie, referer, headerOverrides),
             data: {
                 data_input: testcase,
                 lang: meta.lang,
@@ -107,6 +123,12 @@ async function runCode(meta: ISolutionFileMeta, question: IQuestionDetail, testc
     }
 
     throw new Error("LeetCode rejected the run because requests were sent too quickly.");
+}
+
+function assertCurrentAuth(auth: IAuthSessionSnapshot): void {
+    if (!globalState.isAuthRevisionCurrent(auth.revision)) {
+        throw new DirectApiUnsupportedError("The signed-in LeetCode account changed before this test could be sent.", false);
+    }
 }
 
 function getDefaultTestcases(question: IQuestionDetail): string[] {

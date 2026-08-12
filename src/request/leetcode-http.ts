@@ -154,11 +154,11 @@ function parseCode(content: string): string {
 // Lightweight judge metadata (questionId, testcases, metaData, enableRunCode)
 // for the submit/test paths. For full display detail use getQuestionDetail()
 // in leetcode-api.ts instead.
-export async function getQuestionDetail(slug: string, cookie: string, referer: string): Promise<IQuestionDetail> {
+export async function getQuestionDetail(slug: string, cookie: string, referer: string, overrides?: IHeaderOverrides): Promise<IQuestionDetail> {
     const response: IQuestionDetailResponse = await requestJson<IQuestionDetailResponse>({
         method: "POST",
         url: getUrl("graphql"),
-        headers: createHeaders(cookie, referer),
+        headers: createHeaders(cookie, referer, overrides),
         data: {
             query: [
                 "query getQuestionDetail($titleSlug: String!) {",
@@ -190,13 +190,13 @@ export async function getQuestionDetail(slug: string, cookie: string, referer: s
 // Result polling
 // ---------------------------------------------------------------------------
 
-export async function verifyResult(id: string, cookie: string, referer: string): Promise<ICheckResult> {
+export async function verifyResult(id: string, cookie: string, referer: string, overrides?: IHeaderOverrides): Promise<ICheckResult> {
     const url: string = `${getUrl("base")}/submissions/detail/${id}/check/`;
     for (let attempt: number = 0; attempt < MAX_VERIFY_ATTEMPTS; attempt++) {
         const result: ICheckResult = await requestJson<ICheckResult>({
             method: "GET",
             url,
-            headers: createHeaders(cookie, referer),
+            headers: createHeaders(cookie, referer, overrides),
         }, { label: "judge result poll" });
         if (result.state === "SUCCESS") {
             return result;
