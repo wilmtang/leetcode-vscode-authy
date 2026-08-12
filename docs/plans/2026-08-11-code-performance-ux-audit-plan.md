@@ -1,6 +1,6 @@
 # Code, Performance, Engineering, and UX Audit Plan — 2026-08-11
 
-Status: active remediation plan
+Status: implemented in source; environment-dependent release proof pending
 
 Audit target: `main` at `30154f3` (`test: smoke-load bundled extension`)
 
@@ -20,6 +20,12 @@ The most important broken invariant is that the account displayed by VS Code
 must be the account whose immutable credential snapshot a command uses. That is
 not currently guaranteed during sign-out, account rotation, overlapping login,
 or cross-window sync.
+
+Implementation completed on 2026-08-11 in the focused commits recorded in the
+closure ledger below. The historical findings and requested proof remain here
+unchanged so future reviews can distinguish source closure from the native,
+live-account, cross-window, browser-install, Windows, and accessibility checks
+that still require release-candidate testing.
 
 Priority definitions:
 
@@ -362,6 +368,39 @@ upgrade or bundle rewrite with auth correctness changes.
 | 12 | Webview CSP/config serialization and accessibility | A4-14, A4-15 |
 | 13 | Public command and error-reporting contracts; closure docs | A4-16 |
 
+## Closure Ledger — 2026-08-11
+
+“Source closed” means the broken invariant has an implementation and local
+regression evidence. It does not convert an unrun environment-dependent check
+into proof.
+
+| Findings | Source closure | Focused commits | Local evidence | Remaining release proof |
+| --- | --- | --- | --- | --- |
+| A4-01, A4-02 | Source closed | `96418a1`, `788e1ca`, `5c9eb8e` | Auth intent races, serialized atomic snapshot persistence/migration, immutable request snapshots, remote snapshot events, and durable sign-out tests. | Real two-window A→B/sign-out/takeover and live account-header precedence. |
+| A4-03 | Source closed | `136ae4d` | Last-known-good catalog retention test; validated REST/fallback and bounded GraphQL progress in source. | Live malformed/fallback behavior against current LeetCode schemas. |
+| A4-04, A4-05 | Source closed | `063dcd2` | Deterministic setting-transition and stale profile-generation tests. | Native Settings UI, profile panel, and real endpoint/account transitions. |
+| A4-06, A4-08 | Source closed | `197c0b4` | Raw partial-request shutdown bound; event-driven sign-in wait and transactional listener startup in source. Auth validation inherits the remaining request deadline. | Oldest supported VS Code/Node host, disconnected browser, and real owner handoff. |
+| A4-10 | Source closed | `f907801` | Browser VM harness verifies option rollback and failed sensitive Clear feedback. | Packaged Chrome/Firefox storage and permission failures. |
+| A4-07 | Source closed | `b547c62` | macOS external-symlink rejection and exclusive-write/no-replace tests; obsolete `useWsl` contract removed. | Windows junction, UNC, case normalization, and Remote WSL. |
+| A4-09, A4-11 | Source closed | `40317e8`, `9a7b446` | Marker ordering, bounded header ownership, newest-operation rendering, cancellable sleeps, and live local-socket Axios abort. Curl is killed from the same cancellation callback. | Live Test/Submit cancellation at each LeetCode judge stage. |
+| A4-12 | Source closed | `9c49a77` | Hidden explorer no longer fetches on auth status; first consumers share the cache. Supported/unknown highlighting tests pass. Package gate reports a 2.24 MiB bundle under a 3 MiB ceiling. | Native activation/request instrumentation. |
+| A4-13 | Source closed for production | `87169f0` | `sanitize-html@2.17.5`, `nanoid@3.3.17`, sanitizer suite, package build, and `npm audit --omit=dev` exit zero. | Five development-only advisory nodes remain under the maintainer-guide exception expiring 2026-09-30. |
+| A4-14, A4-15 | Source closed | `ce3cb6b` | CSS-context adversarial tests, nonce-backed inline styles, semantic profile status/tables, text problem states, reduced-motion rules, and deterministic browser button contrast checks. | Native screen reader, keyboard, high contrast, 200% zoom, narrow layout, and real-browser visual checks. |
+| A4-16 | Source closed | `02ef460` | Delete Cache effect and diagnostic redaction tests; Submission side mode and signed-out status text are implemented. | Native command/menu/panel interaction sweep. |
+
+Final local matrix after a clean `npm ci --ignore-scripts`:
+
+| Check | Result |
+| --- | --- |
+| `npm run compile` | Passed. |
+| `npm run lint` | Passed. |
+| `npm test` | Passed: 89 offline tests, browser DOM/syntax checks, and package verification. |
+| `npm audit --omit=dev` | Passed: zero vulnerabilities. |
+| `npm audit` | Expected exception: five high-severity development-only nodes (`web-ext`, `addons-linter`, `image-size`, `fast-uri`, `js-yaml`). |
+| `npm run auth-sync:lint:firefox` | Passed with two compatibility warnings and no errors. |
+| Chrome and Firefox package builds | Passed. |
+| Temporary VSIX build | Passed: 82 files, 1.35 MB archive, 2.24 MiB runtime bundle. |
+
 ## Final Verification Matrix
 
 Run after the relevant focused commit and again on the final integrated tree:
@@ -421,7 +460,8 @@ This audit was source-based plus deterministic local checks. It did not execute:
 - live verification of whether LeetCode prioritizes a replayed Authorization
   header or Cookie when they represent different accounts.
 
-The current browser gate syntax-checks scripts but does not exercise options or
-popup DOM behavior. Add that behavioral harness before treating A4-10 as closed.
-Every finding should remain open in this document until its regression proof,
-manual proof where required, and focused commit are recorded in a closure ledger.
+The browser gate now syntax-checks scripts and exercises option rollback,
+sensitive-clear failure, reduced-motion presence, and primary-button contrast in
+a VM DOM harness. It still does not replace a packaged install in Chrome or
+Firefox. The closure ledger therefore separates implemented/local proof from
+manual release proof instead of claiming those environments were exercised.

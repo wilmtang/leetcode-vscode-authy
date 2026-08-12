@@ -5,6 +5,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 ### Security
+- Made authentication one generation-owned, atomic keychain snapshot so stale
+  sign-ins, browser sync, sign-out, account rotation, and sibling windows cannot
+  expose a mixed credential/identity state.
+- Added bounded auth-sync request/shutdown lifecycles, physical solution-path
+  containment, exclusive no-clobber writes, cancellable judge transports, and
+  credential-redacting command diagnostics.
+- Nonced webview inline styles and serialized markdown font settings as CSS data
+  so workspace configuration cannot escape the style context.
 - Disabled command URIs in every webview and enabled JavaScript only in panels
   that require the extension's `postMessage` protocol.
 - Replaced regex-only remote-markup filtering with a parser-based HTML
@@ -18,13 +26,23 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   credential that has since rotated.
 - Constrain generated solution paths to the selected workspace and sanitize
   remote metadata used as filename segments.
-- Pass WSL path-conversion arguments directly to the process without invoking a
-  command shell.
 - Exclude local environment files and logs from VSIX packaging.
 - Updated runtime dependencies so `npm audit --omit=dev` reports zero
   vulnerabilities.
 
 ### Fixed
+- Preserve the last-known-good catalog on refresh/schema failures, bound fallback
+  pagination, coordinate configuration/profile generations, and show retry state.
+- Make browser settings and sensitive cleanup reflect storage failures instead
+  of reporting false success.
+- Scope editor commands and CodeLens to classified solution documents, match the
+  end marker after its start marker, and prevent stale Test/Submit results from
+  replacing the current panel.
+- Make Delete Cache refresh the real catalog, honor Submission side mode, show a
+  discoverable signed-out status item, and log redacted command failures before
+  offering the output channel.
+- Add text equivalents for explorer problem state, live/busy semantic profile
+  sections and tables, reduced-motion behavior, and AA browser button contrast.
 - Serialize browser/server auth-sync updates instead of dropping or racing a
   newer login, and add a browser-side request timeout plus callback error
   propagation.
@@ -41,9 +59,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   descriptions with its four values.
 
 ### Changed
+- Defer catalog loading until the explorer or a catalog consumer first needs it,
+  use selective Highlight.js/Lodash imports, and enforce a 3 MiB runtime-bundle
+  ceiling (2.24 MiB in the remediation verification build).
+- Removed the obsolete `leetcode.useWsl` direct-file-I/O setting; Remote WSL uses
+  its host-native paths and native Windows hosts keep Windows paths.
 - Bundle the VS Code runtime with esbuild and package only the KaTeX stylesheet
-  and fonts as external webview assets. The verified VSIX dropped from 3,721
-  files / 5.93 MB to 82 files / 1.68 MB.
+  and fonts as external webview assets. The verified VSIX is now 82 files / 1.35
+  MB, down from 3,721 files / 5.93 MB.
 - Extend `npm test` with a package-content contract that rejects bundled
   external npm imports, packaged `node_modules` or per-module compiler output,
   missing KaTeX assets, and unexpected file-count growth.

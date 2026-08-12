@@ -45,7 +45,8 @@ The published extension runtime is `out/extension.js`, produced by esbuild with
 `.vscodeignore` excludes `node_modules/` and TypeScript's per-module `out/src/`
 tree. `scripts/verify-vscode-package.js` fails if either tree re-enters the
 package, required KaTeX assets disappear, external npm imports remain in the
-bundle, or the prospective package grows beyond 150 extension files.
+bundle, the runtime bundle exceeds 3 MiB, or the prospective package grows
+beyond 150 extension files.
 
 `npm run test:integration` hits the live LeetCode API only when a local auth
 fixture exists. Without one, the live suite self-skips.
@@ -211,11 +212,42 @@ npm run auth-sync:build:chrome
 
 ## Audit Notes
 
-The active remediation plan is
+The implemented remediation plan is
 [Code, Performance, Engineering, and UX Audit Plan — 2026-08-11](plans/2026-08-11-code-performance-ux-audit-plan.md).
-It records 16 source-confirmed finding groups against `30154f3`, their execution
-order, deterministic regression requirements, intentional non-changes, and
-environment-dependent proof gaps. The audit changed no runtime code.
+It records 16 source-confirmed finding groups against `30154f3`, the focused
+implementation commits, local closure evidence, final verification matrix,
+intentional non-changes, and environment-dependent release proof gaps.
+
+The 2026-08-11 remediation establishes these current invariants:
+
+- authentication is a generation-owned, single-record SecretStorage snapshot;
+  explicit sign-out is durable and browser sync cannot silently undo it;
+- catalog/profile/configuration work retains last-known-good state and discards
+  stale generations;
+- auth listener, solution-file, and judge operations are bounded, physically
+  contained, no-clobber, account-revision-owned, and cancellable;
+- the catalog is lazy, the runtime bundle is 2.24 MiB with a 3 MiB gate, and
+  production dependency audit is clean;
+- webview inline styles are nonce-backed, markdown font settings are serialized
+  as CSS data, and problem/profile/browser state has non-color semantics;
+- public cache/status/side-mode contracts are effective and command failures use
+  a credential-redacting diagnostic path.
+
+### Development-only audit exception
+
+`npm audit --omit=dev` is required to exit zero. The full `npm audit` currently
+reports five high-severity development-only nodes and is accepted only through
+2026-09-30 (or the next release review, whichever comes first):
+
+| Path | Disposition |
+| --- | --- |
+| `web-ext` → `addons-linter` → `image-size` | Firefox lint/build tooling only. It processes repository-owned extension assets and is absent from the VSIX/browser runtime. The offered forced fix downgrades to breaking `web-ext@5.5.0`; re-evaluate upstream rather than silently downgrade. |
+| `fast-uri` via AJV in `web-ext` and VSIX secret-lint tooling | Developer validation/packaging only; no runtime dependency. Update when the toolchains accept a patched resolution. |
+| `js-yaml` via TSLint, Mocha, web-ext/ESLint, and VSIX tooling | Developer lint/test/package configuration only; no untrusted YAML is handled by the shipped extension. Remove the TSLint path during the already-planned lint migration and refresh upstream tools. |
+
+This exception is not a claim that the full graph is clean. A release review
+must rerun both audit commands and either remove the paths or renew the exception
+with current upstream/tool-compatibility evidence.
 
 The previous complete remediation review is
 [Full Code Audit — 2026-07-30](audits/2026-07-30-full-code-audit.md). It records
