@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import * as fse from "fs-extra";
-import * as _ from "lodash";
+import kebabCase = require("lodash/kebabCase");
 import * as path from "path";
 import { IProblem, langExt } from "../shared";
 
@@ -15,7 +15,7 @@ export function genFileExt(language: string): string {
 }
 
 export function genFileName(node: IProblem, language: string): string {
-    const slug: string = _.kebabCase(node.name);
+    const slug: string = kebabCase(node.name);
     const ext: string = genFileExt(language);
     return `${node.id}.${slug}.${ext}`;
 }

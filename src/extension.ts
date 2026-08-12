@@ -44,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         leetCodeManager.on("statusChanged", () => {
             void vscode.commands.executeCommand("setContext", "leetcode.signedIn", !!leetCodeManager.getUser());
             leetCodeStatusBarController.updateStatusBar(leetCodeManager.getStatus(), leetCodeManager.getUser());
-            leetCodeTreeDataProvider.refresh();
+            leetCodeTreeDataProvider.rerender();
         });
 
         // Refresh the status-bar tooltip and the open profile panel's Session
@@ -71,6 +71,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
         }));
 
+        const explorerView: vscode.TreeView<LeetCodeNode> = vscode.window.createTreeView("leetCodeExplorer", { treeDataProvider: leetCodeTreeDataProvider, showCollapseAll: true });
         context.subscriptions.push(
             leetCodeStatusBarController,
             leetCodeChannel,
@@ -82,7 +83,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             codeLensController,
             explorerNodeManager,
             vscode.window.registerFileDecorationProvider(leetCodeTreeItemDecorationProvider),
-            vscode.window.createTreeView("leetCodeExplorer", { treeDataProvider: leetCodeTreeDataProvider, showCollapseAll: true }),
+            explorerView,
+            explorerView.onDidChangeVisibility((event: vscode.TreeViewVisibilityChangeEvent) => {
+                if (event.visible) {
+                    void leetCodeTreeDataProvider.refresh(false);
+                }
+            }),
             vscode.commands.registerCommand("leetcode.deleteCache", () => cache.deleteCache()),
             vscode.commands.registerCommand("leetcode.toggleLeetCodeCn", () => plugin.switchEndpoint()),
             vscode.commands.registerCommand("leetcode.signin", () => leetCodeManager.signIn()),

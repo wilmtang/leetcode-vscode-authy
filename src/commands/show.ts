@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import * as fse from "fs-extra";
-import * as _ from "lodash";
+import camelCase = require("lodash/camelCase");
+import kebabCase = require("lodash/kebabCase");
+import snakeCase = require("lodash/snakeCase");
+import upperFirst = require("lodash/upperFirst");
 import * as path from "path";
 import * as vscode from "vscode";
 import { explorerNodeManager } from "../explorer/explorerNodeManager";
@@ -343,15 +346,15 @@ async function resolveRelativePath(relativePath: string, node: IProblem, selecte
             case "name":
                 return sanitizePathSegment(node.name);
             case "camelcasename":
-                return _.camelCase(node.name);
+                return camelCase(node.name);
             case "pascalcasename":
-                return _.upperFirst(_.camelCase(node.name));
+                return upperFirst(camelCase(node.name));
             case "kebabcasename":
             case "kebab-case-name":
-                return _.kebabCase(node.name);
+                return kebabCase(node.name);
             case "snakecasename":
             case "snake_case_name":
-                return _.snakeCase(node.name);
+                return snakeCase(node.name);
             case "ext":
                 return genFileExt(selectedLanguage);
             case "language":

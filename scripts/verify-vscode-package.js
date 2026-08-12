@@ -11,7 +11,10 @@ const packageJson = require(path.join(repoRoot, "package.json"));
 const bundlePath = path.join(repoRoot, packageJson.main);
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const maximumPublishedFiles = 150;
-const maximumBundleBytes = 6 * 1024 * 1024;
+// The selective Highlight.js/Lodash build is ~2.13 MiB. Keep a 0.87 MiB
+// tolerance for normal feature growth without permitting the former 3.8 MiB
+// root-distribution imports to return unnoticed.
+const maximumBundleBytes = 3 * 1024 * 1024;
 
 assertFile(bundlePath, "VS Code extension bundle");
 assertFile(path.join(repoRoot, "out", "katex", "katex.min.css"), "KaTeX stylesheet");

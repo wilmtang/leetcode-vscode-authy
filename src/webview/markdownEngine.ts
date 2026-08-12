@@ -1,7 +1,7 @@
 // Copyright (c) jdneo. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import hljs from "highlight.js";
+import { HLJSApi, LanguageFn } from "highlight.js";
 import MarkdownIt = require("markdown-it");
 import * as os from "os";
 import * as path from "path";
@@ -10,6 +10,42 @@ import { leetCodeChannel } from "../leetCodeChannel";
 import { isWindows } from "../utils/osUtils";
 
 type RenderRule = (tokens: any[], idx: number, options: any, env: any, self: any) => string;
+
+/* tslint:disable:no-var-requires */
+const hljs: HLJSApi = require("highlight.js/lib/core");
+const bash: LanguageFn = require("highlight.js/lib/languages/bash");
+const cpp: LanguageFn = require("highlight.js/lib/languages/cpp");
+const csharp: LanguageFn = require("highlight.js/lib/languages/csharp");
+const go: LanguageFn = require("highlight.js/lib/languages/go");
+const java: LanguageFn = require("highlight.js/lib/languages/java");
+const javascript: LanguageFn = require("highlight.js/lib/languages/javascript");
+const json: LanguageFn = require("highlight.js/lib/languages/json");
+const kotlin: LanguageFn = require("highlight.js/lib/languages/kotlin");
+const php: LanguageFn = require("highlight.js/lib/languages/php");
+const python: LanguageFn = require("highlight.js/lib/languages/python");
+const ruby: LanguageFn = require("highlight.js/lib/languages/ruby");
+const rust: LanguageFn = require("highlight.js/lib/languages/rust");
+const sql: LanguageFn = require("highlight.js/lib/languages/sql");
+const swift: LanguageFn = require("highlight.js/lib/languages/swift");
+const typescript: LanguageFn = require("highlight.js/lib/languages/typescript");
+/* tslint:enable:no-var-requires */
+
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("c", cpp);
+hljs.registerLanguage("cpp", cpp);
+hljs.registerLanguage("csharp", csharp);
+hljs.registerLanguage("go", go);
+hljs.registerLanguage("java", java);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("kotlin", kotlin);
+hljs.registerLanguage("php", php);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("ruby", ruby);
+hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("swift", swift);
+hljs.registerLanguage("typescript", typescript);
 
 class MarkdownEngine implements vscode.Disposable {
 

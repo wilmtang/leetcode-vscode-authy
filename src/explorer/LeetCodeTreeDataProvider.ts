@@ -31,6 +31,10 @@ export class LeetCodeTreeDataProvider implements vscode.TreeDataProvider<LeetCod
         this.onDidChangeTreeDataEvent.fire(null);
     }
 
+    public rerender(): void {
+        this.onDidChangeTreeDataEvent.fire(null);
+    }
+
     public getTreeItem(element: LeetCodeNode): vscode.TreeItem | Thenable<vscode.TreeItem> {
         if (element.id === "notSignIn") {
             return {
