@@ -1,7 +1,7 @@
 // Copyright (c) jdneo. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { ViewColumn } from "vscode";
+import { ViewColumn, workspace } from "vscode";
 import { openKeybindingsEditor, promptHintMessage } from "../utils/uiUtils";
 import { ILeetCodeWebviewOption, LeetCodeWebview } from "./LeetCodeWebview";
 import { markdownEngine } from "./markdownEngine";
@@ -11,17 +11,19 @@ class LeetCodeSubmissionProvider extends LeetCodeWebview {
 
     protected readonly viewType: string = "leetcode.submission";
     private result: IResult;
+    private panelTitle: string = "Submission";
 
-    public show(resultString: string): void {
+    public show(resultString: string, title: string): void {
         this.result = this.parseResult(resultString);
+        this.panelTitle = title;
         this.showWebviewInternal();
         this.showKeybindingsHint();
     }
 
     protected getWebviewOption(): ILeetCodeWebviewOption {
         return {
-            title: "Submission",
-            viewColumn: ViewColumn.Two,
+            title: this.panelTitle,
+            viewColumn: workspace.getConfiguration("leetcode").get<boolean>("enableSideMode", true) ? ViewColumn.Two : ViewColumn.One,
         };
     }
 

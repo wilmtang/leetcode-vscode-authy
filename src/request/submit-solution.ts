@@ -22,7 +22,7 @@ interface ISubmitTask {
     submission_id?: number;
 }
 
-export async function submitSolutionWithSyncedCookie(filePath: string): Promise<string> {
+export async function submitSolutionWithSyncedCookie(filePath: string, isCancelled?: () => boolean): Promise<string> {
     const auth: IAuthSessionSnapshot | undefined = globalState.getAuthSession();
     if (!auth || auth.state !== "signed-in" || !auth.cookie) {
         throw new DirectApiUnsupportedError("No synced LeetCode cookie is available.");
@@ -39,13 +39,13 @@ export async function submitSolutionWithSyncedCookie(filePath: string): Promise<
 
     assertCurrentAuth(auth);
     leetCodeChannel.appendLine("[submit] Sending solution to LeetCode");
-    const task: ISubmitTask = await submitCode(meta, question, cookie, referer, headerOverrides, auth);
+    const task: ISubmitTask = await submitCode(meta, question, cookie, referer, headerOverrides, auth, isCancelled);
     if (!task.submission_id) {
         throw new Error("LeetCode did not return a submission id.");
     }
 
     leetCodeChannel.appendLine("[submit] Waiting for judge result");
-    const result: ICheckResult = await verifyResult(String(task.submission_id), cookie, referer, headerOverrides);
+    const result: ICheckResult = await verifyResult(String(task.submission_id), cookie, referer, headerOverrides, isCancelled);
 
     return formatSubmitResult(result);
 }
@@ -57,11 +57,13 @@ async function submitCode(
     referer: string,
     headerOverrides: IHeaderOverrides,
     auth: IAuthSessionSnapshot,
+    isCancelled?: () => boolean,
 ): Promise<ISubmitTask> {
     const url: string = `${getUrl("base")}/problems/${meta.slug}/submit/`;
     let delaySeconds: number = 1;
 
     for (let attempt: number = 0; attempt < MAX_SUBMIT_ATTEMPTS; attempt++) {
+        if (isCancelled && isCancelled()) { throw new Error("Operation cancelled."); }
         assertCurrentAuth(auth);
         const task: ISubmitTask = await requestJson<ISubmitTask>({
             method: "POST",
@@ -72,7 +74,7 @@ async function submitCode(
                 question_id: question.questionId,
                 typed_code: meta.code,
             },
-        }, { label: "submit enqueue", logMode: true });
+        }, { label: "submit enqueue", logMode: true, isCancelled });
 
         if (!task.error) {
             return task;

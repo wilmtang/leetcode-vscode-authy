@@ -39,7 +39,7 @@ interface ICaseResult {
     stdout: string;
 }
 
-export async function testSolutionWithSyncedCookie(filePath: string, testString?: string): Promise<string> {
+export async function testSolutionWithSyncedCookie(filePath: string, testString?: string, isCancelled?: () => boolean): Promise<string> {
     const auth: IAuthSessionSnapshot | undefined = globalState.getAuthSession();
     if (!auth || auth.state !== "signed-in" || !auth.cookie) {
         throw new DirectApiUnsupportedError("No synced LeetCode cookie is available.");
@@ -66,15 +66,15 @@ export async function testSolutionWithSyncedCookie(filePath: string, testString?
 
     leetCodeChannel.appendLine("Sending code to judge");
     assertCurrentAuth(auth);
-    const task: IRunCodeTask = await runCode(meta, question, testcase, cookie, referer, headerOverrides, auth);
+    const task: IRunCodeTask = await runCode(meta, question, testcase, cookie, referer, headerOverrides, auth, isCancelled);
     if (!task.interpret_id) {
         throw new Error("LeetCode did not return an interpret id.");
     }
 
     leetCodeChannel.appendLine("Waiting for judge result");
-    const actual: ICheckResult = await verifyResult(task.interpret_id, cookie, referer, headerOverrides);
+    const actual: ICheckResult = await verifyResult(task.interpret_id, cookie, referer, headerOverrides, isCancelled);
     const expected: ICheckResult | undefined = task.interpret_expected_id
-        ? await verifyResult(task.interpret_expected_id, cookie, referer, headerOverrides)
+        ? await verifyResult(task.interpret_expected_id, cookie, referer, headerOverrides, isCancelled)
         : undefined;
 
     return formatTestResult(actual, expected, testcase, testcaseList);
@@ -88,11 +88,13 @@ async function runCode(
     referer: string,
     headerOverrides: IHeaderOverrides,
     auth: IAuthSessionSnapshot,
+    isCancelled?: () => boolean,
 ): Promise<IRunCodeTask> {
     const url: string = `${getUrl("base")}/problems/${meta.slug}/interpret_solution/`;
     let delaySeconds: number = 1;
 
     for (let attempt: number = 0; attempt < 5; attempt++) {
+        if (isCancelled && isCancelled()) { throw new Error("Operation cancelled."); }
         assertCurrentAuth(auth);
         const task: IRunCodeTask = await requestJson<IRunCodeTask>({
             method: "POST",
@@ -104,7 +106,7 @@ async function runCode(
                 question_id: question.questionId,
                 typed_code: meta.code,
             },
-        }, { label: "run-code enqueue", logMode: true });
+        }, { label: "run-code enqueue", logMode: true, isCancelled });
 
         if (!task.error) {
             return task;

@@ -11,13 +11,14 @@ import { DialogType, promptForOpenOutputChannel, showFileSelectDialog } from "..
 import { getActiveFilePath } from "../utils/workspaceUtils";
 import { decodeInlineTestcase } from "../utils/testcaseUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
+import { judgeOperationCoordinator } from "./judgeOperationCoordinator";
 
-function runTest(filePath: string, testString?: string): Thenable<string> {
+function runTest(filePath: string, operationId: number, testString?: string): Thenable<string> {
     return vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification },
-        async (p: vscode.Progress<{ message?: string }>) => {
-            p.report({ message: "Submitting to LeetCode..." });
-            return testSolutionWithSyncedCookie(filePath, testString);
+        { location: vscode.ProgressLocation.Notification, cancellable: true },
+        async (p: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => {
+            p.report({ message: "Testing on LeetCode..." });
+            return testSolutionWithSyncedCookie(filePath, testString, () => token.isCancellationRequested || !judgeOperationCoordinator.isCurrent(operationId));
         },
     );
 }
@@ -25,6 +26,7 @@ function runTest(filePath: string, testString?: string): Thenable<string> {
 export async function testSolution(uri?: vscode.Uri): Promise<void> {
     try {
         if (leetCodeManager.getStatus() === UserStatus.SignedOut) {
+            await promptForOpenOutputChannel("Sign in to LeetCode before testing a solution.", DialogType.error);
             return;
         }
 
@@ -59,9 +61,10 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
         }
 
         let result: string | undefined;
+        const operationId: number = judgeOperationCoordinator.begin();
         switch (choice.value) {
             case ":default":
-                result = await runTest(filePath);
+                result = await runTest(filePath, operationId);
                 break;
             case ":direct":
                 const testString: string | undefined = await vscode.window.showInputBox({
@@ -71,7 +74,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
                     ignoreFocusOut: true,
                 });
                 if (testString) {
-                    result = await runTest(filePath, decodeInlineTestcase(testString));
+                    result = await runTest(filePath, operationId, decodeInlineTestcase(testString));
                 }
                 break;
             case ":file":
@@ -79,7 +82,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
                 if (testFile && testFile.length) {
                     const input: string = (await fse.readFile(testFile[0].fsPath, "utf-8")).trim();
                     if (input) {
-                        result = await runTest(filePath, input);
+                        result = await runTest(filePath, operationId, input);
                     } else {
                         vscode.window.showErrorMessage("The selected test file must not be empty.");
                     }
@@ -91,7 +94,9 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
         if (!result) {
             return;
         }
-        leetCodeSubmissionProvider.show(result);
+        if (judgeOperationCoordinator.isCurrent(operationId)) {
+            leetCodeSubmissionProvider.show(result, "Test Result");
+        }
     } catch (error) {
         leetCodeChannel.appendLine(error.toString());
         await promptForOpenOutputChannel("Failed to test the solution. Please open the output channel for details.", DialogType.error);

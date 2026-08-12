@@ -270,18 +270,19 @@
             "explorer/context": [
                 {
                     "command": "leetcode.testSolution",
-                    "when": "explorerResourceIsFolder == false",
+                    "when": "explorerResourceIsFolder == false && leetcode.signedIn",
                     "group": "leetcode@1"
                 },
                 {
                     "command": "leetcode.submitSolution",
-                    "when": "explorerResourceIsFolder == false",
+                    "when": "explorerResourceIsFolder == false && leetcode.signedIn",
                     "group": "leetcode@2"
                 }
             ],
             "editor/context": [
                 {
-                    "submenu": "leetcode.editorAction"
+                    "submenu": "leetcode.editorAction",
+                    "when": "leetcode.signedIn && leetcode.isSolutionFile"
                 }
             ],
             "leetcode.editorAction": [

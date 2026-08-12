@@ -6,6 +6,7 @@ import { globalState, IBrowserRequestHeaders } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { getUrl } from "../shared";
 import { sleep } from "../utils/toolUtils";
+import { classifySolutionDocument, extractSolutionCode } from "../utils/solutionDocument";
 
 const MAX_VERIFY_ATTEMPTS: number = 60;
 const CURL_STATUS_MARKER: string = "\n__LEETCODE_HTTP_STATUS__:";
@@ -85,6 +86,7 @@ export interface ICheckResult {
 export interface IRequestContext {
     label: string;
     logMode?: boolean;
+    isCancelled?: () => boolean;
 }
 
 export interface IHeaderOverrides {
@@ -103,20 +105,20 @@ interface ICurlResponse {
 
 export async function parseSolutionFile(filePath: string): Promise<ISolutionFileMeta> {
     const content: string = await fse.readFile(filePath, "utf8");
-    const metaMatch: RegExpMatchArray | null = content.match(/@lc\s+app=\S+\s+id=(\S+)\s+lang=(\S+)/);
-    if (!metaMatch) {
+    const classification = classifySolutionDocument(content);
+    if (!classification.frontendId || !classification.language) {
         throw new DirectApiUnsupportedError("Cannot find LeetCode metadata in the solution file.");
     }
 
-    const slug: string = parseSlug(content, filePath, metaMatch[1]);
+    const slug: string = parseSlug(content, filePath, classification.frontendId);
     if (!slug) {
         throw new DirectApiUnsupportedError("Cannot infer the LeetCode problem slug from the solution file.");
     }
 
     return {
-        code: parseCode(content),
-        frontendId: metaMatch[1],
-        lang: metaMatch[2],
+        code: extractSolutionCode(content),
+        frontendId: classification.frontendId,
+        lang: classification.language,
         slug,
     };
 }
@@ -134,17 +136,6 @@ function parseSlug(content: string, filePath: string, frontendId: string): strin
     }
 
     return "";
-}
-
-function parseCode(content: string): string {
-    const lines: string[] = content.split(/\r\n|\n|\r/);
-    const start: number = lines.findIndex((line: string) => line.indexOf("@lc code=start") >= 0);
-    const end: number = lines.findIndex((line: string) => line.indexOf("@lc code=end") >= 0);
-    if (start >= 0 && end >= 0 && start + 1 <= end) {
-        return lines.slice(start + 1, end).join("\n");
-    }
-
-    return content;
 }
 
 // ---------------------------------------------------------------------------
@@ -190,19 +181,21 @@ export async function getQuestionDetail(slug: string, cookie: string, referer: s
 // Result polling
 // ---------------------------------------------------------------------------
 
-export async function verifyResult(id: string, cookie: string, referer: string, overrides?: IHeaderOverrides): Promise<ICheckResult> {
+export async function verifyResult(id: string, cookie: string, referer: string, overrides?: IHeaderOverrides, isCancelled?: () => boolean): Promise<ICheckResult> {
     const url: string = `${getUrl("base")}/submissions/detail/${id}/check/`;
     for (let attempt: number = 0; attempt < MAX_VERIFY_ATTEMPTS; attempt++) {
+        throwIfCancelled(isCancelled);
         const result: ICheckResult = await requestJson<ICheckResult>({
             method: "GET",
             url,
             headers: createHeaders(cookie, referer, overrides),
-        }, { label: "judge result poll" });
+        }, { label: "judge result poll", isCancelled });
         if (result.state === "SUCCESS") {
             return result;
         }
 
         await sleep(1000);
+        throwIfCancelled(isCancelled);
     }
 
     throw new Error("Timed out waiting for LeetCode judge result.");
@@ -213,6 +206,7 @@ export async function verifyResult(id: string, cookie: string, referer: string, 
 // ---------------------------------------------------------------------------
 
 export async function requestJson<T>(config: AxiosRequestConfig, context: IRequestContext): Promise<T> {
+    throwIfCancelled(context.isCancelled);
     if (context.logMode) {
         leetCodeChannel.appendLine(`[http] Request mode: node/axios (${context.label}).`);
     }
@@ -258,7 +252,14 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
         leetCodeChannel.appendLine(`[http] node/axios request succeeded (${context.label}).`);
     }
 
+    throwIfCancelled(context.isCancelled);
     return response.data;
+}
+
+function throwIfCancelled(isCancelled?: () => boolean): void {
+    if (isCancelled && isCancelled()) {
+        throw new Error("Operation cancelled.");
+    }
 }
 
 async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequestContext): Promise<T> {
@@ -287,6 +288,7 @@ async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequ
 
     try {
         const data: T = JSON.parse(response.body) as T;
+        throwIfCancelled(context.isCancelled);
         if (context.logMode) {
             leetCodeChannel.appendLine(`[http] curl request succeeded (${context.label}).`);
         }

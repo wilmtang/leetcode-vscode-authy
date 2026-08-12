@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import { explorerNodeManager } from "../explorer/explorerNodeManager";
 import { LeetCodeNode } from "../explorer/LeetCodeNode";
 import { getEditorShortcuts } from "../utils/settingUtils";
+import { classifySolutionDocument, MAX_SOLUTION_HEADER_LINES } from "../utils/solutionDocument";
 
 export class CustomCodeLensProvider implements vscode.CodeLensProvider {
 
@@ -24,12 +25,13 @@ export class CustomCodeLensProvider implements vscode.CodeLensProvider {
             return;
         }
 
-        const content: string = document.getText();
-        const matchResult: RegExpMatchArray | null = content.match(/@lc app=.* id=(.*) lang=.*/);
-        if (!matchResult) {
+        const headerEnd: number = Math.min(document.lineCount, MAX_SOLUTION_HEADER_LINES);
+        const content: string = Array.from({ length: headerEnd }, (_: unknown, index: number) => document.lineAt(index).text).join("\n");
+        const classification = classifySolutionDocument(content);
+        if (!classification.frontendId) {
             return undefined;
         }
-        const nodeId: string | undefined = matchResult[1];
+        const nodeId: string | undefined = classification.frontendId;
         let node: LeetCodeNode | undefined;
         if (nodeId) {
             node = explorerNodeManager.getNodeById(nodeId);

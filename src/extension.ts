@@ -34,6 +34,7 @@ import { markdownEngine } from "./webview/markdownEngine";
 import TrackData from "./utils/trackingUtils";
 import { globalState } from "./globalState";
 import { getConfigurationTransition } from "./configurationCoordinator";
+import { classifySolutionDocument, MAX_SOLUTION_HEADER_LINES } from "./utils/solutionDocument";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     try {
@@ -41,6 +42,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // meetRequirements() gate and no CLI endpoint toggle. The active endpoint
         // is resolved purely from the `leetcode.endpoint` setting via getUrl().
         leetCodeManager.on("statusChanged", () => {
+            void vscode.commands.executeCommand("setContext", "leetcode.signedIn", !!leetCodeManager.getUser());
             leetCodeStatusBarController.updateStatusBar(leetCodeManager.getStatus(), leetCodeManager.getUser());
             leetCodeTreeDataProvider.refresh();
         });
@@ -135,16 +137,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 }
                 void handleLeetCodeConfigurationChange(event);
             }),
+            vscode.window.onDidChangeActiveTextEditor((editor: vscode.TextEditor | undefined) => updateSolutionFileContext(editor)),
+            vscode.workspace.onDidSaveTextDocument((document: vscode.TextDocument) => {
+                if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document === document) {
+                    void updateSolutionFileContext(vscode.window.activeTextEditor);
+                }
+            }),
             authSyncServer
         );
 
         await leetCodeManager.getLoginStatus();
+        await vscode.commands.executeCommand("setContext", "leetcode.signedIn", !!leetCodeManager.getUser());
+        await updateSolutionFileContext(vscode.window.activeTextEditor);
         context.subscriptions.push(vscode.window.registerUriHandler({ handleUri: leetCodeManager.handleUriSignIn }));
         await startAuthSyncServer();
     } catch (error) {
         leetCodeChannel.appendLine(error.toString());
         promptForOpenOutputChannel("Extension initialization failed. Please open output channel for details.", DialogType.error);
     }
+}
+
+async function updateSolutionFileContext(editor: vscode.TextEditor | undefined): Promise<void> {
+    if (!editor || editor.document.uri.scheme !== "file") {
+        await vscode.commands.executeCommand("setContext", "leetcode.isSolutionFile", false);
+        return;
+    }
+    const count: number = Math.min(editor.document.lineCount, MAX_SOLUTION_HEADER_LINES);
+    const header: string = Array.from({ length: count }, (_: unknown, index: number) => editor.document.lineAt(index).text).join("\n");
+    await vscode.commands.executeCommand("setContext", "leetcode.isSolutionFile", !!classifySolutionDocument(header).frontendId);
 }
 
 async function handleLeetCodeConfigurationChange(event: vscode.ConfigurationChangeEvent): Promise<void> {
