@@ -807,9 +807,10 @@
         "katex": "^0.16.47",
         "lodash": "^4.18.1",
         "markdown-it": "^14.3.0",
-        "sanitize-html": "2.16.0"
+        "sanitize-html": "2.17.5"
     },
     "overrides": {
+        "nanoid": "3.3.17",
         "firefox-profile": {
             "adm-zip": "0.6.0"
         },
