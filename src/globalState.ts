@@ -259,7 +259,7 @@ class GlobalState {
         const normalized: IAuthSessionSnapshot = this.normalizeAuthSession({
             ...snapshot,
             version: 1,
-            revision: snapshot.revision > 0 ? snapshot.revision : this.nextRevision(),
+            revision: Math.max(snapshot.revision, this.nextRevision()),
         });
         const serialized: string = JSON.stringify(normalized);
         ++this.hydrationGeneration;

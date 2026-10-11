@@ -79,6 +79,26 @@ function context(memento: TestMemento, secrets: TestSecretStorage): vscode.Exten
 }
 
 describe("atomic auth session storage", () => {
+    it("assigns increasing revisions at the serialized write boundary", async () => {
+        const secrets = new TestSecretStorage();
+        await globalState.initialize(context(new TestMemento(), secrets));
+        const oldNow = Date.now;
+        const oldRandom = Math.random;
+        const fractions = [0.8, 0.2];
+        Date.now = () => 1000;
+        Math.random = () => fractions.shift() || 0.1;
+        try {
+            const [first, second] = await Promise.all([
+                globalState.setSignedInSession("synthetic-a", identity),
+                globalState.setSignedInSession("synthetic-b", identity),
+            ]);
+            assert.ok(second.revision > first.revision);
+            assert.strictEqual(globalState.getCookie(), "synthetic-b");
+        } finally {
+            Date.now = oldNow;
+            Math.random = oldRandom;
+        }
+    });
     it("does not resurrect a read captured before a durable sign-out", async () => {
         const secrets = new TestSecretStorage();
         await globalState.initialize(context(new TestMemento(), secrets));
