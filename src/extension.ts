@@ -61,8 +61,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // hydrates the keychain-backed cookie/header cache (and migrates any legacy
         // plaintext credentials) that getCookie()/createHeaders() read synchronously.
         await globalState.initialize(context);
+        let explorerView: vscode.TreeView<LeetCodeNode>;
         context.subscriptions.push(globalState.onDidChangeAuthSession((snapshot) => {
             leetCodeManager.reconcileAuthSession(snapshot);
+            explorerNodeManager.invalidate();
+            if (explorerView && explorerView.visible) {
+                void leetCodeTreeDataProvider.refresh(false);
+            }
             if (snapshot.state === "signed-out") {
                 profile.invalidateProfileRequests();
                 leetCodeProfileProvider.showSignedOut();
@@ -71,7 +76,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
         }));
 
-        const explorerView: vscode.TreeView<LeetCodeNode> = vscode.window.createTreeView("leetCodeExplorer", { treeDataProvider: leetCodeTreeDataProvider, showCollapseAll: true });
+        explorerView = vscode.window.createTreeView("leetCodeExplorer", { treeDataProvider: leetCodeTreeDataProvider, showCollapseAll: true });
         context.subscriptions.push(
             leetCodeStatusBarController,
             leetCodeChannel,

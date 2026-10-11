@@ -8,6 +8,8 @@ import { getSortingStrategy } from "../commands/plugin";
 import { Category, defaultProblem, IProblem, ProblemState, SortingStrategy } from "../shared";
 import { shouldHideSolvedProblem } from "../utils/settingUtils";
 import { LeetCodeNode } from "./LeetCodeNode";
+import { globalState } from "../globalState";
+import { getUrl } from "../shared";
 
 export class ExplorerNodeManager implements Disposable {
     private explorerNodeMap: Map<string, LeetCodeNode> = new Map<string, LeetCodeNode>();
@@ -19,12 +21,19 @@ export class ExplorerNodeManager implements Disposable {
     private fetchInFlight: Promise<void> | undefined;
     private refetchAfterCurrent: boolean = false;
     private catalogError: Error | undefined;
+    private generation: number = 0;
+    private owner: string | undefined;
 
     public constructor(private readonly problemLoader: () => Promise<list.CatalogLoadResult> = list.listProblems) { }
 
     // `force` re-fetches the catalog from the API; otherwise the trees are
     // rebuilt from the cached catalog (or fetched once if the cache is empty).
     public async refreshCache(force: boolean = true): Promise<void> {
+        const owner = this.currentOwner();
+        if (this.owner !== owner) {
+            this.invalidate();
+            this.owner = owner;
+        }
         if (force || !this.cachedProblems) {
             await this.fetchProblems(force);
         }
@@ -44,6 +53,9 @@ export class ExplorerNodeManager implements Disposable {
     }
 
     public invalidate(): void {
+        ++this.generation;
+        this.fetchInFlight = undefined;
+        this.refetchAfterCurrent = false;
         this.cachedProblems = undefined;
         this.catalogError = undefined;
         this.rebuild();
@@ -71,10 +83,15 @@ export class ExplorerNodeManager implements Disposable {
             return;
         }
 
+        const generation = this.generation;
+        const owner = this.currentOwner();
         const operation: Promise<void> = (async (): Promise<void> => {
             do {
                 this.refetchAfterCurrent = false;
                 const result: list.CatalogLoadResult = await this.problemLoader();
+                if (generation !== this.generation || owner !== this.currentOwner()) {
+                    return;
+                }
                 if (result.kind === "success") {
                     this.cachedProblems = result.problems;
                     this.catalogError = undefined;
@@ -96,6 +113,11 @@ export class ExplorerNodeManager implements Disposable {
                 this.fetchInFlight = undefined;
             }
         }
+    }
+
+    private currentOwner(): string {
+        const snapshot = globalState.getAuthSession();
+        return `${snapshot && snapshot.revision}|${getUrl("base")}`;
     }
 
     private rebuild(): void {
@@ -235,6 +257,7 @@ export class ExplorerNodeManager implements Disposable {
     }
 
     public dispose(): void {
+        this.invalidate();
         this.explorerNodeMap.clear();
         this.companySet.clear();
         this.tagSet.clear();

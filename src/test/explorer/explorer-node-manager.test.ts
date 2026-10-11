@@ -17,6 +17,20 @@ function problem(id: string): IProblem {
 }
 
 describe("ExplorerNodeManager refresh concurrency", () => {
+    it("discards invalidated completions without blocking the new owner's fetch", async () => {
+        const resolvers: Array<(value: CatalogLoadResult) => void> = [];
+        const manager = new ExplorerNodeManager(() => new Promise((resolve) => resolvers.push(resolve)));
+        const old = manager.refreshCache();
+        manager.invalidate();
+        const current = manager.refreshCache(false);
+        assert.strictEqual(resolvers.length, 2);
+        resolvers[1]({ kind: "success", problems: [problem("2")] });
+        await current;
+        resolvers[0]({ kind: "success", problems: [problem("1")] });
+        await old;
+        assert.strictEqual(manager.getNodeById("1"), undefined);
+        assert.ok(manager.getNodeById("2"));
+    });
     it("does not lose a forced refresh that arrives during an older fetch", async () => {
         const resolvers: Array<(problems: IProblem[]) => void> = [];
         const manager: ExplorerNodeManager = new ExplorerNodeManager(() => new Promise<CatalogLoadResult>((resolve) => {
