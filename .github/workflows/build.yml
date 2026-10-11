@@ -26,11 +26,24 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Production dependency audit
+        run: npm run audit:production
+
       - name: Test
         run: npm test
 
       - name: VSCE Package
         run: npm run build
+
+      - name: Build minimum-runtime smoke fixture
+        run: npm run test:runtime:build
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 14.21.3
+
+      - name: Packaged Node 14 runtime smoke
+        run: node scripts/run-runtime-smoke.cjs 14
 
   windows:
     name: Windows

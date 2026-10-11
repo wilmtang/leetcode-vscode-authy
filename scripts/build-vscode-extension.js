@@ -22,6 +22,8 @@ esbuild.buildSync({
     platform: "node",
     format: "cjs",
     target: "node14",
+    define: { "Object.hasOwn": "bundledHasOwn" },
+    inject: [path.join(repoRoot, "src", "runtimeCompat.ts")],
     external: ["vscode"],
     sourcemap: false,
     minify: false,
