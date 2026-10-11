@@ -81,7 +81,6 @@ class GlobalState {
         this.context = context;
         this._state = this.context.globalState;
         await this.migrateAuthSession();
-        await this.hydrateAuthSessionCache(false);
         // A sibling VS Code window (or an external keychain edit) can rotate the
         // synced cookie; re-hydrate so this window's cache never serves a stale
         // credential after another window re-syncs. (Replaces the implicit
@@ -97,6 +96,7 @@ class GlobalState {
                 }
             }),
         );
+        await this.hydrateAuthSessionCache(false);
     }
 
     public async setCookie(cookie: string): Promise<void> {
@@ -141,6 +141,7 @@ class GlobalState {
         identity: UserDataType,
         browserUserAgent?: string,
         browserRequestHeaders?: IBrowserRequestHeaders,
+        assertCanWrite?: () => void,
     ): Promise<IAuthSessionSnapshot> {
         return this.persistAuthSession({
             version: 1,
@@ -151,13 +152,14 @@ class GlobalState {
             browserUserAgent,
             browserRequestHeaders,
             identity,
-        });
+        }, assertCanWrite);
     }
 
     public async updateSignedInSession(
         cookie: string,
         browserUserAgent?: string,
         browserRequestHeaders?: IBrowserRequestHeaders,
+        assertCanWrite?: () => void,
     ): Promise<IAuthSessionSnapshot> {
         const current: IAuthSessionSnapshot | undefined = this.getAuthSession();
         if (!current || current.state !== "signed-in" || !current.identity) {
@@ -179,6 +181,7 @@ class GlobalState {
             current.identity,
             nextUserAgent,
             nextHeaders,
+            assertCanWrite,
         );
     }
 
@@ -243,8 +246,11 @@ class GlobalState {
         });
     }
 
-    private persistAuthSession(snapshot: IAuthSessionSnapshot): Promise<IAuthSessionSnapshot> {
-        const operation = this.writeTail.then(() => this.writeAuthSession(snapshot));
+    private persistAuthSession(snapshot: IAuthSessionSnapshot, assertCanWrite?: () => void): Promise<IAuthSessionSnapshot> {
+        const operation = this.writeTail.then(() => {
+            if (assertCanWrite) { assertCanWrite(); }
+            return this.writeAuthSession(snapshot);
+        });
         this.writeTail = operation.then(() => undefined, () => undefined);
         return operation;
     }
@@ -293,7 +299,7 @@ class GlobalState {
         this.authSessionCache = next;
         if (notify && previous !== (next && JSON.stringify(next))) {
             const notification = next || { version: 1 as const, revision: this.nextRevision(), state: "signed-out" as const, intentionalSignOut: false };
-            this.authSessionChangedEmitter.fire({ ...this.cloneAuthSession(notification), source: raw === localRecord ? "local" : "remote" });
+            this.authSessionChangedEmitter.fire({ ...this.cloneAuthSession(notification), source: localRecord !== undefined && raw === localRecord ? "local" : "remote" });
         }
     }
 

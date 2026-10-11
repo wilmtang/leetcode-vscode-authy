@@ -1,6 +1,6 @@
 import { globalState, IAuthSessionSnapshot } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
-import { getUrl } from "../shared";
+import { captureAuthRequest } from "./authRequest";
 import { sleep } from "../utils/toolUtils";
 import {
     createHeaders,
@@ -13,6 +13,7 @@ import {
     ISolutionFileMeta,
     IQuestionDetail,
     IHeaderOverrides,
+    throwIfCancelled,
 } from "./leetcode-http";
 
 const MAX_SUBMIT_ATTEMPTS: number = 5;
@@ -23,19 +24,19 @@ interface ISubmitTask {
 }
 
 export async function submitSolutionWithSyncedCookie(filePath: string, isCancelled?: () => boolean): Promise<string> {
-    const auth: IAuthSessionSnapshot | undefined = globalState.getAuthSession();
-    if (!auth || auth.state !== "signed-in" || !auth.cookie) {
-        throw new DirectApiUnsupportedError("No synced LeetCode cookie is available.");
-    }
-    const cookie: string = auth.cookie;
+    const owner = captureAuthRequest(isCancelled);
+    owner.assertCurrent();
+    isCancelled = owner.isCancelled;
+    const auth = owner.auth;
+    const cookie: string = owner.cookie;
     const headerOverrides: IHeaderOverrides = {
         browserUserAgent: auth.browserUserAgent,
         browserRequestHeaders: auth.browserRequestHeaders,
     };
 
     const meta: ISolutionFileMeta = await parseSolutionFile(filePath);
-    const referer: string = `${getUrl("base")}/problems/${meta.slug}/`;
-    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides);
+    const referer: string = `${owner.base}/problems/${meta.slug}/`;
+    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides, isCancelled, owner.graphql);
 
     assertCurrentAuth(auth);
     leetCodeChannel.appendLine("[submit] Sending solution to LeetCode");
@@ -45,7 +46,8 @@ export async function submitSolutionWithSyncedCookie(filePath: string, isCancell
     }
 
     leetCodeChannel.appendLine("[submit] Waiting for judge result");
-    const result: ICheckResult = await verifyResult(String(task.submission_id), cookie, referer, headerOverrides, isCancelled);
+    const result: ICheckResult = await verifyResult(String(task.submission_id), cookie, referer, headerOverrides, isCancelled, owner.base);
+    owner.assertCurrent();
 
     return formatSubmitResult(result);
 }
@@ -59,11 +61,11 @@ async function submitCode(
     auth: IAuthSessionSnapshot,
     isCancelled?: () => boolean,
 ): Promise<ISubmitTask> {
-    const url: string = `${getUrl("base")}/problems/${meta.slug}/submit/`;
+    const url: string = `${new URL(referer).origin}/problems/${meta.slug}/submit/`;
     let delaySeconds: number = 1;
 
     for (let attempt: number = 0; attempt < MAX_SUBMIT_ATTEMPTS; attempt++) {
-        if (isCancelled && isCancelled()) { throw new Error("Operation cancelled."); }
+        throwIfCancelled(isCancelled);
         assertCurrentAuth(auth);
         const task: ISubmitTask = await requestJson<ISubmitTask>({
             method: "POST",

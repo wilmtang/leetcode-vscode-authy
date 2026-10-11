@@ -47,6 +47,9 @@ export function redactDiagnostic(error: unknown): string {
 }
 
 export async function reportCommandError(operation: string, error: unknown, userMessage?: string): Promise<void> {
+    if (error instanceof Error && error.name === "OperationCancelledError") {
+        return;
+    }
     leetCodeChannel.appendLine(`[${operation}] ${redactDiagnostic(error)}`);
     await promptForOpenOutputChannel(
         userMessage || `${operation} failed. Please open the output channel for details.`,

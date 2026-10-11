@@ -1,7 +1,7 @@
 export function sleep(ms: number, isCancelled?: () => boolean): Promise<void> {
     return new Promise<void>((resolve, reject) => {
         if (isCancelled && isCancelled()) {
-            reject(new Error("Operation cancelled."));
+            reject(cancelledError());
             return;
         }
         let cancellationTimer: NodeJS.Timer | undefined;
@@ -16,11 +16,17 @@ export function sleep(ms: number, isCancelled?: () => boolean): Promise<void> {
                 if (isCancelled()) {
                     clearTimeout(timeout);
                     clearInterval(cancellationTimer!);
-                    reject(new Error("Operation cancelled."));
+                    reject(cancelledError());
                 }
             }, Math.min(50, Math.max(10, ms)));
         }
     });
+}
+
+function cancelledError(): Error {
+    const error = new Error("Operation cancelled.");
+    error.name = "OperationCancelledError";
+    return error;
 }
 
 export function parseQuery(query: string): { [key: string]: string } {

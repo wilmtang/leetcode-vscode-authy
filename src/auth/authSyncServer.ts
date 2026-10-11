@@ -463,8 +463,8 @@ class AuthSyncServer implements vscode.Disposable {
             }
         }
 
-        const body: IAuthSyncRequestBody = await this.readJsonBody(req);
         const deadlineAt: number = Date.now() + AUTH_UPDATE_DEADLINE_MS;
+        const generation = this.serverGeneration;
         let clientDisconnected: boolean = false;
         req.once("aborted", () => { clientDisconnected = true; });
         res.once("close", () => {
@@ -472,8 +472,19 @@ class AuthSyncServer implements vscode.Disposable {
                 clientDisconnected = true;
             }
         });
+        const body: IAuthSyncRequestBody = await this.readJsonBody(req);
+        const expired = () => clientDisconnected || generation !== this.serverGeneration || Date.now() >= deadlineAt;
+        const deadlineTimer = setTimeout(() => {
+            if (!res.writableEnded && !res.destroyed) {
+                this.sendJson(res, 504, { ok: false, error: "Auth sync request timed out." }, true, req);
+            }
+        }, Math.max(1, deadlineAt - Date.now()));
+        try {
         await this.enqueueAuthUpdate(async () => {
-            if (clientDisconnected || Date.now() >= deadlineAt) {
+            if (expired()) {
+                if (!res.writableEnded && !res.destroyed) {
+                    this.sendJson(res, 504, { ok: false, error: "Auth sync request expired." }, true, req);
+                }
                 return;
             }
             if (leetCodeManager.isAutomaticSyncSuspended()) {
@@ -515,16 +526,22 @@ class AuthSyncServer implements vscode.Disposable {
                     browserUserAgent,
                     browserRequestHeaders,
                     "automatic-sync",
-                    { deadlineAt, isCancelled: () => clientDisconnected },
+                    { deadlineAt, isCancelled: expired },
                 );
             } else {
-                await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders);
+                await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders, { deadlineAt, isCancelled: expired });
+            }
+            if (expired()) {
+                return;
             }
             await globalState.setAuthSyncLastSyncedAt(Date.now());
             this.onDidSyncEmitter.fire();
 
             this.sendJson(res, 200, { ok: true, message: "LeetCode cookie synced." }, true, req);
         });
+        } finally {
+            clearTimeout(deadlineTimer);
+        }
     }
 
     private handleHealth(res: http.ServerResponse): void {

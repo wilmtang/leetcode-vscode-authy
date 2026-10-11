@@ -9,6 +9,7 @@ import { promptForSignIn, reportCommandError } from "../utils/uiUtils";
 import { getActiveFilePath } from "../utils/workspaceUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
 import { judgeOperationCoordinator } from "./judgeOperationCoordinator";
+import { captureAuthRequest } from "../request/authRequest";
 
 export async function submitSolution(uri?: vscode.Uri): Promise<void> {
     if (!leetCodeManager.getUser()) {
@@ -23,6 +24,7 @@ export async function submitSolution(uri?: vscode.Uri): Promise<void> {
 
     try {
         const operationId: number = judgeOperationCoordinator.begin();
+        const owner = captureAuthRequest();
         const result: string = await vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, cancellable: true },
             async (p: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => {
@@ -31,6 +33,7 @@ export async function submitSolution(uri?: vscode.Uri): Promise<void> {
             },
         );
         if (judgeOperationCoordinator.isCurrent(operationId)) {
+            owner.assertCurrent();
             leetCodeSubmissionProvider.show(result, "Submission");
         }
     } catch (error) {

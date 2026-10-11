@@ -8,6 +8,7 @@ import { formatAcceptanceRate, getFavoriteProblemSlugs, ILeetCodeProblem, listPr
 import { IProblem, UserStatus } from "../shared";
 import * as settingUtils from "../utils/settingUtils";
 import { reportCommandError } from "../utils/uiUtils";
+import { AuthRequest, captureAuthRequest } from "../request/authRequest";
 
 export type CatalogLoadResult =
     | { kind: "success"; problems: IProblem[] }
@@ -21,15 +22,17 @@ export async function listProblems(): Promise<CatalogLoadResult> {
         }
 
         const useEndpointTranslation: boolean = settingUtils.shouldUseEndpointTranslation();
+        const owner = captureAuthRequest();
         const apiProblems: ILeetCodeProblem[] = await listProblemsViaApi({
             needTranslation: useEndpointTranslation,
             showLocked: true,
-        });
+        }, owner);
 
         // The problemset `isFavor` flag no longer tracks the default "Favorite"
         // list after LeetCode's favorites migration, so membership is read from
         // the list itself. Failure here is non-fatal — fall back to `isFavor`.
-        const favoriteSlugs: Set<string> | undefined = await safeGetFavoriteSlugs();
+        const favoriteSlugs: Set<string> | undefined = await safeGetFavoriteSlugs(owner);
+        owner.assertCurrent();
 
         // listProblemsViaApi already returns the catalog sorted ascending by
         // frontend id, so unlike the old CLI text path there is nothing to reverse.
@@ -41,9 +44,9 @@ export async function listProblems(): Promise<CatalogLoadResult> {
     }
 }
 
-async function safeGetFavoriteSlugs(): Promise<Set<string> | undefined> {
+async function safeGetFavoriteSlugs(owner: AuthRequest): Promise<Set<string> | undefined> {
     try {
-        return await getFavoriteProblemSlugs();
+        return await getFavoriteProblemSlugs(owner);
     } catch (error) {
         // Non-fatal, but log it: `isFavor` is no longer a usable fallback, so a
         // failure here silently empties the Favorite tree. Surface it so it is

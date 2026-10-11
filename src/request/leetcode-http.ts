@@ -87,6 +87,7 @@ export interface IRequestContext {
     label: string;
     logMode?: boolean;
     isCancelled?: () => boolean;
+    deadlineAt?: number;
 }
 
 export interface IHeaderOverrides {
@@ -145,10 +146,10 @@ function parseSlug(content: string, filePath: string, frontendId: string): strin
 // Lightweight judge metadata (questionId, testcases, metaData, enableRunCode)
 // for the submit/test paths. For full display detail use getQuestionDetail()
 // in leetcode-api.ts instead.
-export async function getQuestionDetail(slug: string, cookie: string, referer: string, overrides?: IHeaderOverrides): Promise<IQuestionDetail> {
+export async function getQuestionDetail(slug: string, cookie: string, referer: string, overrides?: IHeaderOverrides, isCancelled?: () => boolean, graphql: string = getUrl("graphql")): Promise<IQuestionDetail> {
     const response: IQuestionDetailResponse = await requestJson<IQuestionDetailResponse>({
         method: "POST",
-        url: getUrl("graphql"),
+        url: graphql,
         headers: createHeaders(cookie, referer, overrides),
         data: {
             query: [
@@ -168,7 +169,8 @@ export async function getQuestionDetail(slug: string, cookie: string, referer: s
             variables: { titleSlug: slug },
             operationName: "getQuestionDetail",
         },
-    }, { label: "problem metadata" });
+    }, { label: "problem metadata", isCancelled });
+    throwIfCancelled(isCancelled);
     const question: IQuestionDetail | undefined = response.data && response.data.question;
     if (!question) {
         throw new DirectApiUnsupportedError(`Cannot load LeetCode problem details for "${slug}".`);
@@ -181,8 +183,8 @@ export async function getQuestionDetail(slug: string, cookie: string, referer: s
 // Result polling
 // ---------------------------------------------------------------------------
 
-export async function verifyResult(id: string, cookie: string, referer: string, overrides?: IHeaderOverrides, isCancelled?: () => boolean): Promise<ICheckResult> {
-    const url: string = `${getUrl("base")}/submissions/detail/${id}/check/`;
+export async function verifyResult(id: string, cookie: string, referer: string, overrides?: IHeaderOverrides, isCancelled?: () => boolean, base: string = getUrl("base")): Promise<ICheckResult> {
+    const url: string = `${base}/submissions/detail/${id}/check/`;
     for (let attempt: number = 0; attempt < MAX_VERIFY_ATTEMPTS; attempt++) {
         throwIfCancelled(isCancelled);
         const result: ICheckResult = await requestJson<ICheckResult>({
@@ -206,7 +208,21 @@ export async function verifyResult(id: string, cookie: string, referer: string, 
 // ---------------------------------------------------------------------------
 
 export async function requestJson<T>(config: AxiosRequestConfig, context: IRequestContext): Promise<T> {
-    throwIfCancelled(context.isCancelled);
+    const timeoutMs = typeof config.timeout === "number" && config.timeout > 0 ? config.timeout : DEFAULT_TIMEOUT_MS;
+    const deadlineAt = context.deadlineAt === undefined
+        ? Date.now() + timeoutMs
+        : context.deadlineAt;
+    const cancelled = context.isCancelled;
+    const assertActive = () => {
+        throwIfCancelled(cancelled);
+        if (Date.now() >= deadlineAt) {
+            const error = new Error(`Request timed out (${context.label}).`);
+            error.name = "RequestDeadlineExceededError";
+            throw error;
+        }
+    };
+    context = { ...context, deadlineAt, isCancelled: () => !!(cancelled && cancelled()) || Date.now() >= deadlineAt };
+    assertActive();
     if (context.logMode) {
         leetCodeChannel.appendLine(`[http] Request mode: node/axios (${context.label}).`);
     }
@@ -223,7 +239,7 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
     try {
         response = await axios({
             ...config,
-            timeout: typeof config.timeout === "number" && config.timeout > 0 ? config.timeout : DEFAULT_TIMEOUT_MS,
+            timeout: Math.max(1, Math.min(timeoutMs, deadlineAt - Date.now())),
             cancelToken: cancelSource ? cancelSource.token : config.cancelToken,
             // All API URLs are already canonical. Following a redirect while
             // carrying Cookie/Authorization risks forwarding credentials to a
@@ -232,6 +248,7 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
             validateStatus: () => true,
         });
     } catch (error) {
+        assertActive();
         const message: string = getErrorMessage(error);
         leetCodeChannel.appendLine(`[http] Failure cause: node/axios transport error (${context.label}): ${message}`);
         throw new Error(`node/axios request failed (${context.label}): ${message}`);
@@ -249,7 +266,8 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
     if (isCloudflareChallenge(response.data)) {
         leetCodeChannel.appendLine(`[http] Failure cause: Cloudflare challenge page from node/axios (${context.label}, HTTP ${response.status}).`);
         leetCodeChannel.appendLine(`[http] Request mode: curl (${context.label}).`);
-        return requestJsonWithCurl<T>(config, context);
+        assertActive();
+        return requestJsonWithCurl<T>({ ...config, timeout: Math.max(1, deadlineAt - Date.now()) }, context, assertActive);
     }
 
     if (response.status === 401 || response.status === 403) {
@@ -265,21 +283,24 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
         leetCodeChannel.appendLine(`[http] node/axios request succeeded (${context.label}).`);
     }
 
-    throwIfCancelled(context.isCancelled);
+    assertActive();
     return response.data;
 }
 
-function throwIfCancelled(isCancelled?: () => boolean): void {
+export function throwIfCancelled(isCancelled?: () => boolean): void {
     if (isCancelled && isCancelled()) {
-        throw new Error("Operation cancelled.");
+        const error = new Error("Operation cancelled.");
+        error.name = "OperationCancelledError";
+        throw error;
     }
 }
 
-async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequestContext): Promise<T> {
+async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequestContext, assertActive: () => void): Promise<T> {
     let response: ICurlResponse;
     try {
         response = await executeCurl(config, context.isCancelled);
     } catch (error) {
+        assertActive();
         const message: string = getErrorMessage(error);
         leetCodeChannel.appendLine(`[http] Failure cause: curl transport error (${context.label}): ${message}`);
         throw new Error(`curl request failed (${context.label}): ${message}`);
@@ -306,7 +327,7 @@ async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequ
         leetCodeChannel.appendLine(`[http] Failure cause: curl returned non-JSON response (${context.label}).`);
         throw new Error(`curl JSON parse failed (${context.label}). Response: ${response.body.slice(0, 200)}`);
     }
-    throwIfCancelled(context.isCancelled);
+    assertActive();
     if (context.logMode) {
         leetCodeChannel.appendLine(`[http] curl request succeeded (${context.label}).`);
     }
@@ -322,7 +343,7 @@ function executeCurl(config: AxiosRequestConfig, isCancelled?: () => boolean): P
         }
 
         const method: string = (config.method || "GET").toString().toUpperCase();
-        const timeoutSeconds: number = Math.ceil((typeof config.timeout === "number" && config.timeout > 0 ? config.timeout : DEFAULT_TIMEOUT_MS) / 1000);
+        const timeoutSeconds: number = (typeof config.timeout === "number" && config.timeout > 0 ? config.timeout : DEFAULT_TIMEOUT_MS) / 1000;
 
         // Sensitive values — the session cookie, any Authorization header, and the
         // request body — are passed through a curl config file on STDIN (`-K -`)

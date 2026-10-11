@@ -149,7 +149,7 @@ class LeetCodeManager extends EventEmitter {
         // identity atomically instead of leaving a stale username beside a new
         // cookie when validation fails.
         const timeoutMs: number | undefined = guard ? Math.max(1, guard.deadlineAt - Date.now()) : undefined;
-        const data: UserDataType = await fetchUserStatus(cookie, browserUserAgent, browserRequestHeaders, timeoutMs);
+        const data: UserDataType = await fetchUserStatus(cookie, browserUserAgent, browserRequestHeaders, timeoutMs, guard);
         if (guard && (guard.isCancelled() || Date.now() >= guard.deadlineAt)) {
             throw new Error("Auth sync request expired before validation completed.");
         }
@@ -162,7 +162,13 @@ class LeetCodeManager extends EventEmitter {
         // A replacement session must not retain browser metadata captured for
         // the previous account. Headerless same-session refreshes use
         // updateSyncedBrowserData() below and intentionally preserve it.
-        const committed = await this.authIntents.commit(intent, () => globalState.setSignedInSession(cookie, data, browserUserAgent, browserRequestHeaders));
+        const committed = await this.authIntents.commit(intent, () => {
+            this.assertUpdateGuard(guard);
+            return globalState.setSignedInSession(cookie, data, browserUserAgent, browserRequestHeaders, () => {
+                this.authIntents.assertCurrent(intent);
+                this.assertUpdateGuard(guard);
+            });
+        });
         this.appliedAuthRevision = committed.revision;
         this.currentUser = data.username;
         this.userStatus = UserStatus.SignedIn;
@@ -172,13 +178,25 @@ class LeetCodeManager extends EventEmitter {
         }
     }
 
-    public async updateSyncedBrowserData(cookie: string, browserUserAgent?: string, browserRequestHeaders?: IBrowserRequestHeaders): Promise<void> {
+    public async updateSyncedBrowserData(cookie: string, browserUserAgent?: string, browserRequestHeaders?: IBrowserRequestHeaders, guard?: IAuthUpdateGuard): Promise<void> {
         if (this.isAutomaticSyncSuspended()) {
             throw new Error("Automatic browser sync is suspended after explicit sign-out. Choose Sign In to resume it.");
         }
         const intent: IAuthIntent = this.authIntents.begin("automatic-sync");
-        const committed = await this.authIntents.commit(intent, () => globalState.updateSignedInSession(cookie, browserUserAgent, browserRequestHeaders));
+        const committed = await this.authIntents.commit(intent, () => {
+            this.assertUpdateGuard(guard);
+            return globalState.updateSignedInSession(cookie, browserUserAgent, browserRequestHeaders, () => {
+                this.authIntents.assertCurrent(intent);
+                this.assertUpdateGuard(guard);
+            });
+        });
         this.appliedAuthRevision = committed.revision;
+    }
+
+    private assertUpdateGuard(guard?: IAuthUpdateGuard): void {
+        if (guard && (guard.isCancelled() || Date.now() >= guard.deadlineAt)) {
+            throw new Error("Auth sync request expired before persistence.");
+        }
     }
 
     public async handleUriSignIn(uri: vscode.Uri): Promise<void> {

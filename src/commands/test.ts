@@ -11,6 +11,7 @@ import { getActiveFilePath } from "../utils/workspaceUtils";
 import { decodeInlineTestcase } from "../utils/testcaseUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
 import { judgeOperationCoordinator } from "./judgeOperationCoordinator";
+import { captureAuthRequest } from "../request/authRequest";
 
 function runTest(filePath: string, operationId: number, testString?: string): Thenable<string> {
     return vscode.window.withProgress(
@@ -61,6 +62,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
 
         let result: string | undefined;
         const operationId: number = judgeOperationCoordinator.begin();
+        const owner = captureAuthRequest();
         switch (choice.value) {
             case ":default":
                 result = await runTest(filePath, operationId);
@@ -94,6 +96,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
             return;
         }
         if (judgeOperationCoordinator.isCurrent(operationId)) {
+            owner.assertCurrent();
             leetCodeSubmissionProvider.show(result, "Test Result");
         }
     } catch (error) {

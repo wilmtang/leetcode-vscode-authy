@@ -8,6 +8,7 @@ import { LeetCodeNode } from "../explorer/LeetCodeNode";
 import { leetCodeTreeDataProvider } from "../explorer/LeetCodeTreeDataProvider";
 import { addFavoriteQuestion, removeFavoriteQuestion } from "../request/leetcode-api";
 import { hasStarShortcut } from "../utils/settingUtils";
+import { captureAuthRequest } from "../request/authRequest";
 import { reportCommandError } from "../utils/uiUtils";
 
 export async function addFavorite(node: LeetCodeNode): Promise<void> {
@@ -27,6 +28,7 @@ export async function removeFavorite(node: LeetCodeNode): Promise<void> {
 }
 
 async function toggleFavorite(node: LeetCodeNode, addToFavorite: boolean): Promise<void> {
+    const owner = captureAuthRequest();
     const titleSlug: string | undefined = node.titleSlug;
     if (!titleSlug) {
         throw new Error(`Cannot resolve the problem slug for "${node.name}".`);
@@ -40,6 +42,7 @@ async function toggleFavorite(node: LeetCodeNode, addToFavorite: boolean): Promi
 
     // Reflect the change in the cached catalog and soft-refresh, instead of
     // re-fetching the whole catalog just to move one node in/out of Favorites.
+    owner.assertCurrent();
     explorerNodeManager.setProblemFavorite(node.id, addToFavorite);
     await leetCodeTreeDataProvider.refresh(false /* soft */);
     if (hasStarShortcut()) {

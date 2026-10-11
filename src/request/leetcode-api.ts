@@ -1,6 +1,7 @@
 import { globalState, IBrowserRequestHeaders, UserDataType } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { getUrl, ProblemState } from "../shared";
+import { AuthRequest, captureAuthRequest } from "./authRequest";
 import { createHeaders, DirectApiUnsupportedError, requestJson } from "./leetcode-http";
 
 const DEFAULT_PAGE_SIZE: number = 100;
@@ -254,30 +255,32 @@ interface ILanguageStatsData {
     };
 }
 
-export async function listProblems(options: IListProblemsOptions = {}): Promise<ILeetCodeProblem[]> {
-    const cookie: string = getRequiredCookie();
+export async function listProblems(options: IListProblemsOptions = {}, owner: AuthRequest = captureAuthRequest()): Promise<ILeetCodeProblem[]> {
+    owner.assertCurrent();
 
     // Fast path: the legacy bulk REST endpoint (the same one the CLI used) returns
     // the *entire* catalog in a single ~1s request. It carries no translated
     // titles, so only the `leetcode.cn` + translation case needs the paginated
     // GraphQL path; on any REST failure we also fall back to GraphQL.
-    if (!(isCnEndpoint() && options.needTranslation !== false)) {
+    if (!(owner.base.includes("leetcode.cn") && options.needTranslation !== false)) {
         try {
-            return await listProblemsViaRest(cookie, options);
+            return await listProblemsViaRest(owner, options);
         } catch (error) {
+            owner.assertCurrent();
             leetCodeChannel.appendLine(`[problems] Bulk REST list unavailable, falling back to GraphQL: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
-    return listProblemsViaGraphql(cookie, options);
+    return listProblemsViaGraphql(owner, options);
 }
 
-async function listProblemsViaRest(cookie: string, options: IListProblemsOptions): Promise<ILeetCodeProblem[]> {
+async function listProblemsViaRest(owner: AuthRequest, options: IListProblemsOptions): Promise<ILeetCodeProblem[]> {
     const response: IRestProblemsResponse = await requestJson<IRestProblemsResponse>({
         method: "GET",
-        url: `${getUrl("base")}/api/problems/all/`,
-        headers: createHeaders(cookie, `${getUrl("base")}/problemset/all/`),
-    }, { label: "problem list" });
+        url: `${owner.base}/api/problems/all/`,
+        headers: createHeaders(owner.cookie, `${owner.base}/problemset/all/`, owner.overrides),
+    }, { label: "problem list", isCancelled: owner.isCancelled });
+    owner.assertCurrent();
 
     if (!response || !Array.isArray(response.stat_status_pairs)) {
         throw new Error("Bulk REST problem list did not contain stat_status_pairs.");
@@ -294,11 +297,11 @@ async function listProblemsViaRest(cookie: string, options: IListProblemsOptions
     return sortByFrontendId(problemsBySlug);
 }
 
-async function listProblemsViaGraphql(cookie: string, options: IListProblemsOptions): Promise<ILeetCodeProblem[]> {
+async function listProblemsViaGraphql(owner: AuthRequest, options: IListProblemsOptions): Promise<ILeetCodeProblem[]> {
     const problemsBySlug: { [titleSlug: string]: ILeetCodeProblem } = {};
 
     for (const categorySlug of PROBLEM_CATEGORIES) {
-        const problems: ILeetCodeProblem[] = await listProblemsByCategory(categorySlug, cookie, options);
+        const problems: ILeetCodeProblem[] = await listProblemsByCategory(categorySlug, owner, options);
         for (const problem of problems) {
             if (!options.showLocked && problem.locked) {
                 continue;
@@ -378,6 +381,7 @@ export async function fetchUserStatus(
     browserUserAgent?: string,
     browserRequestHeaders?: IBrowserRequestHeaders,
     timeoutMs?: number,
+    guard?: { deadlineAt: number; isCancelled: () => boolean },
 ): Promise<UserDataType> {
     const cookie: string = cookieOverride || getRequiredCookie();
     const response: IGraphqlResponse<IUserStatusData> = await requestJson<IGraphqlResponse<IUserStatusData>>({
@@ -403,7 +407,7 @@ export async function fetchUserStatus(
             variables: {},
             operationName: "globalData",
         },
-    }, { label: "user status" });
+    }, { label: "user status", ...guard });
 
     assertNoGraphqlErrors(response, "user status");
     const userStatus: UserDataType | undefined = response.data && response.data.userStatus;
@@ -809,12 +813,13 @@ interface IFavoriteMutationData {
 
 // Resolve the slug (idHash) of the user's default "Favorite" star list — the
 // same list the CLI's `star` command targeted (matched by the exact name).
-export async function getDefaultFavoriteSlug(): Promise<string | undefined> {
-    const cookie: string = getRequiredCookie();
+export async function getDefaultFavoriteSlug(owner: AuthRequest = captureAuthRequest()): Promise<string | undefined> {
+    owner.assertCurrent();
+    const cookie: string = owner.cookie;
     const response: IGraphqlResponse<IFavoritesListsData> = await requestJson<IGraphqlResponse<IFavoritesListsData>>({
         method: "POST",
-        url: getUrl("graphql"),
-        headers: createHeaders(cookie, `${getUrl("base")}/`),
+        url: owner.graphql,
+        headers: createHeaders(cookie, `${owner.base}/`, owner.overrides),
         data: {
             query: [
                 "query favoritesList {",
@@ -829,7 +834,8 @@ export async function getDefaultFavoriteSlug(): Promise<string | undefined> {
             variables: {},
             operationName: "favoritesList",
         },
-    }, { label: "favorites lists" });
+    }, { label: "favorites lists", isCancelled: owner.isCancelled });
+    owner.assertCurrent();
 
     assertNoGraphqlErrors(response, "favorites lists");
     const all: Array<{ idHash?: string; name?: string }> = (response.data && response.data.favoritesLists && response.data.favoritesLists.allFavorites) || [];
@@ -840,23 +846,24 @@ export async function getDefaultFavoriteSlug(): Promise<string | undefined> {
 // Returns the titleSlugs in the default "Favorite" list. The Favorite explorer
 // tree reads membership from here because the problemset `isFavor` flag no
 // longer reflects this list.
-export async function getFavoriteProblemSlugs(): Promise<Set<string>> {
-    const favoriteSlug: string | undefined = await getDefaultFavoriteSlug();
+export async function getFavoriteProblemSlugs(owner: AuthRequest = captureAuthRequest()): Promise<Set<string>> {
+    const favoriteSlug: string | undefined = await getDefaultFavoriteSlug(owner);
     const slugs: Set<string> = new Set<string>();
     if (!favoriteSlug) {
         return slugs;
     }
 
-    const cookie: string = getRequiredCookie();
+    const cookie: string = owner.cookie;
     let skip: number = 0;
     let hasMore: boolean = true;
     // Bound the loop: the server has been observed to ignore `limit`, so guard
     // against a `hasMore: true` + unhonored-`skip` combination spinning forever.
     for (let page: number = 0; hasMore && page < FAVORITE_LIST_MAX_PAGES; page++) {
+        owner.assertCurrent();
         const response: IGraphqlResponse<IFavoriteQuestionListData> = await requestJson<IGraphqlResponse<IFavoriteQuestionListData>>({
             method: "POST",
-            url: getUrl("graphql"),
-            headers: createHeaders(cookie, `${getUrl("base")}/`),
+            url: owner.graphql,
+            headers: createHeaders(cookie, `${owner.base}/`, owner.overrides),
             data: {
                 query: [
                     "query favoriteQuestionList($favoriteSlug: String!, $limit: Int, $skip: Int) {",
@@ -870,7 +877,8 @@ export async function getFavoriteProblemSlugs(): Promise<Set<string>> {
                 variables: { favoriteSlug, limit: DEFAULT_PAGE_SIZE, skip },
                 operationName: "favoriteQuestionList",
             },
-        }, { label: "favorite question list" });
+        }, { label: "favorite question list", isCancelled: owner.isCancelled });
+        owner.assertCurrent();
 
         assertNoGraphqlErrors(response, "favorite question list");
         const list = response.data && response.data.favoriteQuestionList;
@@ -900,16 +908,18 @@ export async function removeFavoriteQuestion(titleSlug: string): Promise<void> {
 }
 
 async function mutateFavorite(operationName: "addQuestionToFavoriteV2" | "removeQuestionFromFavoriteV2", titleSlug: string): Promise<void> {
-    const favoriteSlug: string | undefined = await getDefaultFavoriteSlug();
+    const owner = captureAuthRequest();
+    const favoriteSlug: string | undefined = await getDefaultFavoriteSlug(owner);
     if (!favoriteSlug) {
         throw new DirectApiUnsupportedError(`Could not find your default "${DEFAULT_FAVORITE_NAME}" list on LeetCode.`, false);
     }
 
-    const cookie: string = getRequiredCookie();
+    owner.assertCurrent();
+    const cookie: string = owner.cookie;
     const response: IGraphqlResponse<IFavoriteMutationData> = await requestJson<IGraphqlResponse<IFavoriteMutationData>>({
         method: "POST",
-        url: getUrl("graphql"),
-        headers: createHeaders(cookie, `${getUrl("base")}/problems/${titleSlug}/`),
+        url: owner.graphql,
+        headers: createHeaders(cookie, `${owner.base}/problems/${titleSlug}/`, owner.overrides),
         data: {
             query: [
                 `mutation ${operationName}($favoriteSlug: String!, $questionSlug: String!) {`,
@@ -922,7 +932,8 @@ async function mutateFavorite(operationName: "addQuestionToFavoriteV2" | "remove
             variables: { favoriteSlug, questionSlug: titleSlug },
             operationName,
         },
-    }, { label: operationName });
+    }, { label: operationName, isCancelled: owner.isCancelled });
+    owner.assertCurrent();
 
     assertNoGraphqlErrors(response, operationName);
     const result = response.data && response.data[operationName];
@@ -1165,13 +1176,23 @@ export function formatAcceptanceRate(acRate: number): string {
     return `${acRate.toFixed(2)} %`;
 }
 
-async function listProblemsByCategory(categorySlug: string, cookie: string, options: IListProblemsOptions): Promise<ILeetCodeProblem[]> {
+async function listProblemsByCategory(categorySlug: string, owner: AuthRequest, options: IListProblemsOptions): Promise<ILeetCodeProblem[]> {
     const needTranslation: boolean = options.needTranslation !== false;
     // Fetch the first page to learn the total, then fetch the remaining pages in
     // parallel (bounded concurrency). The catalog is ~3,900 problems / ~39 pages;
     // paging it sequentially took ~20s and made search/refresh feel stuck.
-    const firstPage: IProblemPage = await fetchProblemPage(categorySlug, 0, DEFAULT_PAGE_SIZE, cookie, needTranslation);
+    const firstPage: IProblemPage = await fetchProblemPage(categorySlug, 0, DEFAULT_PAGE_SIZE, owner, needTranslation);
     const problems: ILeetCodeProblem[] = [...firstPage.problems];
+    const seen: Set<string> = new Set();
+    const append = (page: IProblemPage): void => {
+        for (const problem of page.problems) {
+            if (seen.has(problem.titleSlug)) {
+                throw new Error("Problem-list pagination repeated a problem without forward progress.");
+            }
+            seen.add(problem.titleSlug);
+        }
+    };
+    append(firstPage);
 
     if (firstPage.total === undefined) {
         // No total reported: fall back to safe sequential paging.
@@ -1183,7 +1204,8 @@ async function listProblemsByCategory(categorySlug: string, cookie: string, opti
             if (pageCount++ >= 100) {
                 throw new Error("Problem-list pagination exceeded the 100-page safety limit.");
             }
-            const page: IProblemPage = await fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, cookie, needTranslation);
+            const page: IProblemPage = await fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, owner, needTranslation);
+            append(page);
             const newSlugs: string[] = page.problems.map((problem: ILeetCodeProblem) => problem.titleSlug)
                 .filter((slug: string) => !seenSlugs.has(slug));
             if (page.hasMore && newSlugs.length === 0) {
@@ -1205,8 +1227,16 @@ async function listProblemsByCategory(categorySlug: string, cookie: string, opti
         }
     }
     const pages: IProblemPage[] = await mapWithConcurrency(skips, PROBLEM_LIST_CONCURRENCY,
-        (skip: number) => fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, cookie, needTranslation));
-    for (const page of pages) {
+        (skip: number) => fetchProblemPage(categorySlug, skip, DEFAULT_PAGE_SIZE, owner, needTranslation));
+    if (firstPage.problems.length !== Math.min(DEFAULT_PAGE_SIZE, firstPage.total)) {
+        throw new Error("Problem-list first page is incomplete for its reported total.");
+    }
+    for (let index = 0; index < pages.length; index++) {
+        const page = pages[index];
+        if (page.total !== firstPage.total || page.problems.length !== Math.min(DEFAULT_PAGE_SIZE, firstPage.total - skips[index])) {
+            throw new Error("Problem-list pagination is incomplete or its total changed.");
+        }
+        append(page);
         problems.push(...page.problems);
     }
 
@@ -1231,17 +1261,18 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, fn: (it
     return results;
 }
 
-async function fetchProblemPage(categorySlug: string, skip: number, limit: number, cookie: string, needTranslation: boolean): Promise<IProblemPage> {
-    return isCnEndpoint()
-        ? fetchCnProblemPage(categorySlug, skip, limit, cookie, needTranslation)
-        : fetchGlobalProblemPage(categorySlug, skip, limit, cookie);
+async function fetchProblemPage(categorySlug: string, skip: number, limit: number, owner: AuthRequest, needTranslation: boolean): Promise<IProblemPage> {
+    owner.assertCurrent();
+    return owner.base.includes("leetcode.cn")
+        ? fetchCnProblemPage(categorySlug, skip, limit, owner, needTranslation)
+        : fetchGlobalProblemPage(categorySlug, skip, limit, owner);
 }
 
-async function fetchGlobalProblemPage(categorySlug: string, skip: number, limit: number, cookie: string): Promise<IProblemPage> {
+async function fetchGlobalProblemPage(categorySlug: string, skip: number, limit: number, owner: AuthRequest): Promise<IProblemPage> {
     const response: IGraphqlResponse<IGlobalQuestionListData> = await requestJson<IGraphqlResponse<IGlobalQuestionListData>>({
         method: "POST",
-        url: getUrl("graphql"),
-        headers: createHeaders(cookie, `${getUrl("base")}/problemset/`),
+        url: owner.graphql,
+        headers: createHeaders(owner.cookie, `${owner.base}/problemset/`, owner.overrides),
         data: {
             query: [
                 "query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {",
@@ -1265,23 +1296,27 @@ async function fetchGlobalProblemPage(categorySlug: string, skip: number, limit:
             variables: { categorySlug, skip, limit, filters: {} },
             operationName: "problemsetQuestionList",
         },
-    }, { label: "global problem list" });
+    }, { label: "global problem list", isCancelled: owner.isCancelled });
+    owner.assertCurrent();
 
     assertNoGraphqlErrors(response, "global problem list");
     const list = response.data && response.data.problemsetQuestionList;
-    const questions: IGlobalQuestionListItem[] = list && list.questions || [];
+    validateProblemPage(list);
+    const questions: IGlobalQuestionListItem[] = list!.questions!;
+    const problems = questions.map(mapGlobalProblem).filter(hasProblemIdentity);
+    if (problems.length !== questions.length) { throw new Error("Problem-list page contains invalid identities."); }
     return {
         hasMore: questions.length >= limit,
-        problems: questions.map(mapGlobalProblem).filter(hasProblemIdentity),
+        problems,
         total: list && list.total,
     };
 }
 
-async function fetchCnProblemPage(categorySlug: string, skip: number, limit: number, cookie: string, needTranslation: boolean): Promise<IProblemPage> {
+async function fetchCnProblemPage(categorySlug: string, skip: number, limit: number, owner: AuthRequest, needTranslation: boolean): Promise<IProblemPage> {
     const response: IGraphqlResponse<ICnQuestionListData> = await requestJson<IGraphqlResponse<ICnQuestionListData>>({
         method: "POST",
-        url: getUrl("graphql"),
-        headers: createHeaders(cookie, `${getUrl("base")}/problemset/`),
+        url: owner.graphql,
+        headers: createHeaders(owner.cookie, `${owner.base}/problemset/`, owner.overrides),
         data: {
             query: [
                 "query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {",
@@ -1307,16 +1342,35 @@ async function fetchCnProblemPage(categorySlug: string, skip: number, limit: num
             variables: { categorySlug, skip, limit, filters: {} },
             operationName: "problemsetQuestionList",
         },
-    }, { label: "cn problem list" });
+    }, { label: "cn problem list", isCancelled: owner.isCancelled });
+    owner.assertCurrent();
 
     assertNoGraphqlErrors(response, "cn problem list");
     const list = response.data && response.data.problemsetQuestionList;
-    const questions: ICnQuestionListItem[] = list && list.questions || [];
+    validateProblemPage(list);
+    const questions: ICnQuestionListItem[] = list!.questions!;
+    const problems = questions.map((question) => mapCnProblem(question, needTranslation)).filter(hasProblemIdentity);
+    if (problems.length !== questions.length) { throw new Error("Problem-list page contains invalid identities."); }
     return {
         hasMore: list ? !!list.hasMore : questions.length >= limit,
-        problems: questions.map((question: ICnQuestionListItem) => mapCnProblem(question, needTranslation)).filter(hasProblemIdentity),
+        problems,
         total: list && list.total,
     };
+}
+
+function validateProblemPage(list: { questions?: unknown[]; total?: number; hasMore?: boolean } | undefined): void {
+    if (!list || !Array.isArray(list.questions) || list.questions.some((question) => !question || typeof question !== "object")) {
+        throw new Error("LeetCode returned a malformed problem-list page.");
+    }
+    if (list.total !== undefined && (!Number.isInteger(list.total) || list.total < 0 || list.total > 10000)) {
+        throw new Error("LeetCode returned an invalid problem-list total.");
+    }
+    if (list.hasMore !== undefined && typeof list.hasMore !== "boolean") {
+        throw new Error("LeetCode returned an invalid problem-list continuation.");
+    }
+    if (list.hasMore && list.questions.length === 0) {
+        throw new Error("LeetCode returned an empty continuing problem-list page.");
+    }
 }
 
 function assertNoGraphqlErrors(response: IGraphqlResponse<unknown>, label: string): void {

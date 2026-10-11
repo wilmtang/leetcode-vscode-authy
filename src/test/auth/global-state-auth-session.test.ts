@@ -122,6 +122,7 @@ describe("atomic auth session storage", () => {
         await secrets.delete(authSessionKey);
         await new Promise<void>((resolve) => setImmediate(resolve));
         assert.strictEqual(observed[1].state, "signed-out");
+        assert.strictEqual(observed[1].source, "remote");
         assert.strictEqual(globalState.getCookie(), undefined);
         subscription.dispose();
     });

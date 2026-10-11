@@ -1,6 +1,6 @@
 import { globalState, IAuthSessionSnapshot } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
-import { getUrl } from "../shared";
+import { captureAuthRequest } from "./authRequest";
 import { sleep } from "../utils/toolUtils";
 import { normalizeTestcase } from "../utils/testcaseUtils";
 import {
@@ -14,6 +14,7 @@ import {
     parseSolutionFile,
     requestJson,
     verifyResult,
+    throwIfCancelled,
 } from "./leetcode-http";
 
 // Re-export for backward compatibility with any other importers.
@@ -40,19 +41,19 @@ interface ICaseResult {
 }
 
 export async function testSolutionWithSyncedCookie(filePath: string, testString?: string, isCancelled?: () => boolean): Promise<string> {
-    const auth: IAuthSessionSnapshot | undefined = globalState.getAuthSession();
-    if (!auth || auth.state !== "signed-in" || !auth.cookie) {
-        throw new DirectApiUnsupportedError("No synced LeetCode cookie is available.");
-    }
-    const cookie: string = auth.cookie;
+    const owner = captureAuthRequest(isCancelled);
+    owner.assertCurrent();
+    isCancelled = owner.isCancelled;
+    const auth = owner.auth;
+    const cookie: string = owner.cookie;
     const headerOverrides: IHeaderOverrides = {
         browserUserAgent: auth.browserUserAgent,
         browserRequestHeaders: auth.browserRequestHeaders,
     };
 
     const meta: ISolutionFileMeta = await parseSolutionFile(filePath);
-    const referer: string = `${getUrl("base")}/problems/${meta.slug}/`;
-    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides);
+    const referer: string = `${owner.base}/problems/${meta.slug}/`;
+    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides, isCancelled, owner.graphql);
     const defaultTestcases: string[] = getDefaultTestcases(question);
     const testcase: string = normalizeTestcase(testString || defaultTestcases.join("\n"));
     const testcaseList: string[] = testString ? splitTestcases(testcase, question) : defaultTestcases;
@@ -72,11 +73,12 @@ export async function testSolutionWithSyncedCookie(filePath: string, testString?
     }
 
     leetCodeChannel.appendLine("Waiting for judge result");
-    const actual: ICheckResult = await verifyResult(task.interpret_id, cookie, referer, headerOverrides, isCancelled);
+    const actual: ICheckResult = await verifyResult(task.interpret_id, cookie, referer, headerOverrides, isCancelled, owner.base);
     const expected: ICheckResult | undefined = task.interpret_expected_id
-        ? await verifyResult(task.interpret_expected_id, cookie, referer, headerOverrides, isCancelled)
+        ? await verifyResult(task.interpret_expected_id, cookie, referer, headerOverrides, isCancelled, owner.base)
         : undefined;
 
+    owner.assertCurrent();
     return formatTestResult(actual, expected, testcase, testcaseList);
 }
 
@@ -90,11 +92,11 @@ async function runCode(
     auth: IAuthSessionSnapshot,
     isCancelled?: () => boolean,
 ): Promise<IRunCodeTask> {
-    const url: string = `${getUrl("base")}/problems/${meta.slug}/interpret_solution/`;
+    const url: string = `${new URL(referer).origin}/problems/${meta.slug}/interpret_solution/`;
     let delaySeconds: number = 1;
 
     for (let attempt: number = 0; attempt < 5; attempt++) {
-        if (isCancelled && isCancelled()) { throw new Error("Operation cancelled."); }
+        throwIfCancelled(isCancelled);
         assertCurrentAuth(auth);
         const task: IRunCodeTask = await requestJson<IRunCodeTask>({
             method: "POST",
