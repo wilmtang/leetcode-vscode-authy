@@ -46,6 +46,8 @@ export interface IBrowserRequestHeaders {
 }
 
 export interface IAuthSessionSnapshot {
+    // Notification provenance only; never written to SecretStorage.
+    source?: "local" | "remote";
     version: 1;
     revision: number;
     state: "signed-in" | "signed-out";
@@ -68,6 +70,8 @@ class GlobalState {
     private readonly authSessionChangedEmitter: vscode.EventEmitter<IAuthSessionSnapshot> = new vscode.EventEmitter<IAuthSessionSnapshot>();
     private pendingLocalAuthRecord: string | undefined;
     private hydrationGeneration: number = 0;
+    private writeTail: Promise<void> = Promise.resolve();
+    private secretChangeGeneration: number = 0;
 
     public readonly onDidChangeAuthSession: vscode.Event<IAuthSessionSnapshot> = this.authSessionChangedEmitter.event;
 
@@ -85,10 +89,11 @@ class GlobalState {
         context.subscriptions.push(
             context.secrets.onDidChange((event: vscode.SecretStorageChangeEvent) => {
                 if (event.key === AuthSessionSecretKey) {
+                    ++this.secretChangeGeneration;
                     if (this.pendingLocalAuthRecord) {
                         return;
                     }
-                    void this.hydrateAuthSessionCache(true);
+                    void this.hydrateAuthSessionCache(true).catch(() => undefined);
                 }
             }),
         );
@@ -238,34 +243,57 @@ class GlobalState {
         });
     }
 
-    private async persistAuthSession(snapshot: IAuthSessionSnapshot): Promise<IAuthSessionSnapshot> {
+    private persistAuthSession(snapshot: IAuthSessionSnapshot): Promise<IAuthSessionSnapshot> {
+        const operation = this.writeTail.then(() => this.writeAuthSession(snapshot));
+        this.writeTail = operation.then(() => undefined, () => undefined);
+        return operation;
+    }
+
+    private async writeAuthSession(snapshot: IAuthSessionSnapshot): Promise<IAuthSessionSnapshot> {
         const normalized: IAuthSessionSnapshot = this.normalizeAuthSession({
             ...snapshot,
             version: 1,
             revision: snapshot.revision > 0 ? snapshot.revision : this.nextRevision(),
         });
         const serialized: string = JSON.stringify(normalized);
+        ++this.hydrationGeneration;
+        const changeBeforeWrite = this.secretChangeGeneration;
         this.pendingLocalAuthRecord = serialized;
         try {
             await this.context.secrets.store(AuthSessionSecretKey, serialized);
-            this.authSessionCache = normalized;
+            // A sibling write may have arrived while our store was pending.
+            // Read the durable winner rather than dropping all pending events.
+            await this.hydrateAuthSessionCache(true, serialized);
+            if (!this.isAuthRevisionCurrent(normalized.revision)) {
+                throw new Error("Authentication storage was replaced by another window.");
+            }
+        } catch (error) {
+            if (this.secretChangeGeneration !== changeBeforeWrite) {
+                await this.hydrateAuthSessionCache(true, serialized);
+            }
+            throw error;
         } finally {
             this.pendingLocalAuthRecord = undefined;
         }
         return this.cloneAuthSession(normalized);
     }
 
-    private async hydrateAuthSessionCache(notify: boolean): Promise<void> {
+    private async hydrateAuthSessionCache(notify: boolean, localRecord?: string): Promise<void> {
         const generation: number = ++this.hydrationGeneration;
+        const changeGeneration = this.secretChangeGeneration;
         const raw: string | undefined = await this.context.secrets.get(AuthSessionSecretKey);
-        if (generation !== this.hydrationGeneration) {
+        if (generation !== this.hydrationGeneration || (this.pendingLocalAuthRecord && !localRecord)) {
             return;
+        }
+        if (changeGeneration !== this.secretChangeGeneration) {
+            return this.hydrateAuthSessionCache(notify, localRecord);
         }
         const next: IAuthSessionSnapshot | undefined = this.parseAuthSession(raw);
         const previous: string | undefined = this.authSessionCache && JSON.stringify(this.authSessionCache);
         this.authSessionCache = next;
-        if (notify && next && previous !== JSON.stringify(next)) {
-            this.authSessionChangedEmitter.fire(this.cloneAuthSession(next));
+        if (notify && previous !== (next && JSON.stringify(next))) {
+            const notification = next || { version: 1 as const, revision: this.nextRevision(), state: "signed-out" as const, intentionalSignOut: false };
+            this.authSessionChangedEmitter.fire({ ...this.cloneAuthSession(notification), source: raw === localRecord ? "local" : "remote" });
         }
     }
 

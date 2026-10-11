@@ -79,6 +79,52 @@ function context(memento: TestMemento, secrets: TestSecretStorage): vscode.Exten
 }
 
 describe("atomic auth session storage", () => {
+    it("does not resurrect a read captured before a durable sign-out", async () => {
+        const secrets = new TestSecretStorage();
+        await globalState.initialize(context(new TestMemento(), secrets));
+        const old = await globalState.setSignedInSession("synthetic-a", identity);
+        let release!: (value: string) => void;
+        const staleRead = new Promise<string>((resolve) => release = resolve);
+        const get = secrets.get.bind(secrets);
+        let first = true;
+        secrets.get = (key) => first ? (first = false, staleRead) : get(key);
+        await secrets.store(authSessionKey, JSON.stringify(old));
+        await globalState.setSignedOutSession(true);
+        release(JSON.stringify(old));
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.strictEqual(globalState.getAuthSession()!.state, "signed-out");
+    });
+
+    it("reconciles a sibling write delivered during a pending local store", async () => {
+        const secrets = new TestSecretStorage();
+        await globalState.initialize(context(new TestMemento(), secrets));
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => release = resolve);
+        const store = secrets.store.bind(secrets);
+        secrets.store = async (key, value) => { await store(key, value); await gate; };
+        const pending = globalState.setSignedInSession("synthetic-local", identity);
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        const remote = { version: 1, revision: 999, state: "signed-in", intentionalSignOut: false,
+            cookie: "synthetic-remote", identity: { ...identity, username: "remote" } };
+        await store(authSessionKey, JSON.stringify(remote));
+        release();
+        await assert.rejects(pending, /another window/);
+        assert.strictEqual(globalState.getCookie(), "synthetic-remote");
+    });
+
+    it("notifies local credential changes and remote removal", async () => {
+        const secrets = new TestSecretStorage();
+        await globalState.initialize(context(new TestMemento(), secrets));
+        const observed: IAuthSessionSnapshot[] = [];
+        const subscription = globalState.onDidChangeAuthSession((snapshot) => observed.push(snapshot));
+        await globalState.setSignedInSession("synthetic-a", identity);
+        assert.strictEqual(observed[0].source, "local");
+        await secrets.delete(authSessionKey);
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.strictEqual(observed[1].state, "signed-out");
+        assert.strictEqual(globalState.getCookie(), undefined);
+        subscription.dispose();
+    });
     it("migrates legacy credential fields into one complete secret record", async () => {
         const memento: TestMemento = new TestMemento();
         const secrets: TestSecretStorage = new TestSecretStorage();

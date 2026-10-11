@@ -295,7 +295,9 @@ class LeetCodeManager extends EventEmitter {
         if (this.appliedAuthRevision === snapshot.revision) {
             return;
         }
-        this.authIntents.begin("remote-sync");
+        if (snapshot.source !== "local") {
+            this.authIntents.begin("remote-sync");
+        }
         this.appliedAuthRevision = snapshot.revision;
         const nextUser: string | undefined = snapshot.state === "signed-in" && snapshot.identity
             ? snapshot.identity.username
