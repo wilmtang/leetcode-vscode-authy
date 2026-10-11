@@ -5,6 +5,16 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 ### Security
+- Reconciled keychain hydration with serialized writes and sibling updates;
+  invalid/removed credentials now clear local auth consumers. Capture cleanup
+  cannot restore secrets after Developer mode is disabled or cleared.
+- Captured immutable auth/endpoint owners across favorites, catalog reads and
+  every judge stage; cancel obsolete work and bound auth-sync Axios/curl fallback
+  to one deadline, including queued-response expiry and pre-persistence guards.
+- Patched all production dependency advisories and critical tooling paths;
+  enforced production audit during CI and packaging/publication preparation.
+  Preserve bundled Node 14 compatibility with a local Object.hasOwn adapter.
+  Two unpatched development-only advisory paths remain tracked in the maintainer guide.
 - Made authentication one generation-owned, atomic keychain snapshot so stale
   sign-ins, browser sync, sign-out, account rotation, and sibling windows cannot
   expose a mixed credential/identity state.
@@ -31,6 +41,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   vulnerabilities.
 
 ### Fixed
+- Refresh/clear the open profile and invalidate account-specific catalog data on
+  local and remote auth changes; discard old fetch/section completions.
+- Reject malformed/incomplete GraphQL catalog pages and malformed HTTP-200
+  browser sync replies, while preserving genuine empty results and prior data.
+- Restore fraction, radical, superscript and matrix layout through trusted,
+  nonced math stylesheet rules; keep remote inline styles disallowed.
+- Recognize generated MySQL `--` solution markers so SQL outside the intended
+  code block is excluded from judge submissions.
 - Preserve the last-known-good catalog on refresh/schema failures, bound fallback
   pagination, coordinate configuration/profile generations, and show retry state.
 - Make browser settings and sensitive cleanup reflect storage failures instead

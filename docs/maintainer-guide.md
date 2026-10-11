@@ -212,13 +212,27 @@ npm run auth-sync:build:chrome
 
 ## Audit Notes
 
+The latest review is [Codebase Audit and Remediation Plan — 2026-10-10](plans/2026-10-10-codebase-audit-plan.md),
+against baseline `c6d7e91`, followed by the authorized implementation. It records
+11 locally verified groups and one partial dependency group. Keychain reads and
+writes share ownership; profile/catalog consumers receive local and remote
+transitions; favorites/catalog/judge requests retain immutable auth/endpoint
+owners; validation has one deadline; browser cleanup and reply contracts are
+guarded; math uses trusted nonced rules; generated SQL markers round-trip.
+Compile, lint, 96 unit tests, composed race checks (21 judge interleavings),
+browser persistence checks, VSIX packaging, Node 14 bundle smoke, and Firefox
+math layout/CSP verification passed. The ledger lists commits and native/live
+proof gaps. No push or publication was performed.
+
 The implemented remediation plan is
 [Code, Performance, Engineering, and UX Audit Plan — 2026-08-11](plans/2026-08-11-code-performance-ux-audit-plan.md).
 It records 16 source-confirmed finding groups against `30154f3`, the focused
 implementation commits, local closure evidence, final verification matrix,
 intentional non-changes, and environment-dependent release proof gaps.
 
-The 2026-08-11 remediation establishes these current invariants:
+The 2026-08-11 remediation intended the following invariants. The latest ledger
+above records the composed regressions and repaired boundaries; the bundle
+measurements here are historical verification results:
 
 - authentication is a generation-owned, single-record SecretStorage snapshot;
   explicit sign-out is durable and browser sync cannot silently undo it;
@@ -233,21 +247,31 @@ The 2026-08-11 remediation establishes these current invariants:
 - public cache/status/side-mode contracts are effective and command failures use
   a credential-redacting diagnostic path.
 
-### Development-only audit exception
+### Unresolved development-only audit paths
 
-`npm audit --omit=dev` is required to exit zero. The full `npm audit` currently
-reports five high-severity development-only nodes and is accepted only through
-2026-09-30 (or the next release review, whichever comes first):
+`npm run audit:production` is required to exit zero and is enforced by CI and the
+VSCE prepublish lifecycle. After the 2026-10-10 fixes it reports zero affected
+production nodes. `npm run audit:all` still exits 1: seven development-only nodes
+(three high, four moderate), on two underlying advisories below. Critical nodes
+were removed. These paths are absent from the packaged runtime. They are open,
+not an approved exception; the old exception expired 2026-09-30 and was not renewed.
 
 | Path | Disposition |
 | --- | --- |
-| `web-ext` → `addons-linter` → `image-size` | Firefox lint/build tooling only. It processes repository-owned extension assets and is absent from the VSIX/browser runtime. The offered forced fix downgrades to breaking `web-ext@5.5.0`; re-evaluate upstream rather than silently downgrade. |
-| `fast-uri` via AJV in `web-ext` and VSIX secret-lint tooling | Developer validation/packaging only; no runtime dependency. Update when the toolchains accept a patched resolution. |
-| `js-yaml` via TSLint, Mocha, web-ext/ESLint, and VSIX tooling | Developer lint/test/package configuration only; no untrusted YAML is handled by the shipped extension. Remove the TSLint path during the already-planned lint migration and refresh upstream tools. |
+| `web-ext` → `@devicefarmer/adbkit` → `node-forge@1.4.0` | RSA verification advisory GHSA-86w9-cpqp-85rv; latest registry release remains affected. Requires a reviewed upstream fix or tooling replacement. Do not silently downgrade web-ext to 5.1. |
+| `tslint` → `js-yaml@3.15.2` → `argparse@1.0.10` → `sprintf-js@1.0.3` | Precision denial-of-service advisory GHSA-hp3w-g68c-fv3c; latest sprintf-js 1.1.3 remains affected. Remove through the planned lint migration or reviewed upstream fix; an incompatible argparse override is not a fix. |
 
-This exception is not a claim that the full graph is clean. A release review
-must rerun both audit commands and either remove the paths or renew the exception
-with current upstream/tool-compatibility evidence.
+A release review must rerun both scopes and either remove these paths or make
+a separate explicit maintainer acceptance decision. Source-level reachability
+limits do not make the full audit clean. The detailed ledger links advisories
+and records tool checks; Firefox lint has two manifest compatibility warnings.
+
+Development installation/build uses Node 22.12+. The packaged extension retains
+the declared older VS Code host contract: ESM dependencies are bundled to CJS,
+and Object.hasOwn is replaced by a local adapter without changing host globals.
+Build the renderer smoke fixture with `npm run test:runtime:build`, then run
+`node scripts/run-runtime-smoke.cjs 14` under an actual Node 14 process. CI does
+this after packaging. Native minimum/current VS Code runs remain separate proof.
 
 The previous complete remediation review is
 [Full Code Audit — 2026-07-30](audits/2026-07-30-full-code-audit.md). It records
@@ -283,5 +307,5 @@ Still fair game in future reviews:
 - Explorer cache invalidation
 - Auth-sync concurrency and ownership handoff
 - `leetcode.cn` restoration
-- Migration from deprecated TSLint and upstream minimatch/brace-expansion
+- Migration from deprecated TSLint and unresolved node-forge/sprintf-js
   advisory resolution in the development toolchain
