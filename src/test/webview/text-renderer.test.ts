@@ -1,10 +1,20 @@
 import * as assert from "assert";
-import { renderDescriptionHtml, stripMarkdownHtmlComments } from "../../webview/textRenderer";
+import { collectMathStyles, renderDescriptionHtml, stripMarkdownHtmlComments } from "../../webview/textRenderer";
 
 // textRenderer only depends on katex (no vscode), so it runs under the offline
 // harness. These pin the two behaviours that matter: LaTeX gets rendered, and
 // obvious script-injection vectors in the untrusted description are stripped.
 describe("renderDescriptionHtml", () => {
+    it("moves trusted math layout into CSP-compatible stylesheet rules", () => {
+        const rendered = renderDescriptionHtml('<p style="color:red" data-lc-math-style="0">$$\\frac{a^2}{b} + \\sqrt{x} + \\begin{matrix}1&2\\\\3&4\\end{matrix}$$</p>');
+        const result = collectMathStyles(rendered);
+        assert.ok(result.css.includes("height:"));
+        assert.ok(result.css.includes("vertical-align:"));
+        assert.ok(!/ style=/.test(result.html));
+        assert.ok(!result.css.includes("color:red"));
+        assert.ok(!result.css.includes("</style>"));
+        assert.ok(result.html.startsWith("<p>"), "untrusted private selectors must be removed");
+    });
     it("renders inline $…$ math with KaTeX", () => {
         const html: string = renderDescriptionHtml("<p>Given $a^2 + b^2 = c^2$ holds.</p>");
         assert.ok(html.indexOf("katex") >= 0, "expected KaTeX output");

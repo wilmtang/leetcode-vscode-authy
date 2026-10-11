@@ -8,7 +8,7 @@ import { getUrl } from "../shared";
 import { leetCodePreviewProvider } from "./leetCodePreviewProvider";
 import { ILeetCodeWebviewOption, LeetCodeWebview } from "./LeetCodeWebview";
 import { markdownEngine } from "./markdownEngine";
-import { extractMathPlaceholders, IMathExtraction, restoreMath, sanitizeHtml, stripMarkdownHtmlComments } from "./textRenderer";
+import { collectMathStyles, extractMathPlaceholders, IMathExtraction, restoreMath, sanitizeHtml, stripMarkdownHtmlComments } from "./textRenderer";
 
 class LeetCodeSolutionProvider extends LeetCodeWebview {
 
@@ -49,7 +49,7 @@ class LeetCodeSolutionProvider extends LeetCodeWebview {
             `| :------: | :------: |`,
             `| ${authorLink}  | ${upvotes} |`,
         ].join("\n")));
-        const body: string = this.renderArticleBody(this.article.content);
+        const mathStyles = collectMathStyles(this.renderArticleBody(this.article.content));
         return `
             <!DOCTYPE html>
             <html>
@@ -57,11 +57,12 @@ class LeetCodeSolutionProvider extends LeetCodeWebview {
                 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src vscode-resource: 'nonce-${nonce}'; font-src vscode-resource:;"/>
                 ${styles}
                 ${katexStyle}
+                <style nonce="${nonce}">${mathStyles.css}</style>
             </head>
             <body class="vscode-body scrollBeyondLastLine wordWrap showEditorSelection">
                 ${head}
                 ${info}
-                ${body}
+                ${mathStyles.html}
             </body>
             </html>
         `;

@@ -58,6 +58,23 @@ export function restoreMath(input: string, math: string[]): string {
     });
 }
 
+// Call only after sanitization and trusted KaTeX restoration. Remote markup
+// cannot supply either style attributes or this private selector attribute.
+export function collectMathStyles(input: string): { html: string; css: string } {
+    const rules: string[] = [];
+    const html = input.replace(/ style="([^"]*)"/g, (_match, declarations: string) => {
+        const index = rules.length;
+        // KaTeX emits numeric layout declarations and parsed colors. Never let
+        // markup delimiters or escaped CSS enter a style element.
+        if (!/^[a-z0-9\s:;.,()%+#-]*$/i.test(declarations)) {
+            return "";
+        }
+        rules.push(`[data-lc-math-style="${index}"]{${declarations}}`);
+        return ` data-lc-math-style="${index}"`;
+    });
+    return { html, css: rules.join("\n") };
+}
+
 export function stripMarkdownHtmlComments(input: string): string {
     return input
         .split(/\r?\n/)

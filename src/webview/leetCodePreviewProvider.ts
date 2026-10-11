@@ -8,7 +8,7 @@ import { ILeetCodeQuestionDetail } from "../request/leetcode-api";
 import { Endpoint, getUrl, IProblem } from "../shared";
 import { ILeetCodeWebviewOption, LeetCodeWebview } from "./LeetCodeWebview";
 import { markdownEngine } from "./markdownEngine";
-import { renderDescriptionHtml, sanitizeHtml } from "./textRenderer";
+import { collectMathStyles, renderDescriptionHtml, sanitizeHtml } from "./textRenderer";
 
 class LeetCodePreviewProvider extends LeetCodeWebview {
     protected readonly viewType: string = "leetcode.preview";
@@ -73,6 +73,7 @@ class LeetCodePreviewProvider extends LeetCodeWebview {
                 </style>`,
         };
         const { title, url, category, difficulty, likes, dislikes, body } = this.description;
+        const mathStyles = collectMathStyles(body);
         const head: string = sanitizeHtml(markdownEngine.render(`# [${title}](${url})`));
         const info: string = sanitizeHtml(markdownEngine.render(
             [
@@ -108,6 +109,7 @@ class LeetCodePreviewProvider extends LeetCodeWebview {
                 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}'; style-src vscode-resource: 'nonce-${nonce}'; font-src vscode-resource:;"/>
                 ${markdownEngine.getStyles(nonce)}
                 ${markdownEngine.getKatexStyle()}
+                <style nonce="${nonce}">${mathStyles.css}</style>
                 ${!this.sideMode ? button.style.replace("<style>", `<style nonce="${nonce}">`) : ""}
                 <style nonce="${nonce}">
                     code { white-space: pre-wrap; }
@@ -118,7 +120,7 @@ class LeetCodePreviewProvider extends LeetCodeWebview {
                 ${info}
                 ${tags}
                 ${companies}
-                ${body}
+                ${mathStyles.html}
                 <hr />
                 ${links}
                 ${!this.sideMode ? button.element : ""}
