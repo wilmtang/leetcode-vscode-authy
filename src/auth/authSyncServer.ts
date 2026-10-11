@@ -480,65 +480,65 @@ class AuthSyncServer implements vscode.Disposable {
             }
         }, Math.max(1, deadlineAt - Date.now()));
         try {
-        await this.enqueueAuthUpdate(async () => {
-            if (expired()) {
-                if (!res.writableEnded && !res.destroyed) {
-                    this.sendJson(res, 504, { ok: false, error: "Auth sync request expired." }, true, req);
+            await this.enqueueAuthUpdate(async () => {
+                if (expired()) {
+                    if (!res.writableEnded && !res.destroyed) {
+                        this.sendJson(res, 504, { ok: false, error: "Auth sync request expired." }, true, req);
+                    }
+                    return;
                 }
-                return;
-            }
-            if (leetCodeManager.isAutomaticSyncSuspended()) {
-                this.sendJson(res, 409, {
-                    ok: false,
-                    error: "Automatic sync is suspended after explicit sign-out. Choose Sign In > Auto Cookie Sync in VS Code to resume.",
-                }, true, req);
-                return;
-            }
-            const cookie: string = typeof body.cookie === "string" ? body.cookie.trim() : "";
-            const browserUserAgent: string | undefined = this.getBrowserUserAgent(req, body);
-            const browserRequestHeaders: IBrowserRequestHeaders | undefined = this.getBrowserRequestHeaders(body);
-
-            if (!this.hasLeetCodeSessionCookie(cookie)) {
-                this.sendJson(res, 400, { ok: false, error: "Request did not include a valid LeetCode login session cookie." }, true, req);
-                return;
-            }
-
-            const payloadHash: string = this.getSessionPayloadHash(cookie);
-            const currentCookie: string | undefined = globalState.getCookie();
-            const sessionChanged: boolean = !currentCookie || this.getSessionPayloadHash(currentCookie) !== payloadHash;
-
-            if (payloadHash === this.lastPayloadHash) {
-                leetCodeChannel.appendLine(`[auth-sync] Cookie update received (session unchanged). Reason: ${this.getSafeReason(body.reason)}.`);
-            } else {
-                this.lastPayloadHash = payloadHash;
-                this.logCookieUpdate(cookie, body.reason);
-                if (browserUserAgent) {
-                    leetCodeChannel.appendLine("[auth-sync] Captured browser user agent for direct judge requests.");
+                if (leetCodeManager.isAutomaticSyncSuspended()) {
+                    this.sendJson(res, 409, {
+                        ok: false,
+                        error: "Automatic sync is suspended after explicit sign-out. Choose Sign In > Auto Cookie Sync in VS Code to resume.",
+                    }, true, req);
+                    return;
                 }
-                if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
-                    leetCodeChannel.appendLine(`[auth-sync] Captured ${Object.keys(browserRequestHeaders).length} browser request headers for direct judge requests.`);
+                const cookie: string = typeof body.cookie === "string" ? body.cookie.trim() : "";
+                const browserUserAgent: string | undefined = this.getBrowserUserAgent(req, body);
+                const browserRequestHeaders: IBrowserRequestHeaders | undefined = this.getBrowserRequestHeaders(body);
+
+                if (!this.hasLeetCodeSessionCookie(cookie)) {
+                    this.sendJson(res, 400, { ok: false, error: "Request did not include a valid LeetCode login session cookie." }, true, req);
+                    return;
                 }
-            }
 
-            if (leetCodeManager.getStatus() === UserStatus.SignedOut || sessionChanged) {
-                await leetCodeManager.updateSessionFromCookie(
-                    cookie,
-                    browserUserAgent,
-                    browserRequestHeaders,
-                    "automatic-sync",
-                    { deadlineAt, isCancelled: expired },
-                );
-            } else {
-                await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders, { deadlineAt, isCancelled: expired });
-            }
-            if (expired()) {
-                return;
-            }
-            await globalState.setAuthSyncLastSyncedAt(Date.now());
-            this.onDidSyncEmitter.fire();
+                const payloadHash: string = this.getSessionPayloadHash(cookie);
+                const currentCookie: string | undefined = globalState.getCookie();
+                const sessionChanged: boolean = !currentCookie || this.getSessionPayloadHash(currentCookie) !== payloadHash;
 
-            this.sendJson(res, 200, { ok: true, message: "LeetCode cookie synced." }, true, req);
-        });
+                if (payloadHash === this.lastPayloadHash) {
+                    leetCodeChannel.appendLine(`[auth-sync] Cookie update received (session unchanged). Reason: ${this.getSafeReason(body.reason)}.`);
+                } else {
+                    this.lastPayloadHash = payloadHash;
+                    this.logCookieUpdate(cookie, body.reason);
+                    if (browserUserAgent) {
+                        leetCodeChannel.appendLine("[auth-sync] Captured browser user agent for direct judge requests.");
+                    }
+                    if (browserRequestHeaders && Object.keys(browserRequestHeaders).length > 0) {
+                        leetCodeChannel.appendLine(`[auth-sync] Captured ${Object.keys(browserRequestHeaders).length} browser request headers for direct judge requests.`);
+                    }
+                }
+
+                if (leetCodeManager.getStatus() === UserStatus.SignedOut || sessionChanged) {
+                    await leetCodeManager.updateSessionFromCookie(
+                        cookie,
+                        browserUserAgent,
+                        browserRequestHeaders,
+                        "automatic-sync",
+                        { deadlineAt, isCancelled: expired },
+                    );
+                } else {
+                    await leetCodeManager.updateSyncedBrowserData(cookie, browserUserAgent, browserRequestHeaders, { deadlineAt, isCancelled: expired });
+                }
+                if (expired()) {
+                    return;
+                }
+                await globalState.setAuthSyncLastSyncedAt(Date.now());
+                this.onDidSyncEmitter.fire();
+
+                this.sendJson(res, 200, { ok: true, message: "LeetCode cookie synced." }, true, req);
+            });
         } finally {
             clearTimeout(deadlineTimer);
         }
