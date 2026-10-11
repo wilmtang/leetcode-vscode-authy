@@ -27,6 +27,14 @@ const api = typeof chrome !== "undefined" ? chrome : browser;
 let syncTimer = null;
 let syncQueue = Promise.resolve();
 let lastAutomaticCookieProbeAt = 0;
+let captureGeneration = 0;
+let devWriteQueue = Promise.resolve();
+
+function commitDevWrite(work) {
+    const operation = devWriteQueue.then(work);
+    devWriteQueue = operation.catch(() => undefined);
+    return operation;
+}
 
 async function getSettings() {
     const stored = await storageGet(DEFAULTS);
@@ -49,19 +57,16 @@ async function getSettings() {
 }
 
 async function saveSettings(settings) {
-    await storageSet({
+    ++captureGeneration;
+    await commitDevWrite(() => storageSet({
         enabled: settings.enabled !== false,
         port: normalizePort(settings.port),
         secret: typeof settings.secret === "string" ? settings.secret : "",
         cooldownMinutes: normalizeCooldownMinutes(settings.cooldownMinutes),
         showCookieOnlyButton: settings.showCookieOnlyButton === true,
         devMode: settings.devMode === true,
-    });
-
-    if (settings.devMode !== true) {
-        // Leaving dev mode wipes any captured login payload from storage.
-        await storageSet({ devCapturedPayload: null, devCapturedAt: 0 });
-    }
+        ...(settings.devMode === true ? {} : { devCapturedPayload: null, devCapturedAt: 0 }),
+    }));
 }
 
 async function expireSyncCooldown(reason = "manual") {
@@ -122,6 +127,7 @@ async function syncNow(reason = "manual", cookieOverride = "", requestHeadersOve
 }
 
 async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
+    const captureOwner = captureGeneration;
     const settings = await getSettings();
     const syncReason = typeof reason === "string" && reason ? reason : "manual";
 
@@ -173,7 +179,7 @@ async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
         // Persist the exact data we send so a developer can copy it from the
         // popup into the VS Code integration-test fixture. Captured before the
         // fetch so it still works when VS Code is not running.
-        await storeDevPayload(cookie, replayableRequestHeaders);
+        await storeDevPayload(cookie, replayableRequestHeaders, captureOwner);
     }
 
     const headers = {
@@ -224,12 +230,13 @@ async function syncNowInternal(reason, cookieOverride, requestHeadersOverride) {
         clearTimeout(timeout);
     }
 
+    const validObject = data && typeof data === "object" && !Array.isArray(data);
     if (!response.ok) {
-        return recordSyncFailure(getServerFailureMessage(response.status, data.error), syncReason, "server-error", settings);
+        return recordSyncFailure(getServerFailureMessage(response.status, validObject && data.error), syncReason, "server-error", settings);
     }
 
-    if (data.ok === false) {
-        return recordSyncFailure(data.error || "VS Code rejected the LeetCode session update.", syncReason, "server-rejected", settings);
+    if (!validObject || data.ok !== true) {
+        return recordSyncFailure(validObject && data.error || "The local service returned an invalid auth sync response. Check the VS Code listener and port.", syncReason, "server-rejected", settings);
     }
 
     const lastSyncAt = Date.now();
@@ -512,10 +519,16 @@ function getBrowserUserAgent() {
         : "";
 }
 
-async function storeDevPayload(cookie, requestHeaders) {
-    await storageSet({
-        devCapturedPayload: buildDevFixture(cookie, requestHeaders),
-        devCapturedAt: Date.now(),
+async function storeDevPayload(cookie, requestHeaders, generation) {
+    return commitDevWrite(async () => {
+        const settings = await getSettings();
+        if (generation !== captureGeneration || !settings.devMode) {
+            return { ok: false, error: "Capture was cancelled by a settings change or clear." };
+        }
+        const payload = buildDevFixture(cookie, requestHeaders);
+        const capturedAt = Date.now();
+        await storageSet({ devCapturedPayload: payload, devCapturedAt: capturedAt });
+        return { ok: true, payload, capturedAt };
     });
 }
 
@@ -538,6 +551,7 @@ async function getDevPayload() {
 }
 
 async function captureDevPayloadNow() {
+    const generation = captureGeneration;
     const settings = await getSettings();
     if (!settings.devMode) {
         return { ok: false, error: "Enable Developer mode in the extension settings first." };
@@ -552,12 +566,12 @@ async function captureDevPayloadNow() {
     // Cookie-only capture (no live browser request headers). Refresh a
     // leetcode.com page to capture the full Cloudflare/browser headers through
     // the automatic XHR sync instead.
-    await storeDevPayload(cookie, {});
-    return { ok: true, payload: buildDevFixture(cookie, {}), capturedAt: Date.now() };
+    return storeDevPayload(cookie, {}, generation);
 }
 
 async function clearDevPayload() {
-    await storageSet({ devCapturedPayload: null, devCapturedAt: 0 });
+    ++captureGeneration;
+    await commitDevWrite(() => storageSet({ devCapturedPayload: null, devCapturedAt: 0 }));
     return { ok: true };
 }
 
