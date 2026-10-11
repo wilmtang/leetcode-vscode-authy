@@ -79,6 +79,36 @@ function context(memento: TestMemento, secrets: TestSecretStorage): vscode.Exten
 }
 
 describe("atomic auth session storage", () => {
+    it("invalidates unreadable remote updates but ignores stale read failures", async () => {
+        const secrets = new TestSecretStorage();
+        await globalState.initialize(context(new TestMemento(), secrets));
+        await globalState.setSignedInSession("synthetic-a", identity);
+        const get = secrets.get.bind(secrets);
+        secrets.get = () => Promise.reject(new Error("unreadable remote winner"));
+        await secrets.store(authSessionKey, JSON.stringify(globalState.getAuthSession()));
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.strictEqual(globalState.getCookie(), undefined);
+
+        let rejectRead!: (error: Error) => void;
+        const stale = new Promise<string>((_resolve, reject) => rejectRead = reject);
+        let first = true;
+        secrets.get = (key) => first ? (first = false, stale) : get(key);
+        await secrets.store(authSessionKey, secrets.values.get(authSessionKey)!);
+        await globalState.setSignedInSession("synthetic-b", identity);
+        rejectRead(new Error("obsolete read failure"));
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.strictEqual(globalState.getCookie(), "synthetic-b");
+    });
+    it("fails closed when a durable write's winner cannot be read", async () => {
+        const secrets = new TestSecretStorage();
+        await globalState.initialize(context(new TestMemento(), secrets));
+        await globalState.setSignedInSession("synthetic-a", identity);
+        secrets.get = () => Promise.reject(new Error("keychain read failure"));
+        await assert.rejects(globalState.setSignedOutSession(true), /keychain read failure/);
+        assert.strictEqual(JSON.parse(secrets.values.get(authSessionKey)!).state, "signed-out");
+        assert.strictEqual(globalState.getCookie(), undefined);
+        assert.strictEqual(globalState.getAuthSession()!.intentionalSignOut, true);
+    });
     it("assigns increasing revisions at the serialized write boundary", async () => {
         const secrets = new TestSecretStorage();
         await globalState.initialize(context(new TestMemento(), secrets));

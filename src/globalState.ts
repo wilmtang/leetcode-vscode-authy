@@ -265,17 +265,23 @@ class GlobalState {
         ++this.hydrationGeneration;
         const changeBeforeWrite = this.secretChangeGeneration;
         this.pendingLocalAuthRecord = serialized;
+        let reconciliationFailed = false;
         try {
             await this.context.secrets.store(AuthSessionSecretKey, serialized);
             // A sibling write may have arrived while our store was pending.
             // Read the durable winner rather than dropping all pending events.
-            await this.hydrateAuthSessionCache(true, serialized);
+            try {
+                await this.hydrateAuthSessionCache(true, serialized);
+            } catch (error) {
+                reconciliationFailed = true;
+                throw error;
+            }
             if (!this.isAuthRevisionCurrent(normalized.revision)) {
                 throw new Error("Authentication storage was replaced by another window.");
             }
         } catch (error) {
-            if (this.secretChangeGeneration !== changeBeforeWrite) {
-                await this.hydrateAuthSessionCache(true, serialized);
+            if (!reconciliationFailed && this.secretChangeGeneration !== changeBeforeWrite) {
+                await this.hydrateAuthSessionCache(true, serialized).catch(() => undefined);
             }
             throw error;
         } finally {
@@ -284,10 +290,26 @@ class GlobalState {
         return this.cloneAuthSession(normalized);
     }
 
+    private failClosedAuthSession(): void {
+        // Persistence may have completed, but its durable winner is unreadable.
+        // Do not keep serving the preceding account or automatically re-sign in.
+        this.authSessionCache = { version: 1, revision: this.nextRevision(), state: "signed-out", intentionalSignOut: true };
+        this.authSessionChangedEmitter.fire({ ...this.cloneAuthSession(this.authSessionCache), source: "remote" });
+    }
+
     private async hydrateAuthSessionCache(notify: boolean, localRecord?: string): Promise<void> {
         const generation: number = ++this.hydrationGeneration;
         const changeGeneration = this.secretChangeGeneration;
-        const raw: string | undefined = await this.context.secrets.get(AuthSessionSecretKey);
+        let raw: string | undefined;
+        try {
+            raw = await this.context.secrets.get(AuthSessionSecretKey);
+        } catch (error) {
+            if (generation !== this.hydrationGeneration || (this.pendingLocalAuthRecord && !localRecord)) {
+                return;
+            }
+            this.failClosedAuthSession();
+            throw error;
+        }
         if (generation !== this.hydrationGeneration || (this.pendingLocalAuthRecord && !localRecord)) {
             return;
         }
