@@ -6,6 +6,7 @@ import { mapQuestionDetail } from "../../request/leetcode-api";
 import { ISolutionFileMeta, parseSolutionFile } from "../../request/leetcode-http";
 import { generateSolutionFileContent, htmlToCommentLines, htmlToPlainText } from "../../utils/solutionFileGenerator";
 import { getNodeIdFromFile } from "../../utils/problemUtils";
+import { extractSolutionCode } from "../../utils/solutionDocument";
 import { questionDetailItem } from "../fixtures/leetcode-responses";
 
 // The Phase 4 safety net: files this extension now generates itself must keep
@@ -14,6 +15,17 @@ import { questionDetailItem } from "../fixtures/leetcode-responses";
 // The slug-hardening fix (embedding the canonical URL in the @lc header) is what
 // makes the custom-filename case work.
 describe("generateSolutionFileContent", () => {
+    it("extracts only the generated block for every supported comment style", () => {
+        for (const language of ["c", "cpp", "csharp", "golang", "java", "javascript", "kotlin", "php", "rust", "scala", "swift", "typescript", "bash", "mysql", "python", "python3", "ruby"]) {
+            const content = generateSolutionFileContent({
+                detail: { ...mapQuestionDetail(questionDetailItem, false), codeSnippets: [{ lang: language, langSlug: language, code: "BODY" }] },
+                language, frontendId: "1", showDescriptionInComment: false, endpointBase: "https://leetcode.com",
+            });
+            assert.strictEqual(extractSolutionCode(`${content}\nOUTSIDE`).trim(), "BODY", language);
+        }
+        assert.strictEqual(extractSolutionCode("SELECT 1;"), "SELECT 1;", "legacy markerless SQL is preserved");
+        assert.strictEqual(extractSolutionCode("-- @lc code=end\n-- @lc code=start\nSELECT 1;\n-- @lc code=end\nDROP TABLE x;"), "SELECT 1;");
+    });
     const detail = mapQuestionDetail(questionDetailItem, false);
     let tempDir: string;
 

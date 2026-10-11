@@ -24,7 +24,7 @@ export function classifySolutionDocument(content: string): ISolutionDocumentClas
 }
 
 function isMarkerLine(line: string, marker: "start" | "end"): boolean {
-    return new RegExp(`^\\s*(?://|#|/\\*)?\\s*@lc code=${marker}(?:\\s*\\*/)?\\s*$`).test(line);
+    return new RegExp(`^\\s*(?://|#|--|/\\*)?\\s*@lc code=${marker}(?:\\s*\\*/)?\\s*$`).test(line);
 }
 
 export function extractSolutionCode(content: string): string {
