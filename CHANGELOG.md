@@ -6,7 +6,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [Unreleased]
 ### Security
 - Reconciled keychain hydration with serialized writes and sibling updates;
-  invalid/removed credentials now clear local auth consumers. Capture cleanup
+  invalid, removed, or unreadable credentials now clear local auth consumers. Capture cleanup
   cannot restore secrets after Developer mode is disabled or cleared.
 - Captured immutable auth/endpoint owners across favorites, catalog reads and
   every judge stage; cancel obsolete work and bound auth-sync Axios/curl fallback

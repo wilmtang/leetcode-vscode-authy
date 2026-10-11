@@ -219,7 +219,7 @@ writes share ownership; profile/catalog consumers receive local and remote
 transitions; favorites/catalog/judge requests retain immutable auth/endpoint
 owners; validation has one deadline; browser cleanup and reply contracts are
 guarded; math uses trusted nonced rules; generated SQL markers round-trip.
-Compile, lint, 96 unit tests, composed race checks (21 judge interleavings),
+Compile, lint, 98 unit tests, composed race checks (21 judge interleavings),
 browser persistence checks, VSIX packaging, Node 14 bundle smoke, and Firefox
 math layout/CSP verification passed. The ledger lists commits and native/live
 proof gaps. No push or publication was performed.
@@ -272,6 +272,12 @@ and Object.hasOwn is replaced by a local adapter without changing host globals.
 Build the renderer smoke fixture with `npm run test:runtime:build`, then run
 `node scripts/run-runtime-smoke.cjs 14` under an actual Node 14 process. CI does
 this after packaging. Native minimum/current VS Code runs remain separate proof.
+Open VSX's precompiled JavaScript CLI has optional Node type peers in its prompt
+dependencies. The scoped `ovsx` type override binds those to the project's
+existing Node 14 declarations so tooling does not replace extension-host types.
+The CLI still runs on Node 22.12+; its TypeScript SDK is not compiled or consumed
+by this project. CLI loading, clean install and dependency-tree checks cover this
+resolution; this override does not relax a runtime Node engine requirement.
 
 The previous complete remediation review is
 [Full Code Audit — 2026-07-30](audits/2026-07-30-full-code-audit.md). It records

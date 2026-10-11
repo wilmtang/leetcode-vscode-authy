@@ -387,7 +387,7 @@ and offline/browser checks passed; it does not imply native/live proof.
 
 | Finding | Current disposition | Implementation and evidence |
 | --- | --- | --- |
-| A5-01 | Implemented; native sibling-window proof open | Serialized writes invalidate stale reads, assign revisions at the write boundary, reconcile the durable winner, and notify removal/invalid records. Deferred-read/store, migration failure, local notification, remote removal, and queued revision regressions pass. |
+| A5-01 | Implemented; native sibling-window proof open | Serialized writes invalidate stale reads, assign revisions at the write boundary, reconcile the durable winner, and notify removal/invalid records. Unreadable current records fail closed and suspend auto-sync; stale read errors cannot invalidate a newer session. Deferred-read/store, migration failure, local notification, remote removal, queued revision and read-failure regressions pass. |
 | A5-02 | Implemented; native explorer proof open | Catalogs have auth/endpoint ownership and invalidation generations; old completions cannot replace new data. Visible views refresh on transitions; hidden views remain lazy. Catalog and favorite reads share captured credentials. |
 | A5-03 | Implemented; live favorite authorization proof open | Favorite lookup, pages, mutation, and cache application retain one auth/endpoint owner. Tests rotate during lookup and mutation and reject obsolete completion. No live account was mutated. |
 | A5-04 | Implemented; native panel proof open | Local and remote durable transitions share notifications. Sign-out clears the open profile; account/header rotation replaces section generations. Composed activation checks verify four replacement sections complete and stale sections cannot overwrite them. |
@@ -427,6 +427,11 @@ packaged extension and exercised sanitized HTML, math, markdown, and soft-broken
 email input. The declared VS Code minimum remains unchanged; this is runtime
 smoke evidence, not a native VS Code 1.57 activation test. CI adds this smoke after
 building with Node 22.
+The Open VSX CLI's optional prompt-library Node type peers are scoped to the
+existing project Node 14 type declaration dependency. The precompiled CLI still
+runs on Node 22.12+; this project does not compile/consume its TypeScript SDK.
+This prevents tool type peers from replacing the extension-host type contract
+and does not override any runtime Node engine requirement.
 
 ### Actual focused commits
 
@@ -438,13 +443,17 @@ building with Node 22.
 - `673ad81` — trusted math stylesheet/CSP contract.
 - `74b3a95` — serialized auth revision assignment.
 - `cd8c643` — patched dependencies, audited packaging/CI, and permanent composed regressions.
+- `989712a` — unreadable current keychain records fail closed; stale failures are ignored.
+- `83d0426` — indentation correction within the auth transaction introduced by this task.
+- `0d5e038` — optional CLI type peers retain the extension-host declarations; clean install verified.
 
 ### Final local verification
 
 | Check | Result |
 | --- | --- |
 | Compile / lint | Both passed |
-| `npm test` | 96 unit tests, composed audit regressions (including 21 judge interleavings), browser persistence/syntax and package contract passed |
+| `npm test` | 98 unit tests, composed audit regressions (including 21 judge interleavings), browser persistence/syntax and package contract passed |
+| Clean install / dependency tree | `npm ci --ignore-scripts` and `npm ls --all --json` exit 0; no invalid/missing dependency problems |
 | Production audit | Exit 0; zero affected nodes |
 | Full audit | Exit 1; seven development-only nodes, zero critical; unresolved paths above |
 | Bundled Node 14 smoke | Actual Node 14.21.3 passed; current Node 26.11.1 also passed |
@@ -452,7 +461,7 @@ building with Node 22.
 | Firefox lint/build | Exit 0, zero errors/notices, two manifest compatibility warnings (service worker ignored in Firefox; Android minimum/data-collection permission mismatch); ZIP built |
 | Open VSX compatibility | CLI help loads with the shared VSCE 4 library; live publication not attempted |
 | Browser math | Four rendered fixtures, fonts loaded, zero inline styles/CSP violations; screenshot inspected |
-| Bounded markdown fixture | 700 KB soft-broken email input rendered in 377 ms on the final full-suite run; 3 s smoke bound passed |
+| Bounded markdown fixture | 700 KB soft-broken email input rendered in 379 ms on the final full-suite run; 3 s smoke bound passed |
 | Whitespace/source links | `git diff --check` and local link validation passed |
 
 No push, remote CI, store publication, native keychain/window/panel run, live
