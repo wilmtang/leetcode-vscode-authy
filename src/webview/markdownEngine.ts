@@ -218,13 +218,64 @@ class MarkdownConfiguration {
     }
 }
 
-// Serialize a setting into a CSS declaration value without allowing it to end
-// the declaration or the enclosing style element. Escaping every non-identifier
-// character as a CSS code point preserves quoted family names and separators.
+// Serialize the markdown.preview.fontFamily setting into a CSS font-family list
+// without letting it end the declaration or the enclosing style element.
+// Separators must stay real commas: a CSS-escaped comma or quote is a literal
+// name character, which turns the whole setting into one unknown family and
+// silently falls back to the default serif font. Plain identifier sequences
+// (including generic families such as sans-serif and -apple-system) stay
+// unquoted; every other name becomes a CSS string whose non-identifier
+// characters are escaped, so it cannot close the string, declaration or element.
 export function serializeCssFontFamily(value: string): string {
-    return (value || "").replace(/[^a-zA-Z0-9 _-]/g, (character: string) =>
-        `\\${character.charCodeAt(0).toString(16)} `,
+    return splitFontFamilyList(value || "")
+        .map(serializeFontFamilyName)
+        .filter((family: string) => !!family)
+        .join(", ");
+}
+
+const UNQUOTED_FAMILY: RegExp = /^-?[A-Za-z_][A-Za-z0-9_-]*(?: +-?[A-Za-z_][A-Za-z0-9_-]*)*$/;
+
+function serializeFontFamilyName(raw: string): string {
+    let name: string = raw.trim();
+    const quote: string = name.charAt(0);
+    if (name.length >= 2 && (quote === "'" || quote === "\"") && name.charAt(name.length - 1) === quote) {
+        name = name.slice(1, -1);
+    } else if (UNQUOTED_FAMILY.test(name)) {
+        return name.replace(/ +/g, " ");
+    }
+    if (!name) {
+        return "";
+    }
+    const escaped: string = name.replace(/[^a-zA-Z0-9 _-]/gu, (character: string) =>
+        `\\${character.codePointAt(0)!.toString(16)} `,
     );
+    return `"${escaped}"`;
+}
+
+// Split on commas outside quotes. An unbalanced quote keeps the rest of the
+// value as one name, which is then escaped as a string.
+function splitFontFamilyList(value: string): string[] {
+    const families: string[] = [];
+    let current: string = "";
+    let quote: string | undefined;
+    for (const character of value) {
+        if (quote) {
+            if (character === quote) {
+                quote = undefined;
+            }
+            current += character;
+        } else if (character === "'" || character === "\"") {
+            quote = character;
+            current += character;
+        } else if (character === ",") {
+            families.push(current);
+            current = "";
+        } else {
+            current += character;
+        }
+    }
+    families.push(current);
+    return families;
 }
 
 export const markdownEngine: MarkdownEngine = new MarkdownEngine();

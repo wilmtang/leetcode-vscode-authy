@@ -44,6 +44,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   vulnerabilities.
 
 ### Fixed
+- Problem descriptions and results use the `markdown.preview.fontFamily` list
+  again instead of falling back to the default serif font: the CSS-injection
+  escaping had turned list separators into literal name characters.
 - Windows: opening a problem description no longer throws when the built-in
   Markdown extension's `preview.fontFamily` setting is unavailable.
 - Recover judge requests from Cloudflare challenges: classify challenge pages at
