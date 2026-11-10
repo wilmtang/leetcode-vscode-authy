@@ -69,6 +69,7 @@ const forbiddenFiles = publishedFiles.filter((file) =>
     file.startsWith("src/") ||
     file.startsWith("scripts/") ||
     file.startsWith("docs/") ||
+    /^(?:AGENTS|CLAUDE|GEMINI)\.md$/.test(file) ||
     /(^|\/)\.env(?:\.|$)/.test(file) ||
     /\.log$/i.test(file),
 );

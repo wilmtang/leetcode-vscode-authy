@@ -5,6 +5,7 @@
 .env.*
 *.log
 AGENTS.md
+CLAUDE.md
 _config.yml
 browser-extension/**
 dist/**
