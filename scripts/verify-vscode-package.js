@@ -9,7 +9,9 @@ const path = require("path");
 const repoRoot = path.resolve(__dirname, "..");
 const packageJson = require(path.join(repoRoot, "package.json"));
 const bundlePath = path.join(repoRoot, packageJson.main);
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+// Run vsce's JS entry point with this Node directly. Spawning `npm.cmd` on
+// Windows fails with EINVAL on patched Node releases unless a shell is used.
+const vsceEntry = path.join(path.dirname(require.resolve("@vscode/vsce/package.json")), require("@vscode/vsce/package.json").bin.vsce);
 const maximumPublishedFiles = 150;
 // The selective Highlight.js/Lodash build is ~2.13 MiB. Keep a 0.87 MiB
 // tolerance for normal feature growth without permitting the former 3.8 MiB
@@ -43,8 +45,8 @@ if (bundleBytes > maximumBundleBytes) {
 }
 
 const result = cp.spawnSync(
-    npmCommand,
-    ["exec", "--", "vsce", "ls", "--no-dependencies"],
+    process.execPath,
+    [vsceEntry, "ls", "--no-dependencies"],
     { cwd: repoRoot, encoding: "utf8" },
 );
 if (result.error || result.status !== 0) {
