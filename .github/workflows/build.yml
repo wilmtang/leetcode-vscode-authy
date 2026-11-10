@@ -67,5 +67,8 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Local launcher scripts
+        run: npm run test:launchers
+
       - name: VSCE Package
         run: npm run build

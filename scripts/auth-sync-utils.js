@@ -11,14 +11,27 @@ const browserExtensionPath = path.join(repoRoot, "browser-extension");
 const distPath = path.join(repoRoot, "dist");
 const vsixPath = path.join(distPath, "vscode-leetcode-auth-sync.vsix");
 
+// On Windows, CLIs such as `code` and `npm` are `.cmd` shims: without a shell,
+// spawnSync neither resolves them via PATHEXT nor (on patched Node) runs them.
+// Quote a command path containing whitespace (e.g. VSCODE_BIN under
+// "Program Files") so the shell keeps it as one word.
+function shellCommand(command) {
+    return process.platform === "win32" && /\s/.test(command) && !/^".*"$/.test(command)
+        ? `"${command}"`
+        : command;
+}
+
 function commandExists(command) {
-    const result = spawnSync(command, ["--version"], { stdio: "ignore" });
+    const result = spawnSync(shellCommand(command), ["--version"], {
+        stdio: "ignore",
+        shell: process.platform === "win32",
+    });
     return result.status === 0;
 }
 
 function run(command, args, options = {}) {
     const { allowFailure, ...spawnOptions } = options;
-    const result = spawnSync(command, args, {
+    const result = spawnSync(shellCommand(command), args, {
         cwd: repoRoot,
         stdio: "inherit",
         shell: process.platform === "win32",

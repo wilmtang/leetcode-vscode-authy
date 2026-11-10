@@ -4,8 +4,19 @@
 const { spawnSync } = require("child_process");
 
 const isWindows = process.platform === "win32";
-const npmCmd = isWindows ? "npm.cmd" : "npm";
 const nodeCmd = process.execPath;
+
+// Run npm without a shell. Under `npm run local`, npm_execpath names npm's own
+// JS entry point, so it runs with this Node on every OS. Spawning `npm.cmd`
+// directly fails with EINVAL on patched Windows Node releases, so the fallback
+// (invoked as `node scripts/local.js`) goes through the shell there.
+function npmStep(args) {
+    const npmCli = process.env.npm_execpath;
+    if (npmCli && /\.[cm]?js$/i.test(npmCli)) {
+        return [nodeCmd, [npmCli, ...args]];
+    }
+    return ["npm", args, { shell: isWindows }];
+}
 
 const localCommands = {
     "hooks": {
@@ -14,7 +25,7 @@ const localCommands = {
     },
     "vscode:dev": {
         description: "Compile and launch a VS Code extension-development host.",
-        steps: [[npmCmd, ["run", "vscode:prepublish"]], [nodeCmd, ["scripts/start-vscode-auth-sync-dev.js"]]],
+        steps: [npmStep(["run", "vscode:prepublish"]), [nodeCmd, ["scripts/start-vscode-auth-sync-dev.js"]]],
     },
     "vscode:install": {
         description: "Compile, package, and install the extension into local VS Code.",
@@ -64,8 +75,8 @@ Local commands:`);
     }
 }
 
-function runStep(command, args) {
-    const result = spawnSync(command, args, { stdio: "inherit", shell: false });
+function runStep(command, args, options = {}) {
+    const result = spawnSync(command, args, { stdio: "inherit", shell: false, ...options });
     if (result.error) {
         console.error(result.error.message);
         process.exit(1);
@@ -89,6 +100,6 @@ if (!command) {
     process.exit(1);
 }
 
-for (const [commandPath, args] of command.steps) {
-    runStep(commandPath, args);
+for (const [commandPath, args, options] of command.steps) {
+    runStep(commandPath, args, options);
 }
