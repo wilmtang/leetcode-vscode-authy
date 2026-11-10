@@ -1,0 +1,323 @@
+<title>Status Bar Sync Item</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working VS Code window up top (the mock), state picker beside it, behaviour spec below. */
+:root{
+  --page:#f4f5f7; --ink:#1d2330; --muted:#5d6577; --line:#d9dce3; --panel:#ffffff; --accent:#2f6fd6; --chip:#e9edf5;
+  --sans:"Inter",-apple-system,"Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  /* VS Code Dark Modern */
+  --vs-bg:#1f1f1f; --vs-editor:#1f1f1f; --vs-sb:#181818; --vs-sb-fg:#cccccc; --vs-sb-border:#2b2b2b; --vs-hover:rgba(255,255,255,.12);
+  --vs-warn-bg:#7a6400; --vs-err-bg:#c72e0f; --vs-err-fg:#ffffff; --vs-tip-bg:#202020; --vs-tip-fg:#cccccc; --vs-tip-border:#454545;
+  --vs-qp-bg:#222222; --vs-qp-fg:#cccccc; --vs-qp-sel:#04395e; --vs-qp-desc:#9d9d9d; --vs-input:#313131; --vs-focus:#0078d4;
+  --vs-code1:#569cd6; --vs-code2:#dcdcaa; --vs-code3:#9cdcfe; --vs-code4:#6a9955;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#14161b; --ink:#e6e8ee; --muted:#9aa2b3; --line:#2b2f39; --panel:#1b1e25; --accent:#6aa2ff; --chip:#252a35; color-scheme:dark}}
+:root[data-theme="dark"]{--page:#14161b; --ink:#e6e8ee; --muted:#9aa2b3; --line:#2b2f39; --panel:#1b1e25; --accent:#6aa2ff; --chip:#252a35; color-scheme:dark}
+/* VS Code Light Modern, applied to the mock window only */
+.vs.light{--vs-bg:#f8f8f8; --vs-editor:#ffffff; --vs-sb:#f8f8f8; --vs-sb-fg:#3b3b3b; --vs-sb-border:#e5e5e5; --vs-hover:rgba(0,0,0,.08);
+  --vs-warn-bg:#cca700; --vs-err-bg:#c72e0f; --vs-tip-bg:#f8f8f8; --vs-tip-fg:#3b3b3b; --vs-tip-border:#c8c8c8;
+  --vs-qp-bg:#f8f8f8; --vs-qp-fg:#3b3b3b; --vs-qp-sel:#e8e8e8; --vs-qp-desc:#717171; --vs-input:#ffffff;
+  --vs-code1:#0000ff; --vs-code2:#795e26; --vs-code3:#001080; --vs-code4:#008000}
+
+*{box-sizing:border-box}
+body{background:var(--page); color:var(--ink); font-family:var(--sans); line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); padding-block:32px 56px}
+.wrap{max-width:1080px; margin:0 auto; display:grid; gap:28px}
+h1{font-size:26px; font-weight:600; margin:0; letter-spacing:-.01em; text-wrap:balance}
+h2{font-size:17px; font-weight:600; margin:0 0 12px}
+.lede{color:var(--muted); margin:6px 0 0; max-width:68ch}
+code,.mono{font-family:var(--mono); font-size:.88em}
+
+.stage{display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:20px; align-items:start}
+@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}}
+
+.picker{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; display:grid; gap:12px}
+.picker fieldset{border:0; margin:0; padding:0; display:grid; gap:4px}
+.picker legend{font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+.opt{display:flex; gap:8px; align-items:center; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:13.5px}
+.opt:hover{background:var(--chip)}
+.opt input{accent-color:var(--accent); margin:0}
+.tone{width:8px; height:8px; border-radius:50%; flex:none; margin-left:auto}
+.tone.ok{background:#2ea043}.tone.warn{background:#d29922}.tone.bad{background:#e5534b}.tone.neutral{background:#8b949e}
+.hint{font-size:12.5px; color:var(--muted); margin:0}
+
+/* ---- Mock VS Code window ---- */
+.vs{background:var(--vs-bg); border-radius:10px; overflow:hidden; border:1px solid var(--line); position:relative;
+  font-family:-apple-system,"Segoe UI",system-ui,sans-serif; display:flex; flex-direction:column; min-height:340px}
+.vs-title{height:30px; display:flex; align-items:center; gap:7px; padding:0 12px; background:var(--vs-sb); border-bottom:1px solid var(--vs-sb-border)}
+.dot{width:11px; height:11px; border-radius:50%}
+.vs-title span{margin:0 auto; font-size:12px; color:var(--vs-sb-fg); opacity:.75}
+.editor{flex:1; background:var(--vs-editor); padding:16px 18px; font-family:var(--mono); font-size:12.5px; line-height:1.7; color:var(--vs-sb-fg); overflow-x:auto; white-space:pre}
+.k{color:var(--vs-code1)}.f{color:var(--vs-code2)}.v{color:var(--vs-code3)}.c{color:var(--vs-code4)}
+
+.sb{height:24px; background:var(--vs-sb); border-top:1px solid var(--vs-sb-border); display:flex; align-items:stretch; font-size:12px; color:var(--vs-sb-fg); overflow:hidden; position:relative}
+.sb .grp{display:flex; align-items:stretch; min-width:0}
+.sb .right{margin-left:auto}
+.item{display:flex; align-items:center; gap:4px; padding:0 6px; white-space:nowrap; cursor:pointer; border:0; background:none; color:inherit; font:inherit; border-radius:0}
+.item:hover{background:var(--vs-hover)}
+.item:focus-visible{outline:1px solid var(--vs-focus); outline-offset:-1px}
+.item svg{width:14px; height:14px; flex:none}
+.item.warn{background:var(--vs-warn-bg); color:#fff}
+.item.err{background:var(--vs-err-bg); color:var(--vs-err-fg)}
+.item.passive{cursor:default}.item.passive:hover{background:none}
+.item.new{box-shadow:inset 0 0 0 1px var(--accent)}
+.spin{animation:spin 1s linear infinite; transform-origin:50% 50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+.tip{position:absolute; bottom:30px; background:var(--vs-tip-bg); color:var(--vs-tip-fg); border:1px solid var(--vs-tip-border); border-radius:4px; padding:6px 9px; font-size:12px; line-height:1.55; white-space:pre; box-shadow:0 2px 8px rgba(0,0,0,.36); pointer-events:none; z-index:5; max-width:calc(100% - 16px)}
+
+.qp{position:absolute; top:38px; left:50%; transform:translateX(-50%); width:min(560px,calc(100% - 24px)); background:var(--vs-qp-bg); color:var(--vs-qp-fg); border:1px solid var(--vs-tip-border); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.45); padding:6px; z-index:6; font-size:13px}
+.qp-title{font-size:12px; text-align:center; padding:2px 0 6px; opacity:.85}
+.qp-input{background:var(--vs-input); border:1px solid var(--vs-focus); border-radius:3px; padding:4px 8px; color:var(--vs-qp-desc); font-size:13px; margin-bottom:6px}
+.qp-list{list-style:none; margin:0; padding:0; display:grid; gap:1px}
+.qp-list li{display:grid; grid-template-columns:18px minmax(0,1fr); column-gap:6px; padding:4px 8px; border-radius:3px; cursor:pointer}
+.qp-list li[aria-selected="true"]{background:var(--vs-qp-sel)}
+.qp-list li svg{width:16px; height:16px; margin-top:1px}
+.qp-label{display:flex; gap:8px; align-items:baseline; min-width:0}
+.qp-label b{font-weight:400}
+.qp-desc{color:var(--vs-qp-desc); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.qp-detail{grid-column:2; color:var(--vs-qp-desc); font-size:12px; white-space:normal}
+.qp-sep{border-top:1px solid var(--vs-tip-border); margin:4px 0; display:block!important; padding:0!important}
+
+.vs-tools{position:absolute; top:4px; right:8px; display:flex; gap:6px; z-index:7}
+.vs-tools button{font:500 11px var(--sans); border:1px solid var(--vs-tip-border); background:var(--vs-qp-bg); color:var(--vs-qp-fg); border-radius:4px; padding:2px 8px; cursor:pointer}
+
+/* ---- Spec ---- */
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:13px; min-width:760px}
+th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600}
+tr.cur td{background:var(--chip)}
+.pill{display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:12px; padding:1px 7px; border-radius:4px; background:#181818; color:#ccc; white-space:nowrap}
+.pill.warn{background:#7a6400; color:#fff}.pill.err{background:#c72e0f; color:#fff}
+.pill svg{width:12px; height:12px}
+.notes{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px}
+.notes h3{font-size:14px; margin:0 0 6px}
+.notes p,.notes li{font-size:13.5px; color:var(--muted); margin:0}
+.notes ul{margin:0; padding-left:18px; display:grid; gap:4px}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Status bar: profile + session sync</h1>
+    <p class="lede">The existing <span class="mono">LeetCode: SleezyBunny</span> item keeps opening your profile. A second, adjacent item owns session sync: icon-only while healthy, icon plus a short word when it needs you, and a click opens a quick pick with the status and the one action that fixes it. Hover or click the items in the mock.</p>
+  </header>
+
+  <section class="stage" aria-label="Interactive mock">
+    <div class="vs" id="vs">
+      <div class="vs-title"><i class="dot" style="background:#ff5f57"></i><i class="dot" style="background:#febc2e"></i><i class="dot" style="background:#28c840"></i><span>two-sum.py — leetcode</span></div>
+      <div class="vs-tools"><button type="button" id="vsTheme" aria-pressed="false">Light Modern</button></div>
+      <div class="editor" id="editor"><span class="c"># 1. Two Sum</span>
+<span class="k">class</span> <span class="f">Solution</span>:
+    <span class="k">def</span> <span class="f">twoSum</span>(<span class="v">self</span>, <span class="v">nums</span>, <span class="v">target</span>):
+        <span class="v">seen</span> = {}
+        <span class="k">for</span> <span class="v">i</span>, <span class="v">n</span> <span class="k">in</span> <span class="f">enumerate</span>(<span class="v">nums</span>):
+            <span class="k">if</span> <span class="v">target</span> - <span class="v">n</span> <span class="k">in</span> <span class="v">seen</span>:
+                <span class="k">return</span> [<span class="v">seen</span>[<span class="v">target</span> - <span class="v">n</span>], <span class="v">i</span>]
+            <span class="v">seen</span>[<span class="v">n</span>] = <span class="v">i</span></div>
+      <div class="sb" id="sb">
+        <div class="grp">
+          <span class="item passive" title="">⟨⟩ main</span>
+          <span class="item passive">⊗ 0 ⚠ 4</span>
+          <span class="item passive">Git Graph</span>
+          <button class="item" id="profile" type="button"></button>
+          <button class="item" id="sync" type="button"></button>
+        </div>
+        <div class="grp right">
+          <span class="item passive">Ln 7, Col 21</span>
+          <span class="item passive">Python 3.12</span>
+        </div>
+      </div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="qp" id="qp" hidden role="dialog" aria-label="LeetCode session sync">
+        <div class="qp-title">LeetCode Session Sync</div>
+        <div class="qp-input" id="qpPlaceholder"></div>
+        <ul class="qp-list" id="qpList" role="listbox"></ul>
+      </div>
+    </div>
+
+    <form class="picker" id="picker" onsubmit="return false">
+      <fieldset id="states"><legend>Sync state</legend></fieldset>
+      <p class="hint">States map 1:1 to <span class="mono">authSyncSummary</span> modes. “Just synced” is the 2-second check after a session arrives.</p>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Every state</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>State</th><th>Sync item</th><th>Hover</th><th>Click opens, first action</th></tr></thead>
+        <tbody id="spec"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card notes">
+    <div>
+      <h3>Why two items</h3>
+      <p>The profile click stays a single, predictable destination. Sync gets its own target so a problem is one click from its fix, without opening a webview first.</p>
+    </div>
+    <div>
+      <h3>Quiet when healthy</h3>
+      <p>Healthy sync is an icon only, about 22px of bar, and the quick pick opens on details so Enter never restarts a working listener. Text and a background appear only when you need to act, and the icon shape changes too, so state never depends on color alone.</p>
+    </div>
+    <div>
+      <h3>Implementation notes</h3>
+      <ul>
+        <li>Both items left-aligned with adjacent priorities so nothing slips between them.</li>
+        <li>Quick pick uses native <span class="mono">createQuickPick</span>; items reuse existing commands (restart, force start, status, settings).</li>
+        <li><span class="mono">errorBackground</span> works on the current 1.57 engine; <span class="mono">warningBackground</span> needs 1.63+, so on older hosts warnings fall back to icon + text.</li>
+        <li>Each item has its own id, so either can be hidden from the status bar's context menu.</li>
+        <li>Hidden with the profile item when <span class="mono">leetcode.enableStatusBar</span> is off, and on its own while sync is turned off.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const I = {
+    sync:'<path d="M2.5 8a5.5 5.5 0 0 1 9.6-3.7M13.5 8a5.5 5.5 0 0 1-9.6 3.7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12.6 1.8v2.9H9.7M3.4 14.2v-2.9h2.9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+    synced:'<path d="M2.5 8a5.5 5.5 0 0 1 9.6-3.7M13.5 8a5.5 5.5 0 0 1-9.6 3.7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12.6 1.8v2.9H9.7M3.4 14.2v-2.9h2.9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.8 8.1l1.5 1.5 2.9-3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+    remote:'<rect x="1.5" y="3" width="9" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="5.5" y="6" width="9" height="7" rx="1" fill="var(--vs-sb)" stroke="currentColor" stroke-width="1.2"/>',
+    warn:'<path d="M8 2l6.2 11H1.8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6.3v3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.4" r=".85" fill="currentColor"/>',
+    pause:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 5.6v4.8M9.5 5.6v4.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+    error:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+    stop:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="5.8" y="5.8" width="4.4" height="4.4" rx=".6" fill="currentColor"/>',
+    off:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M3.8 12.2l8.4-8.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+    play:'<path d="M5 3.2v9.6L12.6 8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+    refresh:'<path d="M13 8a5 5 0 1 1-1.6-3.7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.8 1.6v3h-3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+    owner:'<rect x="2" y="3" width="12" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 14h5M8 12v2M6 7.5l1.5 1.5L10.5 6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    info:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.2v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".85" fill="currentColor"/>',
+    gear:'<circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6L5 5M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>',
+    account:'<circle cx="8" cy="5.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2.8 14c.6-2.6 2.7-4 5.2-4s4.6 1.4 5.2 4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>',
+    signin:'<path d="M9 2.5h3.5v11H9M2.5 8h7M7 5.5L9.5 8 7 10.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  };
+  I.check = '<path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  const svg = (n, cls='') => `<svg viewBox="0 0 16 16" aria-hidden="true" class="${cls}">${I[n]}</svg>`;
+  const LAST = '11/10/2026, 2:06:06 AM';
+  const details = {icon:'info', label:'Show sync details', desc:'port, owner window, secret, timing'};
+  const S = [
+    {id:'local', name:'Synced here', tone:'ok', icon:'sync', text:'', cls:'',
+      tip:`✓ Syncing your LeetCode session here\nLast auth sync: ${LAST}\nClick for sync details and actions`,
+      ph:'Synced in this window · last sync 4 min ago',
+      items:[details, {icon:'refresh', label:'Restart sync', desc:'port 17899'}]},
+    {id:'pulse', name:'Just synced', tone:'ok', icon:'check', text:'', cls:'',
+      tip:`✓ Received your LeetCode session just now\nLast auth sync: ${LAST}\nClick for sync details and actions`,
+      ph:'Synced in this window · just now',
+      items:[details, {icon:'refresh', label:'Restart sync', desc:'port 17899'}]},
+    {id:'observer', name:'Synced by another window', tone:'ok', icon:'remote', text:'', cls:'',
+      tip:`✓ LeetCode session synced by another window\nLast auth sync: ${LAST}\nAnother VS Code window is syncing; this one gets its updates`,
+      ph:'Another window is syncing · last sync 4 min ago',
+      items:[details, {icon:'owner', label:'Sync in this window instead', desc:'asks before moving'}]},
+    {id:'vacant', name:'No window syncing', tone:'warn', icon:'warn', text:'Not syncing', cls:'warn',
+      tip:`⚠ No window is syncing your LeetCode session\nLast auth sync: ${LAST}\nThis window will take over automatically within about a minute`,
+      ph:'No window is syncing · this one takes over within a minute',
+      items:[{icon:'play', label:'Start syncing in this window', desc:'port 17899'}, details]},
+    {id:'stopped', name:'Stopped after an error', tone:'warn', icon:'stop', text:'Sync stopped', cls:'warn',
+      tip:`⚠ LeetCode session sync stopped\nLast auth sync: ${LAST}\nSync stopped after an error. Click to restart`,
+      ph:'Sync stopped after an error · last sync 4 min ago',
+      items:[{icon:'refresh', label:'Restart sync', desc:'port 17899'}, details]},
+    {id:'conflict', name:'Port conflict', tone:'bad', icon:'error', text:'Sync blocked', cls:'err',
+      tip:`✕ LeetCode session sync port conflict\nLast auth sync: ${LAST}\nPort 17899 is used by node (pid 4182)`,
+      ph:'Port 17899 is used by node (pid 4182)',
+      items:[
+        {icon:'info', label:"Show what's using port 17899", desc:'copy inspect or stop command'},
+        {icon:'refresh', label:'Try again', desc:'after the other program stops'},
+        {icon:'gear', label:'Use a different port…', desc:'leetcode.authSync.port', detail:'Set the same port in the browser extension options.'}]},
+    {id:'disabled', name:'Turned off (item hidden)', tone:'neutral', hidden:true, icon:'off', text:'', cls:'',
+      tip:'', ph:'', items:[]},
+  ];
+  let cur = S[0], signedIn = true, lightVs = false;
+
+  const $ = id => document.getElementById(id);
+  const vs = $('vs'), sync = $('sync'), profile = $('profile'), tip = $('tip'), qp = $('qp');
+
+  // picker
+  const fs = $('states');
+  S.forEach((s, i) => {
+    const l = document.createElement('label'); l.className = 'opt';
+    l.innerHTML = `<input type="radio" name="state" id="st-${s.id}" value="${s.id}" ${i===0?'checked':''}> ${s.name}<i class="tone ${s.tone}"></i>`;
+    fs.appendChild(l);
+  });
+  const so = document.createElement('label'); so.className = 'opt';
+  so.innerHTML = `<input type="checkbox" id="signedOut"> Signed out`;
+  fs.appendChild(so);
+  fs.addEventListener('change', e => {
+    if (e.target.id === 'signedOut') signedIn = !e.target.checked;
+    else cur = S.find(s => s.id === e.target.value);
+    closeAll(); render();
+  });
+
+  function render(){
+    profile.innerHTML = signedIn ? 'LeetCode: SleezyBunny' : `${svg('signin')} LeetCode: Sign In`;
+    sync.hidden = !!cur.hidden;
+    sync.className = 'item ' + cur.cls;
+    sync.innerHTML = svg(cur.icon, cur.spin ? 'spin' : '') + (cur.text ? `<span>${cur.text}</span>` : '');
+    sync.setAttribute('aria-label', 'LeetCode session sync: ' + cur.tip.split('\n')[0].replace(/^[✓⚠✕] /, ''));
+    document.querySelectorAll('#spec tr').forEach(tr => tr.classList.toggle('cur', tr.dataset.id === cur.id));
+  }
+
+  function showTip(el, text){
+    tip.textContent = text; tip.hidden = false;
+    const r = el.getBoundingClientRect(), v = vs.getBoundingClientRect();
+    let left = r.left - v.left;
+    left = Math.max(8, Math.min(left, v.width - tip.offsetWidth - 8));
+    tip.style.left = left + 'px';
+  }
+  const hideTip = () => { tip.hidden = true; };
+  const profileTip = () => signedIn
+    ? `LeetCode: SleezyBunny\nClick to open your profile`
+    : `Sign in to LeetCode`;
+  [[profile, profileTip], [sync, () => cur.tip]].forEach(([el, t]) => {
+    el.addEventListener('mouseenter', () => { if (qp.hidden) showTip(el, t()); });
+    el.addEventListener('focus', () => { if (qp.hidden) showTip(el, t()); });
+    el.addEventListener('mouseleave', hideTip); el.addEventListener('blur', hideTip);
+  });
+
+  function openQp(){
+    hideTip();
+    $('qpPlaceholder').textContent = cur.ph;
+    const items = [...cur.items, signedIn
+      ? {icon:'account', label:'Open profile', desc:'solved counts and recent submissions'}
+      : {icon:'signin', label:'Sign in', desc:'or sign in in your browser'}];
+    $('qpList').innerHTML = items.map((x, i) => x.sep ? '<li class="qp-sep" role="separator"></li>' :
+      `<li role="option" aria-selected="${i===0}">${svg(x.icon)}<span class="qp-label"><b>${x.label}</b><span class="qp-desc">${x.desc||''}</span></span>${x.detail?`<span class="qp-detail">${x.detail}</span>`:''}</li>`).join('');
+    qp.hidden = false;
+  }
+  function closeAll(){ qp.hidden = true; hideTip(); }
+  sync.addEventListener('click', e => { e.stopPropagation(); qp.hidden ? openQp() : closeAll(); });
+  profile.addEventListener('click', e => { e.stopPropagation(); closeAll(); flash(signedIn ? 'Opens the profile panel (unchanged)' : 'Opens the existing sign-in prompt'); });
+  $('qpList').addEventListener('mouseover', e => {
+    const li = e.target.closest('li[role=option]'); if (!li) return;
+    $('qpList').querySelectorAll('li[role=option]').forEach(x => x.setAttribute('aria-selected', x === li));
+  });
+  $('qpList').addEventListener('click', e => { const li = e.target.closest('li[role=option]'); if (li) { closeAll(); flash('Runs: ' + li.querySelector('b').textContent); } });
+  document.addEventListener('click', e => { if (!qp.contains(e.target)) closeAll(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+
+  function flash(msg){ showTip(sync, msg); setTimeout(hideTip, 1600); }
+
+  $('vsTheme').addEventListener('click', e => {
+    lightVs = !lightVs; vs.classList.toggle('light', lightVs);
+    e.target.textContent = lightVs ? 'Dark Modern' : 'Light Modern';
+    e.target.setAttribute('aria-pressed', lightVs);
+  });
+
+  // spec table
+  $('spec').innerHTML = S.map(s => {
+    const first = s.items[0] || {label:'—'};
+    return `<tr data-id="${s.id}"><td>${s.name}</td>
+      <td>${s.hidden?'<span class="hint">hidden</span>':`<span class="pill ${s.cls}">${svg(s.icon)}${s.text||''}</span>`}${s.id==='pulse'?' <span class="hint">2 s</span>':''}</td>
+      <td class="hint" style="white-space:pre-line">${s.tip.replace(/\nClick.*$/,'')}</td>
+      <td>${first.label}<div class="hint">${s.ph||'Re-enable in settings or the profile panel'}</div></td></tr>`;
+  }).join('');
+
+  render();
+})();
+</script>
