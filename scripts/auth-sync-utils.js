@@ -13,28 +13,50 @@ const vsixPath = path.join(distPath, "vscode-leetcode-auth-sync.vsix");
 
 // On Windows, CLIs such as `code` and `npm` are `.cmd` shims: without a shell,
 // spawnSync neither resolves them via PATHEXT nor (on patched Node) runs them.
-// Quote a command path containing whitespace (e.g. VSCODE_BIN under
-// "Program Files") so the shell keeps it as one word.
-function shellCommand(command) {
-    return process.platform === "win32" && /\s/.test(command) && !/^".*"$/.test(command)
-        ? `"${command}"`
-        : command;
+// A real `.exe` (e.g. chrome.exe) runs directly, with no shell. When cmd.exe is
+// needed, Node joins the command and arguments with plain spaces, so every word
+// that contains whitespace or a cmd delimiter/operator is double-quoted here
+// (`C:\Users\Jane Doe\...`, `--user-data-dir=...\User Data`). Inside quotes
+// cmd treats `& | < > ^ ( )` literally; `"` and `%` cannot be made literal, so
+// they are rejected instead of being reinterpreted by the shell.
+function planSpawn(command, args, platform = process.platform) {
+    if (platform !== "win32" || /\.exe$/i.test(command)) {
+        return { command, args, shell: false };
+    }
+    return { command: quoteForCmd(command), args: args.map(quoteForCmd), shell: true };
+}
+
+function quoteForCmd(value) {
+    let text = String(value);
+    // An already-quoted value (e.g. VSCODE_BIN="C:\Program Files\...") is
+    // unwrapped and checked like any other.
+    if (text.length >= 2 && text.startsWith("\"") && text.endsWith("\"")) {
+        text = text.slice(1, -1);
+    }
+    if (/["%\r\n]/.test(text)) {
+        throw new Error(`Cannot pass this value through the Windows shell safely: ${text}`);
+    }
+    if (text !== "" && !/[\s&|<>^(),;=!]/.test(text)) {
+        return text;
+    }
+    // The target's argv parser treats `\"` as an escaped quote, so double any
+    // trailing backslashes before the closing quote (`"C:\dir\\"` -> C:\dir\).
+    return `"${text.replace(/(\\+)$/, "$1$1")}"`;
 }
 
 function commandExists(command) {
-    const result = spawnSync(shellCommand(command), ["--version"], {
-        stdio: "ignore",
-        shell: process.platform === "win32",
-    });
+    const plan = planSpawn(command, ["--version"]);
+    const result = spawnSync(plan.command, plan.args, { stdio: "ignore", shell: plan.shell });
     return result.status === 0;
 }
 
 function run(command, args, options = {}) {
     const { allowFailure, ...spawnOptions } = options;
-    const result = spawnSync(shellCommand(command), args, {
+    const plan = planSpawn(command, args);
+    const result = spawnSync(plan.command, plan.args, {
         cwd: repoRoot,
         stdio: "inherit",
-        shell: process.platform === "win32",
+        shell: plan.shell,
         ...spawnOptions,
     });
 
@@ -129,6 +151,7 @@ module.exports = {
     getDefaultChromeUserDataDir,
     getLastUsedChromeProfileDirectory,
     getCodeCommand,
+    planSpawn,
     repoRoot,
     run,
     vsixPath,
