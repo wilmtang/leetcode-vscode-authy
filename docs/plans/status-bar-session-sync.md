@@ -1,6 +1,6 @@
 # Status bar session sync item
 
-Status: implemented 2026-11-10. Design approved after 3 independent review rounds; code approved after 2. Real Extension Development Host check still open (see Verification).
+Status: implemented 2026-11-10. Design approved after 3 independent review rounds; code approved after 2. Checked in a real Extension Development Host (see Verification results).
 Drafted 2026-11-10.
 
 Interactive mock: [mocks/status-bar-sync.html](mocks/status-bar-sync.html)
@@ -198,6 +198,31 @@ maintainer rather than claiming it.
 
 Not covered by either: screen-reader output and `warningBackground` on 1.63+
 themes beyond the one checked.
+
+## Verification results (2026-11-10)
+
+Background Extension Development Host runs (VS Code 1.145.2, macOS 15.8.1,
+`npm run check:vscode-background`, secondary built-in display, Dark Modern
+default theme):
+
+- Local: `$(sync)` only. The quick pick (from the command, and from a DOM click
+  on the item) lists details, restart, then sign in.
+- Conflict: `$(error) Sync blocked` on the error background. The quick pick
+  names the program holding the port and lists the actions in the planned
+  order.
+- Restart from conflict back to local: sampled every 50 ms; only `$(sync)` was
+  seen, with no "stopped" flash.
+- Disabled: the sync item is hidden and the account item stays.
+- These runs found two older bugs, fixed in `1c98c9c`: the signed-out account
+  item was empty, and lsof's escaped, truncated program names appeared in the
+  conflict text.
+
+Not covered: observer and vacant (they need a second window), `stopped`
+(needs a non-port-in-use listen error), the just-synced check (needs a real
+browser push), hiding items from the status bar context menu (needs a real
+right-click), screen readers, Windows, and `warningBackground` rendering. The
+runs did take focus: VS Code activated itself when its window opened (see
+AGENTS.md "Background VS Code checks").
 
 ## Out of scope
 

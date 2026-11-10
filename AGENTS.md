@@ -75,6 +75,51 @@ optional cleanup and missing evidence.
 - State whether verification ran hidden or visible and what it could not
   establish (focus, notifications, onscreen behavior).
 
+### Background VS Code checks
+
+Offline tests cannot see VS Code UI: status bar items, codicons, theme
+colors, quick picks, notifications, webview rendering. For those, use the
+scripted background run instead of opening VS Code yourself or asking the
+user to look:
+
+```sh
+npm run bundle && npm run check:vscode-background -- --out <dir>
+```
+
+`scripts/background-vscode/run.js` launches a separate VS Code instance with a
+throwaway profile (`--user-data-dir`, `--extensions-dir`,
+`--disable-extensions`) and its own auth-sync port, so the user's VS Code,
+settings, extensions and running sync are never touched. It:
+
+- **Uses only the secondary display.** It refuses unless the built-in display
+  is present, non-primary and unmirrored, and never falls back to another
+  screen. The window position is seeded into the throwaway profile, and the
+  run aborts if the window lands anywhere else.
+- **Launches without activation.** It uses `NSWorkspace` with
+  `activates = false` and starts hidden, via
+  `scripts/background-vscode/macos-window.swift`.
+- **Drives and captures without your input devices.** It never touches the
+  real pointer, keyboard or `screencapture`. Instead:
+  - it drives and screenshots the workbench over CDP
+    (`--remote-debugging-port`), with DOM `click()` and
+    `Page.captureScreenshot`;
+  - a generated harness extension runs commands, changes settings and occupies
+    ports inside the extension host.
+- **Checks focus and cleans up.** It samples the frontmost app every 500 ms
+  and fails if the test instance ever becomes frontmost. It kills only the pid
+  it launched and deletes its temp profile, even on failure.
+
+Add a scenario to `run.js` for new UI rather than ad-hoc launches, and read
+the screenshots it writes; DOM state alone has passed on visibly wrong UI
+(an empty status bar item rendered as nothing).
+
+**Known limit (2026-11-10, VS Code 1.145):** VS Code activates itself when
+its window opens, even when launched non-activating and hidden. The script
+detects this and fails the run, but cannot prevent it yet. Until it can, a
+run takes the user's focus for a moment, so do not start one on your own.
+Ask the user first, and say it will briefly take focus. CDP screenshots work
+whether or not the app is hidden (`--no-unhide` keeps it hidden).
+
 ### UX bar
 
 Hold user-facing changes (notifications, progress, webviews, the browser
