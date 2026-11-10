@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as net from "net";
 import * as vscode from "vscode";
+import { parseLsofOutput } from "../../auth/authSyncPortInspector";
 import { authSyncServer } from "../../auth/authSyncServer";
 import { globalState } from "../../globalState";
 import {
@@ -109,6 +110,14 @@ describe("session sync status bar", () => {
         assert.strictEqual(account.name, "LeetCode Account");
         assert.strictEqual(sync.name, "LeetCode Session Sync");
         assert.strictEqual(sync.command, "leetcode.authSync.showActions");
+        bar.dispose();
+    });
+
+    it("labels the account item before any sign-in status arrives", () => {
+        const bar: LeetCodeStatusBarItem = new LeetCodeStatusBarItem();
+        const { account } = itemsOf();
+        assert.strictEqual(account.text, "LeetCode: Sign In");
+        assert.strictEqual(account.command, "leetcode.signin");
         bar.dispose();
     });
 
@@ -316,5 +325,15 @@ describe("auth sync status changes", () => {
             assert.strictEqual(authSyncServer.getStatusSnapshot().conflict, snapshot.conflict);
             assert.strictEqual(events, 1);
         });
+    });
+});
+
+describe("port owner lookup", () => {
+    it("decodes lsof's escaped command names", () => {
+        const output: string = [
+            "COMMAND                  PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME",
+            "Code\\x20Helper\\x20(Plugin) 23662 zihaod 31u  IPv4 0x1      0t0  TCP 127.0.0.1:64438 (LISTEN)",
+        ].join("\n");
+        assert.deepStrictEqual(parseLsofOutput(output), { command: "Code Helper (Plugin)", pid: "23662" });
     });
 });

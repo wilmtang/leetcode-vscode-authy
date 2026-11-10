@@ -22,8 +22,9 @@ export async function describePortOwner(port: number): Promise<IAuthSyncPortConf
 }
 
 async function describeUnixPortOwner(port: number): Promise<IAuthSyncPortConflict> {
-    const inspectCommand: string = `lsof -nP -iTCP:${port} -sTCP:LISTEN`;
-    const output: ICommandOutput = await runCommand("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN"]);
+    // `+c 0` prints the full command name instead of lsof's 9-character cut.
+    const inspectCommand: string = `lsof +c 0 -nP -iTCP:${port} -sTCP:LISTEN`;
+    const output: ICommandOutput = await runCommand("lsof", ["+c", "0", "-nP", `-iTCP:${port}`, "-sTCP:LISTEN"]);
     const parsed: IParsedProcess | undefined = parseLsofOutput(output.stdout);
     const summary: string = parsed
         ? `${parsed.command} (PID ${parsed.pid})`
@@ -87,7 +88,9 @@ function runCommand(command: string, args: string[]): Promise<ICommandOutput> {
     });
 }
 
-function parseLsofOutput(output: string): IParsedProcess | undefined {
+// lsof escapes non-printable and space characters in COMMAND as \xNN (e.g.
+// "Code\x20Helper"), which also keeps the column free of literal spaces.
+export function parseLsofOutput(output: string): IParsedProcess | undefined {
     const lines: string[] = output.split(/\r?\n/).filter((line: string) => !!line.trim());
     if (lines.length < 2) {
         return undefined;
@@ -98,7 +101,8 @@ function parseLsofOutput(output: string): IParsedProcess | undefined {
         return undefined;
     }
 
-    return { command: fields[0], pid: fields[1] };
+    const command: string = fields[0].replace(/\\x([0-9a-fA-F]{2})/g, (_match: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+    return { command, pid: fields[1] };
 }
 
 function parseNetstatPid(output: string): string | undefined {
@@ -122,7 +126,7 @@ interface ICommandOutput {
     errorMessage?: string;
 }
 
-interface IParsedProcess {
+export interface IParsedProcess {
     command: string;
     pid: string;
 }

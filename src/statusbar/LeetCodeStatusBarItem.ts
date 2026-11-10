@@ -29,6 +29,9 @@ export class LeetCodeStatusBarItem implements vscode.Disposable {
         // prompt so the click is never a dead end.
         this.accountItem = vscode.window.createStatusBarItem(ACCOUNT_STATUS_BAR_ID, vscode.StatusBarAlignment.Left, ACCOUNT_PRIORITY);
         this.accountItem.name = "LeetCode Account";
+        // Signed-out startup never emits a status change, so set the
+        // signed-out text up front instead of showing an empty item.
+        this.accountItem.text = "LeetCode: Sign In";
         this.accountItem.command = "leetcode.signin";
         this.accountItem.tooltip = "Sign in to LeetCode";
 
