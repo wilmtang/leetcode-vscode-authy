@@ -4,6 +4,87 @@ Guidance for AI agents (and humans) working in this repo. Read this before doing
 a code review or security audit so you don't re-report decisions that are
 intentional.
 
+## Working approach
+
+Act like a skeptical senior engineer. Inspect relevant code before editing,
+identify root causes and broken invariants, and prefer the smallest safe change.
+Add regression tests when practical, state exactly what was verified, and do not
+perform unrelated refactors.
+
+### Commit discipline
+
+When making code changes, commit each completed independent unit of work before
+starting another. Keep every commit focused and do not bundle unrelated changes.
+Run checks appropriate to the change before committing; do not commit knowingly
+broken or incomplete work merely to satisfy this rule. Preserve unrelated
+user-owned working-tree changes unless the user explicitly asks to include them.
+
+- Subject: lowercase Conventional Commit — `<type>: <concise lowercase summary>`
+  (see `git log`, e.g. `989712a fix: fail closed on unreadable current auth records`).
+- Add a body only when it records context, constraints, or verification the
+  subject can't convey. When warranted, name the concrete module-level changes,
+  call out intentionally preserved exceptions or boundaries, and end with the
+  checks actually run and their results. Do not claim verification that did not
+  occur.
+- Pass multi-paragraph bodies with repeated `-m` arguments or `-F`; never embed
+  literal `\n` escapes in a shell argument. Inspect `git log -1 --format=raw`
+  before moving on.
+- A parenthesized step label is appropriate only for an explicitly numbered
+  migration or plan.
+
+### Audit remediation
+
+For audit-remediation work, keep an explicit closure ledger with three
+categories: fixed and verified, intentionally not changed, and changed but not
+fully proven. Do not summarize the audit as completely fixed while owner-choice
+items or verification gaps remain; carry the ledger into
+`docs/maintainer-guide.md` so the handoff distinguishes product risk from
+optional cleanup and missing evidence.
+
+### Regression tests and verification
+
+- **Prove the regression test detects the regression.** For a reproduced bug,
+  run the new assertion against the unfixed implementation when practical, then
+  against the fix. The expected failure must be the defect, not setup errors or
+  timeouts. Inspect historical code read-only or in a disposable copy; never
+  reset user work for this proof. If pre-fix reproduction is unavailable, record
+  that gap rather than treating a green new test as proven protection.
+- **Gate on the condition, never on a fixed sleep.** Poll with a timeout and
+  report the live value at failure time. Treat a check that passes on re-run as
+  a bug in the check, not as noise.
+- **Know what each check cannot see.** `npm test` is offline: it never talks to
+  LeetCode or Cloudflare, never runs inside a real VS Code extension host, and
+  never loads the browser extension in a real browser. State which of those
+  surfaces a change touched and whether it was exercised.
+- **Local check load.** Use the narrowest check that covers the edit, and rerun
+  a check only when something it covers has changed — but never skip a check
+  the change requires.
+
+### Live LeetCode and browser checks
+
+- Keep live LeetCode checks minimal, read-only where possible, and rate-limited;
+  repeatable coverage belongs in offline fixtures. Bursts trigger Cloudflare
+  challenges (see "Request And Cloudflare Notes" in the maintainer guide). Never
+  automate a CAPTCHA or Cloudflare challenge; if bot detection blocks progress,
+  pause for the user to clear it in their own browser.
+- Prefer the user's existing browser profile and synced session for live
+  reproduction. Real-browser and VS Code checks must not steal focus, switch the
+  user's Space, or cover their active work; never close the user's existing
+  browser or VS Code windows as cleanup. Tear down every browser, profile, or
+  helper process a check launches, even on failure.
+- State whether verification ran hidden or visible and what it could not
+  establish (focus, notifications, onscreen behavior).
+
+### UX bar
+
+Hold user-facing changes (notifications, progress, webviews, the browser
+extension popup/options) to the clarity and restraint a senior Apple product
+designer would expect: one obvious primary action per prompt, plain language,
+failure messages users can act on, sensible defaults over new settings, never
+trap or surprise the user, and keep consequential actions explicit and
+cancellable. Prefer native VS Code affordances (notifications, progress,
+quick picks) over custom UI.
+
 ## Build & test
 
 - `npm run compile` — type-check + emit (`tsc -p ./`).
