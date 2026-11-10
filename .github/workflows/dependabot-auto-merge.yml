@@ -122,10 +122,45 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
 
+      # Guard on the update itself, not only the group name: a security update
+      # (security-fixes group) or an ungrouped PR can also carry a major bump of
+      # shipped runtime code, which must wait for review. fetch-metadata reports
+      # the highest semver change in the PR as update-type.
+      - name: Hold major updates of shipped runtime code
+        id: policy
+        run: |
+          runtime='axios fs-extra highlight.js katex lodash markdown-it sanitize-html'
+          allowed=true
+          if [ "$DEPENDENCY_GROUP" = runtime-major ]; then
+            allowed=false
+          # An unparsed (empty) update-type is treated like a major.
+          elif [ "$UPDATE_TYPE" = version-update:semver-major ] || [ -z "$UPDATE_TYPE" ]; then
+            IFS=',' read -ra names <<<"$DEPENDENCY_NAMES"
+            for name in "${names[@]}"; do
+              name="${name// /}"
+              for package in $runtime; do
+                if [ "$name" = "$package" ]; then
+                  allowed=false
+                fi
+              done
+            done
+          fi
+          echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+          if [ "$allowed" != true ]; then
+            echo 'Major update of shipped runtime code: left for manual review.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          DEPENDENCY_GROUP: ${{ steps.metadata.outputs.dependency-group }}
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+
       - name: Queue the npm merge once required checks pass
         # fetch-metadata uses Dependabot's internal npm ecosystem identifier,
         # not the shorter package-ecosystem value from dependabot.yml.
-        if: steps.metadata.outputs.package-ecosystem == 'npm_and_yarn'
+        # Major updates of shipped runtime code stay manual (see dependabot.yml).
+        if: >-
+          steps.metadata.outputs.package-ecosystem == 'npm_and_yarn'
+          && steps.policy.outputs.allowed == 'true'
         run: |
           gh pr merge --auto --merge --match-head-commit "$HEAD_SHA" "$PR_URL"
           state="$(gh pr view "$PR_URL" --json state,headRefOid,autoMergeRequest)"

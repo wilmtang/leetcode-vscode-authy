@@ -1,6 +1,7 @@
 # Dependency updates (adapted from better-peakbagger).
 #
-# Every npm group merges automatically once the required `main` checks pass;
+# Every npm group except runtime-major merges automatically once the required
+# `main` checks pass;
 # see `.github/workflows/dependabot-auto-merge.yml`. Cooldown is the only delay
 # left in the version-update path, so it is what lets an ecosystem find a bad
 # release before this repository takes it. GitHub Actions updates stay grouped
@@ -33,8 +34,22 @@ updates:
       - dependency-name: typescript
         update-types: [version-update:semver-major]
     groups:
+      # Major updates of shipped code (sanitize-html is the webview XSS
+      # boundary) always wait for review; the auto-merge workflow skips this
+      # group. Listed first so it wins over the groups below.
+      runtime-major:
+        update-types: [major]
+        patterns:
+          - axios
+          - fs-extra
+          - highlight.js
+          - katex
+          - lodash
+          - markdown-it
+          - sanitize-html
       # Bundled into the shipped VS Code extension by esbuild.
       runtime:
+        update-types: [minor, patch]
         patterns:
           - axios
           - fs-extra

@@ -9,7 +9,6 @@ GEMINI.md
 .agents/**
 .claude/**
 CLAUDE.md
-GEMINI.md
 _config.yml
 browser-extension/**
 dist/**
