@@ -44,6 +44,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   vulnerabilities.
 
 ### Fixed
+- Windows: opening a problem description no longer throws when the built-in
+  Markdown extension's `preview.fontFamily` setting is unavailable.
 - Recover judge requests from Cloudflare challenges: classify challenge pages at
   any status (including curl 200/503) without mistaking JSON that echoes user input,
   back off once with jitter, then offer "Open in Browser" and retry automatically
