@@ -85,7 +85,7 @@ export function currentProfileSyncStatus(): IProfileSyncStatus {
 // Snapshots the local cookie/auth-sync state for the panel's "Session Sync"
 // card. All of this is synchronous local state (no network), so the card paints
 // immediately. The label/tone/timestamps come from the shared summary that also
-// backs the status-bar tooltip; only the account fields are added here.
+// backs the session-sync status bar item; only the account fields are added here.
 function gatherSyncStatus(username: string, cached: UserDataType | undefined): IProfileSyncStatus {
     return {
         ...getAuthSyncSummary(),

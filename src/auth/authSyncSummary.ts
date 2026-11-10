@@ -7,7 +7,7 @@ import { authSyncServer, IAuthSyncStatusSnapshot } from "./authSyncServer";
 export type AuthSyncTone = "ok" | "warn" | "bad" | "neutral";
 
 // A formatted, view-agnostic snapshot of the cookie/auth-sync state. Both the
-// profile panel's "Session Sync" card and the status-bar tooltip render from
+// profile panel's "Session Sync" card and the session-sync status bar item render from
 // this, so the wording ("Syncing your LeetCode session here", etc.) is defined
 // once here and stays identical across both surfaces. Timestamps are Unix ms.
 export interface IAuthSyncSummary {
@@ -58,7 +58,7 @@ function describeMode(mode: string): { label: string; tone: AuthSyncTone } {
         case "vacant":
             return { label: "No window is syncing your LeetCode session", tone: "warn" };
         case "stopped":
-            return { label: "LeetCode session sync paused", tone: "warn" };
+            return { label: "LeetCode session sync stopped", tone: "warn" };
         case "conflict":
             return { label: "LeetCode session sync port conflict", tone: "bad" };
         case "disabled":

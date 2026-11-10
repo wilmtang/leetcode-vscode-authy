@@ -25,7 +25,7 @@ export type ProfileSectionId = "header" | "about" | "totals" | "languages" | "re
 // Local cookie/auth-sync state surfaced in the panel's "Session Sync" card. The
 // shared IAuthSyncSummary (label/tone/timestamps) is gathered by the command and
 // joined with the signed-in account fields, so this provider stays a pure
-// renderer and the wording matches the status-bar tooltip.
+// renderer and the wording matches the session-sync status bar item.
 export interface IProfileSyncStatus extends IAuthSyncSummary {
     username: string;
     isPremium: boolean;

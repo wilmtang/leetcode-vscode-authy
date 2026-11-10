@@ -33,6 +33,7 @@
         "onCommand:leetcode.authSync.status",
         "onCommand:leetcode.authSync.restart",
         "onCommand:leetcode.authSync.forceStart",
+        "onCommand:leetcode.authSync.showActions",
         "onCommand:leetcode.refreshExplorer",
         "onCommand:leetcode.pickOne",
         "onCommand:leetcode.showProblem",
@@ -160,6 +161,11 @@
             {
                 "command": "leetcode.authSync.forceStart",
                 "title": "Force Start Browser Auth Sync Server",
+                "category": "LeetCode"
+            },
+            {
+                "command": "leetcode.authSync.showActions",
+                "title": "Session Sync Actions",
                 "category": "LeetCode"
             }
         ],
@@ -664,7 +670,7 @@
                         "type": "boolean",
                         "default": true,
                         "scope": "application",
-                        "description": "Show the LeetCode status bar or not."
+                        "description": "Show the LeetCode account and session sync status bar items."
                     },
                     "leetcode.editor.shortcuts": {
                         "type": "array",

@@ -62,6 +62,7 @@ If a browser store listing is not available for your browser, load `browser-exte
 - Run tests and submit solutions from editor CodeLens shortcuts.
 - Star and unstar problems on the validated `leetcode.com` endpoint.
 - Click the `LeetCode: <username>` status bar item to open a personal stats panel with solved counts, ranking, language stats, and recent accepted submissions.
+- A second status bar item next to it shows browser session sync: just an icon while sync works, and a short warning such as `Sync stopped` or `Sync blocked` when it needs you. Click it for sync details and the action that fixes the problem.
 - Sync auth from Chrome, Chromium, or Firefox through the companion browser extension.
 
 Core commands:
@@ -73,6 +74,7 @@ Core commands:
 - `LeetCode: Pick One`
 - `LeetCode: Show Browser Auth Sync Status`
 - `LeetCode: Restart Browser Auth Sync Server`
+- `LeetCode: Session Sync Actions` (same as clicking the session sync status bar item)
 
 Browser extension controls:
 
@@ -122,7 +124,7 @@ That blocks ordinary malicious websites through the Origin/CORS checks, but it i
 | `leetcode.endpoint` | `leetcode` | Active endpoint. `leetcode-cn` is currently broken in this project. |
 | `leetcode.workspaceFolder` | `""` | Folder for generated problem files. |
 | `leetcode.filePath` | `""` | Relative folder and filename pattern for problem files. |
-| `leetcode.enableStatusBar` | `true` | Show the LeetCode status bar item. |
+| `leetcode.enableStatusBar` | `true` | Show the LeetCode account and session sync status bar items. |
 | `leetcode.editor.shortcuts` | `["submit, test"]` | Editor CodeLens shortcuts. |
 | `leetcode.enableSideMode` | `true` | Open preview, solution, and submission tabs in the second editor column. |
 | `leetcode.showCommentDescription` | `false` | Include problem descriptions in generated files. |

@@ -4,6 +4,29 @@ All notable changes to the "leetcode" extension will be documented in this file.
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
 ## [Unreleased]
+### Added
+- **Session sync status bar item**: a second item beside `LeetCode: <user>` shows
+  browser session sync health (icon only while healthy; `Not syncing`,
+  `Sync stopped` or `Sync blocked` when it needs you) and opens a quick pick with
+  sync details and the fix for the current state. It stays hidden while sync is
+  turned off. Both items now have their own ids, so either can be hidden from the
+  status bar's context menu; if you had hidden the old LeetCode item there, it
+  may reappear once and can be hidden again.
+
+### Changed
+- Restarting session sync no longer passes through a visible "stopped" state,
+  reports where sync ended up, and force start asks in plain language that
+  matches the current state. "Paused" is now "stopped", since nothing pauses
+  sync. A port conflict found by the background check now names the program.
+
+### Fixed
+- A background sync check that finished after sync was turned off or its port
+  changed could bring back a stale "blocked" or "another window" state.
+- A force start whose release timed out could leave sync stopped with no retry;
+  it now claims the freed port or reports the conflict and keeps checking.
+- Looking up which program holds the sync port no longer opens a console
+  window on Windows, and runs once per new conflict instead of every check.
+
 ### Security
 - Patched newly published production advisories: sanitize-html 2.18.1 (drops
   the prototype-poisoning deepmerge path), markdown-it 14.3.3 (quadratic-time

@@ -46,4 +46,8 @@ describe("auth sync lifecycle", () => {
         assert.ok(Date.now() - startedAt < 3500, "shutdown should destroy incomplete sockets after its grace period");
         socket.destroy();
     });
+
+    after(() => {
+        delete (global as unknown as { __LC_TEST_CONFIG__?: unknown }).__LC_TEST_CONFIG__;
+    });
 });

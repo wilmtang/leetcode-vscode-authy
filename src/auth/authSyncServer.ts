@@ -82,11 +82,20 @@ class AuthSyncServer implements vscode.Disposable {
     private readonly sockets: Set<net.Socket> = new Set<net.Socket>();
     private serverGeneration: number = 0;
     // Fires after the browser extension pushes a fresh auth payload (cookie +
-    // request headers + user agent) and lastSyncedAt is bumped. Lets the status
-    // bar refresh its "Last auth sync" tooltip on every sync, not just on the
-    // sign-in/identity changes that drive `statusChanged`.
+    // request headers + user agent) and lastSyncedAt is bumped. Lets the
+    // session-sync status bar item and profile card refresh "Last auth sync" on
+    // every sync, not just on the sign-in/identity changes that drive
+    // `statusChanged`.
     private readonly onDidSyncEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
     public readonly onDidSync: vscode.Event<void> = this.onDidSyncEmitter.event;
+    // Fires when the visible sync state (mode, port, owner window or port
+    // conflict) changes, once the operation queue drains. Waiting for an idle
+    // queue keeps a stop-then-start sequence from flashing "stopped"; the key
+    // excludes heartbeat and last-sync timestamps so heartbeats never fire it.
+    private readonly onDidChangeStatusEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    public readonly onDidChangeStatus: vscode.Event<void> = this.onDidChangeStatusEmitter.event;
+    private inFlightOperations: number = 0;
+    private lastStatusKey: string | undefined;
 
     public start(): Promise<void> {
         return this.enqueue(() => this.startInternal());
@@ -94,6 +103,15 @@ class AuthSyncServer implements vscode.Disposable {
 
     public stop(): Promise<void> {
         return this.enqueue(() => this.stopInternal());
+    }
+
+    // One queued stop-then-start, so observers of onDidChangeStatus never see
+    // the transient "stopped" between the two halves.
+    public restart(): Promise<void> {
+        return this.enqueue(async () => {
+            await this.stopInternal();
+            await this.startInternal();
+        });
     }
 
     public forceStart(): Promise<AuthSyncForceStartResult> {
@@ -126,12 +144,37 @@ class AuthSyncServer implements vscode.Disposable {
     public dispose(): void {
         void this.stop();
         this.onDidSyncEmitter.dispose();
+        this.onDidChangeStatusEmitter.dispose();
     }
 
     private enqueue<T>(operation: () => Promise<T>): Promise<T> {
-        const next: Promise<T> = this.pending.then(operation, operation);
+        this.inFlightOperations++;
+        const settle = (): void => {
+            this.inFlightOperations--;
+            if (this.inFlightOperations === 0) {
+                this.emitStatusIfChanged();
+            }
+        };
+        const run = (): Promise<T> => operation();
+        const next: Promise<T> = this.pending.then(run, run);
+        next.then(settle, settle);
         this.pending = next.then(() => undefined, () => undefined);
         return next;
+    }
+
+    private emitStatusIfChanged(): void {
+        const owner: AuthSyncOwnerInfo | undefined = this.getSnapshotOwner();
+        const key: string = [
+            this.mode,
+            this.port === undefined ? "" : String(this.port),
+            owner ? owner.windowId : "",
+            this.lastConflict ? this.lastConflict.summary : "",
+        ].join("|");
+        if (key === this.lastStatusKey) {
+            return;
+        }
+        this.lastStatusKey = key;
+        this.onDidChangeStatusEmitter.fire();
     }
 
     private enqueueAuthUpdate<T>(operation: () => Promise<T>): Promise<T> {
@@ -256,7 +299,20 @@ class AuthSyncServer implements vscode.Disposable {
                 const postReleaseProbe: AuthSyncPortProbe = await this.probePort(serverSettings.port);
                 if (postReleaseProbe.kind === "occupied") {
                     const releaseConflict: IAuthSyncPortConflict = await describePortOwner(serverSettings.port);
+                    this.mode = "conflict";
+                    this.port = serverSettings.port;
+                    this.lastConflict = releaseConflict;
+                    this.startObserverTimer();
                     return { kind: "portConflict", port: serverSettings.port, conflict: releaseConflict };
+                }
+
+                if (postReleaseProbe.kind === "free") {
+                    // Freed just after the wait timed out: claim it now rather
+                    // than leaving this window stopped with no retry.
+                    await this.startInternal();
+                    if (this.isRunning()) {
+                        return { kind: "claimed", port: serverSettings.port, previousOwner };
+                    }
                 }
 
                 if (postReleaseProbe.kind === "authSync") {
@@ -891,7 +947,22 @@ class AuthSyncServer implements vscode.Disposable {
                 return;
             }
 
+            // A restart (settings change, user action) between here and the
+            // queued write below bumps the generation; the write must not then
+            // resurrect a mode for the old settings.
+            const generation: number = this.serverGeneration;
             const probe: AuthSyncPortProbe = await this.probePort(serverSettings.port);
+            // Describe a foreign port owner before taking the lock (it shells
+            // out), so a conflict found by this timer names the program too.
+            // Only on a new conflict: re-inspecting every tick would spawn a
+            // process each interval and flip the summary on a slow lookup.
+            const knownConflict: IAuthSyncPortConflict | undefined =
+                this.mode === "conflict" && this.lastConflict && this.lastConflict.port === serverSettings.port
+                    ? this.lastConflict
+                    : undefined;
+            const conflict: IAuthSyncPortConflict | undefined = probe.kind === "free" || probe.kind === "authSync"
+                ? undefined
+                : knownConflict || await describePortOwner(serverSettings.port);
             if (probe.kind === "free") {
                 leetCodeChannel.appendLine(`[auth-sync] No live auth sync owner found. Trying to become owner on port ${serverSettings.port}.`);
                 await this.enqueue(() => this.startInternal());
@@ -902,7 +973,13 @@ class AuthSyncServer implements vscode.Disposable {
                 // Re-check `local` inside the lock: we may have become the owner while
                 // probing, in which case there is nothing to downgrade. (A2-11.)
                 await this.enqueue(async () => {
-                    if (this.mode === "local") {
+                    const current: IAuthSyncServerSettings = this.getServerSettings();
+                    if (
+                        this.mode === "local" ||
+                        this.serverGeneration !== generation ||
+                        !current.enabled ||
+                        current.port !== serverSettings.port
+                    ) {
                         return;
                     }
                     if (probe.kind === "authSync") {
@@ -913,6 +990,7 @@ class AuthSyncServer implements vscode.Disposable {
                     } else {
                         this.mode = "conflict";
                         this.port = serverSettings.port;
+                        this.lastConflict = conflict;
                         this.observedOwner = undefined;
                     }
                 });
@@ -946,7 +1024,7 @@ class AuthSyncServer implements vscode.Disposable {
     // Picks up auth syncs performed by the OWNER window (which bumps the shared
     // lastSyncedAt). The owner fires onDidSync inline in handleRequest; observer
     // windows only see the change here, so re-emit onDidSync on a genuine advance
-    // so their status-bar tooltip and open profile "Session Sync" card refresh on
+    // so their session-sync status bar item and open profile "Session Sync" card refresh on
     // a remote sync instead of reading stale until the next local action. Runs off
     // the observer timer, so the refresh lands within one observer-check interval.
     // (A2-8.)

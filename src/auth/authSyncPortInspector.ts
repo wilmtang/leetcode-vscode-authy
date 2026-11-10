@@ -77,7 +77,7 @@ async function describeWindowsPortOwner(port: number): Promise<IAuthSyncPortConf
 
 function runCommand(command: string, args: string[]): Promise<ICommandOutput> {
     return new Promise<ICommandOutput>((resolve: (output: ICommandOutput) => void) => {
-        cp.execFile(command, args, { timeout: 3000, maxBuffer: 64 * 1024 }, (error: cp.ExecException | null, stdout: string, stderr: string) => {
+        cp.execFile(command, args, { timeout: 3000, maxBuffer: 64 * 1024, windowsHide: true }, (error: cp.ExecException | null, stdout: string, stderr: string) => {
             resolve({
                 stdout,
                 stderr,

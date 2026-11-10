@@ -14,15 +14,30 @@ function createOutputChannel(name) {
     };
 }
 
-function createStatusBarItem() {
-    return {
+// Records every created item (id, alignment, priority) and its visibility so
+// status bar tests can assert on what a real host would render.
+const createdStatusBarItems = [];
+
+function createStatusBarItem(idOrAlignment, alignmentOrPriority, maybePriority) {
+    const hasId = typeof idOrAlignment === "string";
+    const item = {
+        id: hasId ? idOrAlignment : undefined,
+        alignment: hasId ? alignmentOrPriority : idOrAlignment,
+        priority: hasId ? maybePriority : alignmentOrPriority,
+        name: undefined,
         text: "",
         tooltip: "",
         command: undefined,
-        show() { return undefined; },
-        hide() { return undefined; },
-        dispose() { return undefined; },
+        backgroundColor: undefined,
+        accessibilityInformation: undefined,
+        visible: false,
+        disposed: false,
+        show() { this.visible = true; },
+        hide() { this.visible = false; },
+        dispose() { this.visible = false; this.disposed = true; },
     };
+    createdStatusBarItems.push(item);
+    return item;
 }
 
 function getConfiguration() {
@@ -55,6 +70,7 @@ module.exports = {
     window: {
         createOutputChannel: createOutputChannel,
         createStatusBarItem: createStatusBarItem,
+        __createdStatusBarItems: createdStatusBarItems,
         showErrorMessage() { return Promise.resolve(undefined); },
         showInformationMessage() { return Promise.resolve(undefined); },
         showWarningMessage() { return Promise.resolve(undefined); },
@@ -65,6 +81,7 @@ module.exports = {
         onDidChangeConfiguration() { return { dispose() { return undefined; } }; },
     },
     ProgressLocation: { SourceControl: 1, Window: 10, Notification: 15 },
+    StatusBarAlignment: { Left: 1, Right: 2 },
     ThemeColor: class ThemeColor {
         constructor(id) { this.id = id; }
     },

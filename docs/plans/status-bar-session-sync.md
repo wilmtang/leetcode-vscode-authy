@@ -1,6 +1,6 @@
 # Status bar session sync item
 
-Status: design approved by independent review (3 rounds); implementation in progress.
+Status: implemented 2026-11-10. Design approved after 3 independent review rounds; code approved after 2. Real Extension Development Host check still open (see Verification).
 Drafted 2026-11-10.
 
 Interactive mock: [mocks/status-bar-sync.html](mocks/status-bar-sync.html)
@@ -147,7 +147,10 @@ Inspect Command / Copy Stop Command).
 3. **Conflict detail from the observer timer.** In `runObserverCheck`'s
    occupied branch, call `describePortOwner` before taking the lock and store
    it as `lastConflict` inside the lock, so a timer-detected conflict names
-   the program.
+   the program. The lookup runs only for a new conflict (an existing conflict
+   on the same port is reused), and "Show what's using port N" refreshes it
+   first. The queued write is dropped if a restart, disable or port change
+   happened while the check ran.
 4. **Pure presentation.** `src/statusbar/sessionSyncPresentation.ts`:
    `describeSessionSyncItem(summary, { justSynced })` →
    `{ visible, text, tooltip, backgroundThemeId?, accessibilityLabel }`, and

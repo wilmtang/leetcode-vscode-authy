@@ -24,6 +24,18 @@ class LeetCodeStatusBarController implements Disposable {
         this.statusBar.updateStatusBar(status, user);
     }
 
+    public setSyncReady(): void {
+        this.statusBar.setSyncReady();
+    }
+
+    public markSynced(): void {
+        this.statusBar.markSynced();
+    }
+
+    public updateSync(): void {
+        this.statusBar.updateSync();
+    }
+
     public dispose(): void {
         this.statusBar.dispose();
         this.configurationChangeListener.dispose();

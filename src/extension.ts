@@ -18,6 +18,8 @@ import {
     IAuthSyncStatusSnapshot,
 } from "./auth/authSyncServer";
 import { IAuthSyncPortConflict } from "./auth/authSyncPortInspector";
+import { getAuthSyncSummary } from "./auth/authSyncSummary";
+import { buildSessionSyncActions, describeForceStartPrompt, ISessionSyncActionItem, ISessionSyncActions, SessionSyncAction } from "./statusbar/sessionSyncPresentation";
 import { explorerNodeManager } from "./explorer/explorerNodeManager";
 import { LeetCodeNode } from "./explorer/LeetCodeNode";
 import { leetCodeTreeDataProvider } from "./explorer/LeetCodeTreeDataProvider";
@@ -47,12 +49,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             leetCodeTreeDataProvider.rerender();
         });
 
-        // Refresh the status-bar tooltip and the open profile panel's Session
-        // Sync card on every auth sync (including same-user re-syncs that don't
-        // fire "statusChanged"), so "Last auth sync" stays current without a
-        // manual Refresh. updateSync no-ops when the panel is closed.
+        // Refresh the session-sync status bar item and the open profile panel's
+        // Session Sync card on every auth sync (including same-user re-syncs
+        // that don't fire "statusChanged"), so "Last auth sync" stays current
+        // without a manual Refresh. updateSync no-ops when the panel is closed.
         context.subscriptions.push(authSyncServer.onDidSync(() => {
-            leetCodeStatusBarController.updateStatusBar(leetCodeManager.getStatus(), leetCodeManager.getUser());
+            leetCodeStatusBarController.markSynced();
+            leetCodeProfileProvider.updateSync(profile.currentProfileSyncStatus());
+        }));
+        // Mode, port, owner window or port conflict changed (restart, takeover,
+        // observer check): keep both sync surfaces current.
+        context.subscriptions.push(authSyncServer.onDidChangeStatus(() => {
+            leetCodeStatusBarController.updateSync();
             leetCodeProfileProvider.updateSync(profile.currentProfileSyncStatus());
         }));
 
@@ -136,6 +144,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             vscode.commands.registerCommand("leetcode.authSync.status", () => showAuthSyncStatus()),
             vscode.commands.registerCommand("leetcode.authSync.restart", () => restartAuthSyncServer()),
             vscode.commands.registerCommand("leetcode.authSync.forceStart", () => forceStartAuthSyncServer()),
+            vscode.commands.registerCommand("leetcode.authSync.showActions", () => showSessionSyncActions()),
             vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
                 if (
                     event.affectsConfiguration("leetcode.authSync.enabled") ||
@@ -225,20 +234,23 @@ async function startAuthSyncServer(): Promise<void> {
         await authSyncServer.start();
     } catch (error) {
         leetCodeChannel.appendLine(`[auth-sync] Failed to start server: ${String(error)}`);
+    } finally {
+        // Reveal the session-sync item only now, so activation never shows the
+        // initial "stopped" state as a warning.
+        leetCodeStatusBarController.setSyncReady();
     }
 }
 
 async function restartAuthSyncServer(showMessage: boolean = true): Promise<void> {
     try {
-        await authSyncServer.stop();
-        await authSyncServer.start();
+        await authSyncServer.restart();
         if (showMessage) {
-            vscode.window.showInformationMessage("LeetCode auth sync server restarted.");
+            await showRestartOutcome();
         }
     } catch (error) {
         leetCodeChannel.appendLine(`[auth-sync] Failed to restart server: ${String(error)}`);
         if (showMessage) {
-            promptForOpenOutputChannel("Failed to restart LeetCode auth sync server. Please open output channel for details.", DialogType.error);
+            promptForOpenOutputChannel("Failed to restart LeetCode session sync. Please open output channel for details.", DialogType.error);
         }
     }
 }
@@ -281,11 +293,54 @@ async function showAuthSyncStatus(): Promise<void> {
     );
 }
 
+// After a user-requested restart, say what actually happened: a restart can
+// end with another window syncing or the port taken, not only "running here".
+async function showRestartOutcome(): Promise<void> {
+    const snapshot: IAuthSyncStatusSnapshot = authSyncServer.getStatusSnapshot();
+    switch (snapshot.mode) {
+        case "local":
+            vscode.window.showInformationMessage(`LeetCode session sync is running in this window (port ${snapshot.port}).`);
+            return;
+        case "observer":
+            vscode.window.showInformationMessage(`LeetCode session sync is running in another window (${formatOwner(snapshot.owner)}).`);
+            return;
+        case "conflict":
+            if (snapshot.conflict) {
+                await showPortConflictPrompt(snapshot.conflict, "start");
+            } else {
+                await showAuthSyncStatus();
+            }
+            return;
+        case "disabled":
+            await showSyncDisabledMessage();
+            return;
+        default:
+            promptForOpenOutputChannel("LeetCode session sync did not restart. Please open output channel for details.", DialogType.error);
+            return;
+    }
+}
+
+async function showSyncDisabledMessage(): Promise<void> {
+    const openSetting: vscode.MessageItem = { title: "Open Setting" };
+    const choice: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(
+        "LeetCode session sync is turned off. Turn on `leetcode.authSync.enabled` to sync your browser session.",
+        openSetting
+    );
+    if (choice === openSetting) {
+        await vscode.commands.executeCommand("workbench.action.openSettings", "leetcode.authSync.enabled");
+    }
+}
+
 async function forceStartAuthSyncServer(): Promise<void> {
-    const forceStart: vscode.MessageItem = { title: "Force Start" };
+    const prompt: { message: string; confirm: string } | undefined = describeForceStartPrompt(authSyncServer.getStatusSnapshot().mode);
+    if (!prompt) {
+        await showSyncDisabledMessage();
+        return;
+    }
+    const forceStart: vscode.MessageItem = { title: prompt.confirm };
     const cancel: vscode.MessageItem = { title: "Cancel", isCloseAffordance: true };
     const choice: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(
-        "Force this VS Code window to own the LeetCode Auth Sync port? If another VS Code window owns it, that listener will be released first.",
+        prompt.message,
         { modal: true },
         forceStart,
         cancel
@@ -295,30 +350,92 @@ async function forceStartAuthSyncServer(): Promise<void> {
         return;
     }
 
-    const result: AuthSyncForceStartResult = await authSyncServer.forceStart();
+    let result: AuthSyncForceStartResult;
+    try {
+        result = await authSyncServer.forceStart();
+    } catch (error) {
+        leetCodeChannel.appendLine(`[auth-sync] Force start failed: ${String(error)}`);
+        promptForOpenOutputChannel("LeetCode session sync couldn't start in this window. Please open output channel for details.", DialogType.error);
+        return;
+    }
     switch (result.kind) {
         case "disabled":
-            vscode.window.showWarningMessage("Browser Auth Sync is disabled. Enable `leetcode.authSync.enabled` before force starting the listener.");
+            await showSyncDisabledMessage();
             return;
         case "started":
-            vscode.window.showInformationMessage(`LeetCode auth sync server is now listening in this window on port ${result.port}.`);
+            vscode.window.showInformationMessage(`LeetCode session sync is now running in this window (port ${result.port}).`);
             return;
         case "claimed":
-            vscode.window.showInformationMessage(`LeetCode auth sync server moved to this window on port ${result.port}. Previous owner: ${formatOwner(result.previousOwner)}.`);
+            vscode.window.showInformationMessage(`LeetCode session sync moved to this window from ${formatOwner(result.previousOwner)}.`);
             return;
         case "releaseFailed":
-            vscode.window.showErrorMessage(`Failed to release the current LeetCode auth sync owner${result.owner ? ` (${formatOwner(result.owner)})` : ""}: ${result.message}`);
+            vscode.window.showErrorMessage(`Couldn't move LeetCode session sync from the other window${result.owner ? ` (${formatOwner(result.owner)})` : ""}: ${result.message}`);
             return;
         case "portConflict":
-            await showPortConflictPrompt(result.conflict);
+            await showPortConflictPrompt(result.conflict, "forceStart");
             return;
         default:
             return;
     }
 }
 
-async function showPortConflictPrompt(conflict: IAuthSyncPortConflict): Promise<void> {
-    leetCodeChannel.appendLine("[auth-sync] Force start failed because the configured port is not owned by LeetCode Auth Sync.");
+async function showSessionSyncActions(): Promise<void> {
+    const actions: ISessionSyncActions = buildSessionSyncActions(getAuthSyncSummary(), {
+        signedIn: !!leetCodeManager.getUser(),
+        now: Date.now(),
+    });
+    const picked: (vscode.QuickPickItem & { action: SessionSyncAction }) | undefined = await vscode.window.showQuickPick(
+        actions.items.map((item: ISessionSyncActionItem) => ({
+            label: item.label,
+            description: item.description,
+            detail: item.detail,
+            action: item.action,
+        })),
+        { placeHolder: actions.placeholder },
+    );
+    if (!picked) {
+        return;
+    }
+    switch (picked.action) {
+        case "details":
+            await showAuthSyncStatus();
+            return;
+        case "restart":
+            await restartAuthSyncServer();
+            return;
+        case "forceStart":
+            await forceStartAuthSyncServer();
+            return;
+        case "showPortOwner": {
+            // The background check reuses the owner found when the conflict
+            // began; look again so the copied stop command names today's PID.
+            await authSyncServer.refreshStatus();
+            const conflict: IAuthSyncPortConflict | undefined = authSyncServer.getStatusSnapshot().conflict;
+            if (conflict) {
+                await showPortConflictPrompt(conflict, "start");
+            } else {
+                await showAuthSyncStatus();
+            }
+            return;
+        }
+        case "changePort":
+            await vscode.commands.executeCommand("workbench.action.openSettings", "leetcode.authSync.port");
+            return;
+        case "openProfile":
+            await vscode.commands.executeCommand("leetcode.showUserProfile");
+            return;
+        case "signIn":
+            await vscode.commands.executeCommand("leetcode.signin");
+            return;
+        default:
+            return;
+    }
+}
+
+async function showPortConflictPrompt(conflict: IAuthSyncPortConflict, context: "start" | "forceStart"): Promise<void> {
+    leetCodeChannel.appendLine(context === "forceStart"
+        ? "[auth-sync] Force start failed because the configured port is not owned by LeetCode Auth Sync."
+        : "[auth-sync] The configured port is not owned by LeetCode Auth Sync.");
     leetCodeChannel.appendLine(conflict.details);
 
     const openOutput: vscode.MessageItem = { title: "Open Output" };
@@ -327,10 +444,10 @@ async function showPortConflictPrompt(conflict: IAuthSyncPortConflict): Promise<
     const choices: vscode.MessageItem[] = conflict.stopCommand
         ? [openOutput, copyInspect, copyStop]
         : [openOutput, copyInspect];
-    const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(
-        `Auth Sync cannot force start on port ${conflict.port}. The port is used by ${conflict.summary}, not this extension.`,
-        ...choices
-    );
+    const message: string = context === "forceStart"
+        ? `LeetCode session sync couldn't start in this window. Port ${conflict.port} is used by ${conflict.summary}, not this extension.`
+        : `Port ${conflict.port} is used by ${conflict.summary}, so LeetCode session sync can't start. Stop that program, or use a different port.`;
+    const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, ...choices);
 
     if (result === openOutput) {
         leetCodeChannel.show();
