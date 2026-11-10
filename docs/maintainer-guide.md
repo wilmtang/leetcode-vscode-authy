@@ -198,6 +198,44 @@ Required repository settings (not in git): "Allow auto-merge" enabled, and an
 active `main` ruleset requiring the `Linux` and `Windows` status checks with
 Dependabot holding no bypass.
 
+## Shared UI/UX Skill
+
+The repository vendors [UI UX Pro Max](../.agents/skills/ui-ux-pro-max/SKILL.md),
+shared with Better Peakbagger, for interface design, accessibility, interaction,
+and layout reviews. Codex and Gemini CLI discover it in
+`.agents/skills/ui-ux-pro-max/`; Claude Code discovers the same copy through the
+relative symlink `.claude/skills/ui-ux-pro-max`. The skill's
+`LeetCode Auth Sync integration` section defers to `AGENTS.md`. Its search helper
+needs only Python 3:
+
+```bash
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "status bar sync state" --domain ux
+```
+
+Provenance, license, and local adaptations are in
+[UPSTREAM.md](../.agents/skills/ui-ux-pro-max/UPSTREAM.md). Update the canonical
+copy only; never fork per-agent versions.
+
+### Automatic skill updates
+
+The **Update UI/UX skill** workflow checks upstream at 15:17 UTC on the first of
+each month and supports **Run workflow**. `scripts/update-ui-ux-skill.mjs` pins
+the upstream commit, verifies downloaded blob hashes, and three-way merges
+`SKILL.md` so the project integration section survives. Changed local helpers,
+merge conflicts, license changes, unsupported layouts, and divergent upstream
+history stop the run; `--check` previews without writing. A read-only job
+validates the data and an isolated example search; a separate publisher
+(`scripts/stage-ui-ux-skill-update.mjs`) rejects anything outside the skill
+directory, symlinks, license edits, or changed project guidance, then pushes a
+`[skip ci]` commit straight to `main`. That job never runs downloaded helpers.
+
+One-time setup (not yet done for this repository): create a repository deploy
+key with write access, store its private half as `SKILL_UPDATE_SSH_KEY` in a
+`skill-updates` environment restricted to `main`, and allow deploy keys to
+bypass the `main` ruleset's required checks. Until then the publish step fails
+closed. Updater regressions run with `npm test` (skipped on Windows, where the
+updater never runs).
+
 ## Publishing
 
 VS Code extension release:

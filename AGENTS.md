@@ -85,6 +85,16 @@ trap or surprise the user, and keep consequential actions explicit and
 cancellable. Prefer native VS Code affordances (notifications, progress,
 quick picks) over custom UI.
 
+## Repository skills
+
+For UI/UX design, interface implementation, accessibility, interaction, or
+layout reviews (status bar items, notifications, webviews, the browser
+extension popup/options), read and apply
+[ui-ux-pro-max](.agents/skills/ui-ux-pro-max/SKILL.md). Codex and Gemini CLI
+discover the shared `.agents/skills/` copy; Claude Code uses a symlink under
+`.claude/skills/`. Follow this file's project-specific rules when generic skill
+recommendations differ.
+
 ## Build & test
 
 - `npm run compile` — type-check + emit (`tsc -p ./`).
