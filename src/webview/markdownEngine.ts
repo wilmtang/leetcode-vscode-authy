@@ -234,13 +234,16 @@ export function serializeCssFontFamily(value: string): string {
 }
 
 const UNQUOTED_FAMILY: RegExp = /^-?[A-Za-z_][A-Za-z0-9_-]*(?: +-?[A-Za-z_][A-Za-z0-9_-]*)*$/;
+// CSS-wide keywords (and `default`) are not valid family names inside a list;
+// left unquoted, `Arial, inherit` invalidates the whole declaration.
+const RESERVED_FAMILY_WORD: RegExp = /(?:^| )(?:inherit|initial|unset|revert|revert-layer|default)(?: |$)/i;
 
 function serializeFontFamilyName(raw: string): string {
     let name: string = raw.trim();
     const quote: string = name.charAt(0);
     if (name.length >= 2 && (quote === "'" || quote === "\"") && name.charAt(name.length - 1) === quote) {
         name = name.slice(1, -1);
-    } else if (UNQUOTED_FAMILY.test(name)) {
+    } else if (UNQUOTED_FAMILY.test(name) && !RESERVED_FAMILY_WORD.test(name)) {
         return name.replace(/ +/g, " ");
     }
     if (!name) {

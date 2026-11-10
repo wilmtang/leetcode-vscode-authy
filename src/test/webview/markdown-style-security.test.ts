@@ -31,6 +31,10 @@ describe("Markdown style security", () => {
         assert.strictEqual(serializeCssFontFamily(`微软雅黑`), `"\\5fae \\8f6f \\96c5 \\9ed1 "`);
         assert.strictEqual(serializeCssFontFamily(`Emoji 😀`), `"Emoji \\1f600 "`);
         assert.strictEqual(serializeCssFontFamily(` , ,`), ``);
+        // CSS-wide keywords would invalidate the whole list if left unquoted.
+        assert.strictEqual(serializeCssFontFamily(`Arial, inherit`), `Arial, "inherit"`);
+        assert.strictEqual(serializeCssFontFamily(`Initial Sans, DEFAULT`), `"Initial Sans", "DEFAULT"`);
+        assert.strictEqual(serializeCssFontFamily(`system-ui, Unsettled`), `system-ui, Unsettled`);
     });
 
     it("cannot break out of the string through quotes or an unbalanced quote", () => {
