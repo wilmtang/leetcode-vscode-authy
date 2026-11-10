@@ -5,6 +5,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 ### Security
+- Patched newly published production advisories: sanitize-html 2.18.1 (drops
+  the prototype-poisoning deepmerge path), markdown-it 14.3.3 (quadratic-time
+  parsing) and follow-redirects 1.16.3 (credential headers across redirects).
 - Reconciled keychain hydration with serialized writes and sibling updates;
   invalid, removed, or unreadable credentials now clear local auth consumers. Capture cleanup
   cannot restore secrets after Developer mode is disabled or cleared.
