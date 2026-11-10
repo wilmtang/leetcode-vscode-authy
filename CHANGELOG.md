@@ -41,6 +41,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   vulnerabilities.
 
 ### Fixed
+- Recover judge requests from Cloudflare challenges: classify challenge pages at
+  any status (including curl 200/503) without mistaking JSON that echoes user input,
+  back off once with jitter, then offer "Open in Browser" and retry automatically
+  after the browser syncs a fresh `cf_clearance`. Challenges after enqueue resume
+  polling the same submission/run instead of re-sending it.
+- Same-account browser syncs (fresh `cf_clearance`/headers) no longer silently
+  cancel an in-flight Submit/Test and drop its result; sign-out, account changes
+  and endpoint switches still cancel it.
 - Refresh/clear the open profile and invalidate account-specific catalog data on
   local and remote auth changes; discard old fetch/section completions.
 - Reject malformed/incomplete GraphQL catalog pages and malformed HTTP-200

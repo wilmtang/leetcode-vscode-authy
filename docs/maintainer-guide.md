@@ -162,6 +162,27 @@ When debugging live failures, inspect the LeetCode output channel. It logs the
 request mode and whether the failure came from node/axios, curl, LeetCode auth,
 Cloudflare, non-JSON output, or an unexpected status.
 
+`cf_clearance` is bound to the browser's TLS fingerprint, IP and user agent, so
+node/curl replays are borderline to Cloudflare and request bursts get challenged
+even with a fresh cookie. Judge workflows therefore escalate in three steps:
+
+1. A detected challenge (`CloudflareChallengeError`: `cf-mitigated` header or the
+   "Just a moment..." HTML title; parseable JSON never counts) is retried once
+   after 4–7s with jitter (`withChallengeBackoff`). Result polling tolerates two
+   challenges. Transport errors, timeouts and plain 5xx are never re-sent, because
+   they may have reached the judge.
+2. A persistent challenge shows "Open in Browser"; `src/commands/cloudflareRecovery.ts`
+   waits up to 3 minutes for a same-account sync with a different `cf_clearance`,
+   then retries once. The browser extension's cooldown fingerprint includes
+   `cf_clearance`, so the fresh clearance is pushed immediately.
+3. If the challenge happened after enqueue, the error carries `resume` state and
+   the retry re-polls the same submission/interpret ids rather than re-enqueueing.
+
+Judge workflows capture auth with `captureAuthRequest(..., { sameAccount: true })`:
+a same-account sync bumps the auth revision but must not drop an in-flight result.
+Other workflows stay revision-bound. Known gap: no unit test drives `verifyResult`
+through repeated poll challenges (the backoff delay is not injectable there).
+
 ## Publishing
 
 VS Code extension release:

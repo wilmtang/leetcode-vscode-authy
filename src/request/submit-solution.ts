@@ -1,9 +1,11 @@
-import { globalState, IAuthSessionSnapshot } from "../globalState";
+import { IAuthSessionSnapshot } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
-import { captureAuthRequest } from "./authRequest";
+import { captureAuthRequest, isSameAccountCurrent } from "./authRequest";
 import { sleep } from "../utils/toolUtils";
 import {
     createHeaders,
+    isCloudflareChallengeError,
+    withChallengeBackoff,
     DirectApiUnsupportedError,
     ICheckResult,
     parseSolutionFile,
@@ -23,8 +25,15 @@ interface ISubmitTask {
     submission_id?: number;
 }
 
-export async function submitSolutionWithSyncedCookie(filePath: string, isCancelled?: () => boolean): Promise<string> {
-    const owner = captureAuthRequest(isCancelled);
+/** State for resuming a submission whose enqueue already succeeded. */
+export interface ISubmitResume {
+    kind: "submit";
+    filePath: string;
+    submissionId: string;
+}
+
+export async function submitSolutionWithSyncedCookie(filePath: string, isCancelled?: () => boolean, resume?: ISubmitResume): Promise<string> {
+    const owner = captureAuthRequest(isCancelled, { sameAccount: true });
     owner.assertCurrent();
     isCancelled = owner.isCancelled;
     const auth = owner.auth;
@@ -36,17 +45,46 @@ export async function submitSolutionWithSyncedCookie(filePath: string, isCancell
 
     const meta: ISolutionFileMeta = await parseSolutionFile(filePath);
     const referer: string = `${owner.base}/problems/${meta.slug}/`;
-    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides, isCancelled, owner.graphql);
+    const tagChallenge = (error: unknown, pending?: ISubmitResume): unknown => {
+        if (isCloudflareChallengeError(error)) {
+            error.problemUrl = referer;
+            error.resume = pending;
+        }
+        return error;
+    };
 
-    assertCurrentAuth(auth);
-    leetCodeChannel.appendLine("[submit] Sending solution to LeetCode");
-    const task: ISubmitTask = await submitCode(meta, question, cookie, referer, headerOverrides, auth, isCancelled);
-    if (!task.submission_id) {
-        throw new Error("LeetCode did not return a submission id.");
+    let submissionId: string;
+    if (resume && resume.kind === "submit" && resume.filePath === filePath) {
+        // The enqueue already reached the judge; never enqueue it again.
+        submissionId = resume.submissionId;
+        leetCodeChannel.appendLine(`[submit] Resuming judge result polling for submission ${submissionId}`);
+    } else {
+        let task: ISubmitTask;
+        try {
+            const question: IQuestionDetail = await withChallengeBackoff("problem metadata",
+                () => getQuestionDetail(meta.slug, cookie, referer, headerOverrides, isCancelled, owner.graphql), isCancelled);
+            assertCurrentAuth(auth);
+            leetCodeChannel.appendLine("[submit] Sending solution to LeetCode");
+            task = await submitCode(meta, question, cookie, referer, headerOverrides, auth, isCancelled);
+        } catch (error) {
+            throw tagChallenge(error);
+        }
+        if (!task.submission_id) {
+            throw new Error("LeetCode did not return a submission id.");
+        }
+        submissionId = String(task.submission_id);
     }
 
     leetCodeChannel.appendLine("[submit] Waiting for judge result");
-    const result: ICheckResult = await verifyResult(String(task.submission_id), cookie, referer, headerOverrides, isCancelled, owner.base);
+    let result: ICheckResult;
+    try {
+        result = await verifyResult(submissionId, cookie, referer, headerOverrides, isCancelled, owner.base);
+    } catch (error) {
+        if (isCloudflareChallengeError(error)) {
+            leetCodeChannel.appendLine(`[submit] Submission ${submissionId} was accepted by LeetCode, but its result could not be read.`);
+        }
+        throw tagChallenge(error, { kind: "submit", filePath, submissionId });
+    }
     owner.assertCurrent();
 
     return formatSubmitResult(result);
@@ -67,7 +105,9 @@ async function submitCode(
     for (let attempt: number = 0; attempt < MAX_SUBMIT_ATTEMPTS; attempt++) {
         throwIfCancelled(isCancelled);
         assertCurrentAuth(auth);
-        const task: ISubmitTask = await requestJson<ISubmitTask>({
+        // Only a detected Cloudflare challenge is re-sent: the edge served it, so
+        // the submission never reached the judge.
+        const task: ISubmitTask = await withChallengeBackoff("submit enqueue", () => requestJson<ISubmitTask>({
             method: "POST",
             url,
             headers: createHeaders(cookie, referer, headerOverrides),
@@ -76,7 +116,7 @@ async function submitCode(
                 question_id: question.questionId,
                 typed_code: meta.code,
             },
-        }, { label: "submit enqueue", logMode: true, isCancelled });
+        }, { label: "submit enqueue", logMode: true, isCancelled }), isCancelled);
 
         if (!task.error) {
             return task;
@@ -98,7 +138,7 @@ async function submitCode(
 }
 
 function assertCurrentAuth(auth: IAuthSessionSnapshot): void {
-    if (!globalState.isAuthRevisionCurrent(auth.revision)) {
+    if (!isSameAccountCurrent(auth)) {
         throw new DirectApiUnsupportedError("The signed-in LeetCode account changed before this submission could be sent.", false);
     }
 }

@@ -1,11 +1,13 @@
-import { globalState, IAuthSessionSnapshot } from "../globalState";
+import { IAuthSessionSnapshot } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
-import { captureAuthRequest } from "./authRequest";
+import { captureAuthRequest, isSameAccountCurrent } from "./authRequest";
 import { sleep } from "../utils/toolUtils";
 import { normalizeTestcase } from "../utils/testcaseUtils";
 import {
     createHeaders,
     DirectApiUnsupportedError,
+    isCloudflareChallengeError,
+    withChallengeBackoff,
     getQuestionDetail,
     ICheckResult,
     IQuestionDetail,
@@ -40,8 +42,18 @@ interface ICaseResult {
     stdout: string;
 }
 
-export async function testSolutionWithSyncedCookie(filePath: string, testString?: string, isCancelled?: () => boolean): Promise<string> {
-    const owner = captureAuthRequest(isCancelled);
+/** State for resuming a test run whose enqueue already succeeded. */
+export interface ITestResume {
+    kind: "test";
+    filePath: string;
+    testcase: string;
+    testcaseList: string[];
+    interpretId: string;
+    interpretExpectedId?: string;
+}
+
+export async function testSolutionWithSyncedCookie(filePath: string, testString?: string, isCancelled?: () => boolean, resume?: ITestResume): Promise<string> {
+    const owner = captureAuthRequest(isCancelled, { sameAccount: true });
     owner.assertCurrent();
     isCancelled = owner.isCancelled;
     const auth = owner.auth;
@@ -53,33 +65,67 @@ export async function testSolutionWithSyncedCookie(filePath: string, testString?
 
     const meta: ISolutionFileMeta = await parseSolutionFile(filePath);
     const referer: string = `${owner.base}/problems/${meta.slug}/`;
-    const question: IQuestionDetail = await getQuestionDetail(meta.slug, cookie, referer, headerOverrides, isCancelled, owner.graphql);
-    const defaultTestcases: string[] = getDefaultTestcases(question);
-    const testcase: string = normalizeTestcase(testString || defaultTestcases.join("\n"));
-    const testcaseList: string[] = testString ? splitTestcases(testcase, question) : defaultTestcases;
+    const tagChallenge = (error: unknown, resumable?: ITestResume): unknown => {
+        if (isCloudflareChallengeError(error)) {
+            error.problemUrl = referer;
+            error.resume = resumable;
+        }
+        return error;
+    };
 
-    if (!question.enableRunCode) {
-        throw new Error("not testable? please submit directly!");
-    }
-    if (!testcase) {
-        throw new Error("missing testcase?");
-    }
+    let pending: ITestResume;
+    if (resume && resume.kind === "test" && resume.filePath === filePath) {
+        // The run was already enqueued; poll the same ids instead of re-running it.
+        pending = resume;
+        leetCodeChannel.appendLine("[test] Resuming judge result polling");
+    } else {
+        try {
+            const question: IQuestionDetail = await withChallengeBackoff("problem metadata",
+                () => getQuestionDetail(meta.slug, cookie, referer, headerOverrides, isCancelled, owner.graphql), isCancelled);
+            const defaultTestcases: string[] = getDefaultTestcases(question);
+            const testcase: string = normalizeTestcase(testString || defaultTestcases.join("\n"));
+            const testcaseList: string[] = testString ? splitTestcases(testcase, question) : defaultTestcases;
 
-    leetCodeChannel.appendLine("Sending code to judge");
-    assertCurrentAuth(auth);
-    const task: IRunCodeTask = await runCode(meta, question, testcase, cookie, referer, headerOverrides, auth, isCancelled);
-    if (!task.interpret_id) {
-        throw new Error("LeetCode did not return an interpret id.");
+            if (!question.enableRunCode) {
+                throw new Error("not testable? please submit directly!");
+            }
+            if (!testcase) {
+                throw new Error("missing testcase?");
+            }
+
+            leetCodeChannel.appendLine("Sending code to judge");
+            assertCurrentAuth(auth);
+            const task: IRunCodeTask = await runCode(meta, question, testcase, cookie, referer, headerOverrides, auth, isCancelled);
+            if (!task.interpret_id) {
+                throw new Error("LeetCode did not return an interpret id.");
+            }
+            pending = {
+                kind: "test",
+                filePath,
+                testcase,
+                testcaseList,
+                interpretId: task.interpret_id,
+                interpretExpectedId: task.interpret_expected_id,
+            };
+        } catch (error) {
+            throw tagChallenge(error);
+        }
     }
 
     leetCodeChannel.appendLine("Waiting for judge result");
-    const actual: ICheckResult = await verifyResult(task.interpret_id, cookie, referer, headerOverrides, isCancelled, owner.base);
-    const expected: ICheckResult | undefined = task.interpret_expected_id
-        ? await verifyResult(task.interpret_expected_id, cookie, referer, headerOverrides, isCancelled, owner.base)
-        : undefined;
+    let actual: ICheckResult;
+    let expected: ICheckResult | undefined;
+    try {
+        actual = await verifyResult(pending.interpretId, cookie, referer, headerOverrides, isCancelled, owner.base);
+        expected = pending.interpretExpectedId
+            ? await verifyResult(pending.interpretExpectedId, cookie, referer, headerOverrides, isCancelled, owner.base)
+            : undefined;
+    } catch (error) {
+        throw tagChallenge(error, pending);
+    }
 
     owner.assertCurrent();
-    return formatTestResult(actual, expected, testcase, testcaseList);
+    return formatTestResult(actual, expected, pending.testcase, pending.testcaseList);
 }
 
 async function runCode(
@@ -98,7 +144,9 @@ async function runCode(
     for (let attempt: number = 0; attempt < 5; attempt++) {
         throwIfCancelled(isCancelled);
         assertCurrentAuth(auth);
-        const task: IRunCodeTask = await requestJson<IRunCodeTask>({
+        // Only a detected Cloudflare challenge is re-sent: the edge served it, so
+        // the run never reached the judge.
+        const task: IRunCodeTask = await withChallengeBackoff("run-code enqueue", () => requestJson<IRunCodeTask>({
             method: "POST",
             url,
             headers: createHeaders(cookie, referer, headerOverrides),
@@ -108,7 +156,7 @@ async function runCode(
                 question_id: question.questionId,
                 typed_code: meta.code,
             },
-        }, { label: "run-code enqueue", logMode: true, isCancelled });
+        }, { label: "run-code enqueue", logMode: true, isCancelled }), isCancelled);
 
         if (!task.error) {
             return task;
@@ -130,7 +178,7 @@ async function runCode(
 }
 
 function assertCurrentAuth(auth: IAuthSessionSnapshot): void {
-    if (!globalState.isAuthRevisionCurrent(auth.revision)) {
+    if (!isSameAccountCurrent(auth)) {
         throw new DirectApiUnsupportedError("The signed-in LeetCode account changed before this test could be sent.", false);
     }
 }

@@ -764,8 +764,10 @@ class AuthSyncServer implements vscode.Disposable {
         return reason.replace(/[\0\r\n\t]/g, " ").trim().slice(0, 80) || "unspecified";
     }
 
-    // Fingerprints the login identity only (LEETCODE_SESSION + csrftoken),
-    // mirroring the browser extension's cooldown fingerprint. Deliberately
+    // Fingerprints the login identity only (LEETCODE_SESSION + csrftoken). The
+    // browser extension's cooldown fingerprint also includes cf_clearance so a
+    // fresh Cloudflare clearance is pushed; this server-side hash only decides
+    // how much to log, so it stays identity-only. Deliberately
     // excludes the captured request headers and user agent: headers like
     // `priority`, `accept`, and `sec-fetch-*` describe whichever XHR happened
     // to trigger the sync and differ between requests from the same browser,

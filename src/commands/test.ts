@@ -4,7 +4,7 @@
 import * as fse from "fs-extra";
 import * as vscode from "vscode";
 import { leetCodeManager } from "../leetCodeManager";
-import { testSolutionWithSyncedCookie } from "../request/test-solution";
+import { ITestResume, testSolutionWithSyncedCookie } from "../request/test-solution";
 import { IQuickItemEx, UserStatus } from "../shared";
 import { promptForSignIn, reportCommandError, showFileSelectDialog } from "../utils/uiUtils";
 import { getActiveFilePath } from "../utils/workspaceUtils";
@@ -12,14 +12,25 @@ import { decodeInlineTestcase } from "../utils/testcaseUtils";
 import { leetCodeSubmissionProvider } from "../webview/leetCodeSubmissionProvider";
 import { judgeOperationCoordinator } from "./judgeOperationCoordinator";
 import { captureAuthRequest } from "../request/authRequest";
+import { runWithChallengeRecovery } from "./cloudflareRecovery";
 
-function runTest(filePath: string, operationId: number, testString?: string): Thenable<string> {
-    return vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, cancellable: true },
-        async (p: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => {
-            p.report({ message: "Testing on LeetCode..." });
-            return testSolutionWithSyncedCookie(filePath, testString, () => token.isCancellationRequested || !judgeOperationCoordinator.isCurrent(operationId));
-        },
+function runTest(filePath: string, operationId: number, username: string, testString?: string): Promise<string | undefined> {
+    return runWithChallengeRecovery(
+        "Test solution",
+        username,
+        () => !judgeOperationCoordinator.isCurrent(operationId),
+        (resume: unknown) => vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, cancellable: true },
+            async (p: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => {
+                p.report({ message: resume ? "Waiting for LeetCode judge result..." : "Testing on LeetCode..." });
+                return testSolutionWithSyncedCookie(
+                    filePath,
+                    testString,
+                    () => token.isCancellationRequested || !judgeOperationCoordinator.isCurrent(operationId),
+                    resume as ITestResume | undefined,
+                );
+            },
+        ),
     );
 }
 
@@ -62,10 +73,15 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
 
         let result: string | undefined;
         const operationId: number = judgeOperationCoordinator.begin();
-        const owner = captureAuthRequest();
+        const owner = captureAuthRequest(undefined, { sameAccount: true });
+        const username: string | undefined = owner.auth.identity && owner.auth.identity.username;
+        if (!username) {
+            await promptForSignIn();
+            return;
+        }
         switch (choice.value) {
             case ":default":
-                result = await runTest(filePath, operationId);
+                result = await runTest(filePath, operationId, username);
                 break;
             case ":direct":
                 const testString: string | undefined = await vscode.window.showInputBox({
@@ -75,7 +91,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
                     ignoreFocusOut: true,
                 });
                 if (testString) {
-                    result = await runTest(filePath, operationId, decodeInlineTestcase(testString));
+                    result = await runTest(filePath, operationId, username, decodeInlineTestcase(testString));
                 }
                 break;
             case ":file":
@@ -83,7 +99,7 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
                 if (testFile && testFile.length) {
                     const input: string = (await fse.readFile(testFile[0].fsPath, "utf-8")).trim();
                     if (input) {
-                        result = await runTest(filePath, operationId, input);
+                        result = await runTest(filePath, operationId, username, input);
                     } else {
                         vscode.window.showErrorMessage("The selected test file must not be empty.");
                     }
@@ -96,6 +112,8 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
             return;
         }
         if (judgeOperationCoordinator.isCurrent(operationId)) {
+            // Same-account owner: a browser sync of fresh cf_clearance/headers
+            // during the run must not silently drop the result.
             owner.assertCurrent();
             leetCodeSubmissionProvider.show(result, "Test Result");
         }

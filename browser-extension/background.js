@@ -398,7 +398,10 @@ async function getSessionFingerprint(cookieHeader) {
     const cookies = parseCookieHeader(cookieHeader);
     const session = cookies.get("LEETCODE_SESSION") || "";
     const csrf = cookies.get("csrftoken") || "";
-    const data = new TextEncoder().encode(`${session}\n${csrf}`);
+    // cf_clearance is included so a freshly cleared Cloudflare challenge bypasses
+    // the cooldown and reaches VS Code, which retries a challenged judge request.
+    const clearance = cookies.get("cf_clearance") || "";
+    const data = new TextEncoder().encode(`${session}\n${csrf}\n${clearance}`);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");

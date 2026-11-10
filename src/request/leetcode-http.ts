@@ -26,6 +26,56 @@ export class DirectApiUnsupportedError extends Error {
     }
 }
 
+/**
+ * Cloudflare answered with an interactive challenge instead of forwarding the
+ * request to LeetCode. The edge served the challenge, so the request never
+ * reached the judge: re-sending the same enqueue is safe *only* in this case.
+ * `resume` lets a judge workflow continue polling an already-enqueued run
+ * instead of enqueueing it again.
+ */
+// tslint:disable-next-line:max-classes-per-file
+export class CloudflareChallengeError extends DirectApiUnsupportedError {
+    public resume?: unknown;
+    public problemUrl?: string;
+
+    constructor(message: string) {
+        super(message, false);
+        this.name = "CloudflareChallengeError";
+    }
+}
+
+export function isCloudflareChallengeError(error: unknown): error is CloudflareChallengeError {
+    return error instanceof CloudflareChallengeError;
+}
+
+const CHALLENGE_BACKOFF_MIN_MS: number = 4000;
+const CHALLENGE_BACKOFF_JITTER_MS: number = 3000;
+const MAX_POLL_CHALLENGES: number = 2;
+
+/**
+ * Challenges correlate with request bursts, so wait a few seconds (with jitter)
+ * and try once more before escalating. Only a positively detected challenge is
+ * retried; transport errors, timeouts and plain 5xx may have reached the origin.
+ */
+export async function withChallengeBackoff<T>(
+    label: string,
+    run: () => Promise<T>,
+    isCancelled?: () => boolean,
+    delayMs: number = CHALLENGE_BACKOFF_MIN_MS + Math.floor(Math.random() * CHALLENGE_BACKOFF_JITTER_MS),
+): Promise<T> {
+    try {
+        return await run();
+    } catch (error) {
+        if (!isCloudflareChallengeError(error)) {
+            throw error;
+        }
+        leetCodeChannel.appendLine(`[http] Cloudflare challenge on ${label}; retrying once in ${(delayMs / 1000).toFixed(1)}s.`);
+        await sleep(delayMs, isCancelled);
+        throwIfCancelled(isCancelled);
+        return run();
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Shared interfaces
 // ---------------------------------------------------------------------------
@@ -185,13 +235,26 @@ export async function getQuestionDetail(slug: string, cookie: string, referer: s
 
 export async function verifyResult(id: string, cookie: string, referer: string, overrides?: IHeaderOverrides, isCancelled?: () => boolean, base: string = getUrl("base")): Promise<ICheckResult> {
     const url: string = `${base}/submissions/detail/${id}/check/`;
+    let challenges: number = 0;
     for (let attempt: number = 0; attempt < MAX_VERIFY_ATTEMPTS; attempt++) {
         throwIfCancelled(isCancelled);
-        const result: ICheckResult = await requestJson<ICheckResult>({
-            method: "GET",
-            url,
-            headers: createHeaders(cookie, referer, overrides),
-        }, { label: "judge result poll", isCancelled });
+        let result: ICheckResult;
+        try {
+            result = await requestJson<ICheckResult>({
+                method: "GET",
+                url,
+                headers: createHeaders(cookie, referer, overrides),
+            }, { label: "judge result poll", isCancelled });
+        } catch (error) {
+            // Polling is an idempotent GET: back off and keep polling the same id.
+            if (!isCloudflareChallengeError(error) || ++challenges > MAX_POLL_CHALLENGES) {
+                throw error;
+            }
+            const delayMs: number = CHALLENGE_BACKOFF_MIN_MS + Math.floor(Math.random() * CHALLENGE_BACKOFF_JITTER_MS);
+            leetCodeChannel.appendLine(`[http] Cloudflare challenge on judge result poll; retrying in ${(delayMs / 1000).toFixed(1)}s.`);
+            await sleep(delayMs, isCancelled);
+            continue;
+        }
         if (result.state === "SUCCESS") {
             return result;
         }
@@ -263,7 +326,7 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
     // status check — a 200 challenge would otherwise be handed back as if it were
     // real JSON and blow up downstream at parse time — so the curl fallback (which
     // replays the browser user-agent/headers) always gets a chance to pass it. (A2-9.)
-    if (isCloudflareChallenge(response.data)) {
+    if (isCloudflareChallenge(response.data) || hasChallengeHeader(response.headers)) {
         leetCodeChannel.appendLine(`[http] Failure cause: Cloudflare challenge page from node/axios (${context.label}, HTTP ${response.status}).`);
         leetCodeChannel.appendLine(`[http] Request mode: curl (${context.label}).`);
         assertActive();
@@ -306,12 +369,14 @@ async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequ
         throw new Error(`curl request failed (${context.label}): ${message}`);
     }
 
+    // Detect the challenge before any status check: Cloudflare serves it with
+    // 403, 503, 429 or even 200, and a non-403 challenge must not surface as a
+    // generic HTTP error or a JSON parse failure.
+    if (isCloudflareChallenge(response.body)) {
+        leetCodeChannel.appendLine(`[http] Failure cause: Cloudflare challenge page from curl (${context.label}, HTTP ${response.status}).`);
+        throw new CloudflareChallengeError(`Direct LeetCode curl request hit Cloudflare challenge (${context.label}): HTTP ${response.status}${summarizeResponseData(response.body)}.`);
+    }
     if (response.status === 401 || response.status === 403) {
-        if (isCloudflareChallenge(response.body)) {
-            leetCodeChannel.appendLine(`[http] Failure cause: Cloudflare challenge page from curl (${context.label}, HTTP ${response.status}).`);
-            throw new DirectApiUnsupportedError(`Direct LeetCode curl request hit Cloudflare challenge (${context.label}): HTTP ${response.status}${summarizeResponseData(response.body)}.`, false);
-        }
-
         leetCodeChannel.appendLine(`[http] Failure cause: LeetCode rejected curl request (${context.label}, HTTP ${response.status}).`);
         throw new DirectApiUnsupportedError(`Direct LeetCode curl request was rejected (${context.label}): HTTP ${response.status}${summarizeResponseData(response.body)}.`, false);
     }
@@ -568,9 +633,32 @@ export function getCookieValue(cookie: string, name: string): string | undefined
 // Internal helpers
 // ---------------------------------------------------------------------------
 
+function hasChallengeHeader(headers: unknown): boolean {
+    if (!headers || typeof headers !== "object") {
+        return false;
+    }
+    const value: unknown = (headers as { [key: string]: unknown })["cf-mitigated"];
+    return typeof value === "string" && /challenge/i.test(value);
+}
+
+// Only an HTML body can be a challenge page. Parsed or parseable JSON is a real
+// LeetCode response even if it echoes user input such as a custom test case
+// containing the challenge title; misclassifying it would re-send a run that
+// already reached the judge. The canonical signal is the cf-mitigated header.
 function isCloudflareChallenge(data: unknown): boolean {
-    const text: string = typeof data === "string" ? data : JSON.stringify(data || "");
-    return /<title>Just a moment\.\.\.<\/title>/i.test(text) || /cf-mitigated/i.test(text);
+    if (typeof data !== "string") {
+        return false;
+    }
+    const trimmed: string = data.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+        try {
+            JSON.parse(trimmed);
+            return false;
+        } catch (error) {
+            // Not JSON; fall through to the HTML check.
+        }
+    }
+    return /<title>Just a moment\.\.\.<\/title>/i.test(trimmed);
 }
 
 function summarizeResponseData(data: unknown): string {

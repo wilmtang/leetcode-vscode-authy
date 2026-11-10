@@ -8,6 +8,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Reject hop-by-hop browser headers instead of replaying them to LeetCode.
 
 ### Fixed
+- Include `cf_clearance` in the sync cooldown fingerprint so a freshly cleared
+  Cloudflare challenge reaches VS Code immediately instead of after the cooldown.
 - Queue auth-sync requests in arrival order so a newer login is not discarded
   while an earlier session is being verified.
 - Abort a loopback sync after 45 seconds and report a distinct timeout result.
