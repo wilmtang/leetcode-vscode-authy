@@ -183,6 +183,21 @@ a same-account sync bumps the auth revision but must not drop an in-flight resul
 Other workflows stay revision-bound. Known gap: no unit test drives `verifyResult`
 through repeated poll challenges (the backoff delay is not injectable there).
 
+## Dependency Updates
+
+Dependabot (`.github/dependabot.yml`) opens grouped npm updates weekly (runtime,
+tooling, catch-all, and a single security-fixes group) after a release cooldown.
+`.github/workflows/dependabot-auto-merge.yml` queues GitHub auto-merge (merge
+commit) for npm groups only, after verifying the PR is a single verified
+Dependabot commit at the event head. It refuses to queue unless the `main`
+ruleset requires the `Linux` and `Windows` CI checks, so updates merge only after
+lint, the production audit, `npm test`, packaging and the Node 14 smoke pass.
+GitHub Actions updates always wait for manual review.
+
+Required repository settings (not in git): "Allow auto-merge" enabled, and an
+active `main` ruleset requiring the `Linux` and `Windows` status checks with
+Dependabot holding no bypass.
+
 ## Publishing
 
 VS Code extension release:

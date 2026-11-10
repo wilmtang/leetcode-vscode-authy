@@ -1,0 +1,146 @@
+name: Dependabot auto-merge
+
+# Queues GitHub's native auto-merge for npm Dependabot pull requests (adapted
+# from better-peakbagger). The merge still waits for the required CI checks
+# (`Linux`, `Windows`) in the `main` ruleset; this workflow only sets the flag,
+# and Dependabot holds no bypass. It refuses to queue anything unless `main`
+# actually requires status checks, so a missing ruleset can never turn this
+# into an untested merge. GitHub Actions updates do not auto-merge because they
+# can change the credential-bearing publish workflows without any required
+# check exercising them.
+#
+# This privileged decision runs from the trusted default-branch workflow via
+# `pull_request_target`. It never checks out, downloads, or executes pull-request
+# content. The ordinary `pull_request` test workflow remains responsible for
+# building and running the proposed dependency update with a read-only token.
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+# A reset from an older run must not race a newer head's queue decision.
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  auto-merge:
+    name: Auto-merge dependency updates
+    # Dependabot's own pull requests, from a branch on this repository.
+    if: >-
+      github.repository == 'wilmtang/leetcode-vscode-authy'
+      && github.event.pull_request.user.login == 'dependabot[bot]'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # A write-capable maintainer push does not necessarily make GitHub clear
+      # an existing auto-merge request. Reset it before inspecting every new
+      # head so a failed provenance check always leaves the PR manual.
+      - name: Reset any previously queued merge
+        run: |
+          state="$(gh pr view "$PR_URL" --json state,headRefOid,autoMergeRequest)"
+          if ! jq -e --arg head "$HEAD_SHA" '
+            .state == "OPEN" and .headRefOid == $head
+          ' <<<"$state" >/dev/null; then
+            echo 'Refusing stale merge decision: the PR is closed or its head changed.' >&2
+            exit 1
+          fi
+          if jq -e '.autoMergeRequest != null' <<<"$state" >/dev/null; then
+            gh pr merge --disable-auto "$PR_URL"
+          fi
+          state="$(gh pr view "$PR_URL" --json state,headRefOid,autoMergeRequest)"
+          if ! jq -e --arg head "$HEAD_SHA" '
+            .state == "OPEN" and .headRefOid == $head and .autoMergeRequest == null
+          ' <<<"$state" >/dev/null; then
+            echo 'Refusing auto-merge: could not confirm a cleared queue at the event head.' >&2
+            exit 1
+          fi
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Auto-merge without required checks would merge untested code at once.
+      - name: Require status checks on main
+        run: |
+          rules="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "repos/$GITHUB_REPOSITORY/rules/branches/main")"
+          if ! jq -e '
+            [.[] | select(.type == "required_status_checks")
+              | .parameters.required_status_checks[].context]
+            | (index("Linux") != null and index("Windows") != null)
+          ' <<<"$rules" >/dev/null; then
+            echo 'Refusing auto-merge: main does not require the Linux and Windows CI checks.' >&2
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # fetch-metadata validates only the first commit. Dependabot PRs are
+      # single-commit changes, so enforce that stronger invariant independently
+      # and verify that exact commit is the signed head from the event.
+      - name: Verify the complete Dependabot branch
+        run: |
+          commits="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits?per_page=2")"
+          if ! jq -e --arg head "$HEAD_SHA" '
+            length == 1
+            and .[0].sha == $head
+            and .[0].author.login == "dependabot[bot]"
+            and .[0].commit.verification.verified == true
+          ' <<<"$commits" >/dev/null; then
+            echo 'Refusing auto-merge: expected one verified Dependabot commit at the current PR head.' >&2
+            exit 1
+          fi
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Retained for its parsed ecosystem metadata. Its own first-commit check
+      # is defense in depth after the complete-branch check above.
+      - name: Read Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Queue the npm merge once required checks pass
+        # fetch-metadata uses Dependabot's internal npm ecosystem identifier,
+        # not the shorter package-ecosystem value from dependabot.yml.
+        if: steps.metadata.outputs.package-ecosystem == 'npm_and_yarn'
+        run: |
+          gh pr merge --auto --merge --match-head-commit "$HEAD_SHA" "$PR_URL"
+          state="$(gh pr view "$PR_URL" --json state,headRefOid,autoMergeRequest)"
+          if ! jq -e --arg head "$HEAD_SHA" '
+            .headRefOid == $head and (
+              .state == "MERGED" or (
+                .state == "OPEN" and .autoMergeRequest.mergeMethod == "MERGE"
+              )
+            )
+          ' <<<"$state" >/dev/null; then
+            echo 'Auto-merge was not confirmed at the verified head; inspect the PR and required checks.' >&2
+            exit 1
+          fi
+          echo 'Verified npm merge queued or completed. Required checks still gate the merge.' >> "$GITHUB_STEP_SUMMARY"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
