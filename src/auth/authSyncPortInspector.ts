@@ -101,7 +101,12 @@ export function parseLsofOutput(output: string): IParsedProcess | undefined {
         return undefined;
     }
 
-    const command: string = fields[0].replace(/\\x([0-9a-fA-F]{2})/g, (_match: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+    // Decode printable ASCII only; control bytes stay escaped so a local
+    // process name cannot inject newlines or terminal escapes into UI text.
+    const command: string = fields[0].replace(/\\x([0-9a-fA-F]{2})/g, (match: string, hex: string) => {
+        const code: number = parseInt(hex, 16);
+        return code >= 0x20 && code <= 0x7e ? String.fromCharCode(code) : match;
+    });
     return { command, pid: fields[1] };
 }
 

@@ -332,8 +332,16 @@ describe("port owner lookup", () => {
     it("decodes lsof's escaped command names", () => {
         const output: string = [
             "COMMAND                  PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME",
-            "Code\\x20Helper\\x20(Plugin) 23662 zihaod 31u  IPv4 0x1      0t0  TCP 127.0.0.1:64438 (LISTEN)",
+            "Code\\x20Helper\\x20(Plugin) 23662 user 31u  IPv4 0x1      0t0  TCP 127.0.0.1:64438 (LISTEN)",
         ].join("\n");
         assert.deepStrictEqual(parseLsofOutput(output), { command: "Code Helper (Plugin)", pid: "23662" });
+    });
+
+    it("keeps control bytes escaped in decoded names", () => {
+        const output: string = [
+            "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME",
+            "evil\\x0a\\x1b[2Jname 4242 user 3u IPv4 0x1 0t0 TCP 127.0.0.1:1 (LISTEN)",
+        ].join("\n");
+        assert.deepStrictEqual(parseLsofOutput(output), { command: "evil\\x0a\\x1b[2Jname", pid: "4242" });
     });
 });
