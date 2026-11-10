@@ -11,6 +11,9 @@
 //   unhide PID         show PID's windows without activating it
 //   windows PID        print "id x y w h onscreen" for each window of PID
 //   frontmost          print the frontmost app's pid
+//   policy PID         print PID's activation policy (regular|accessory|prohibited)
+//   watch-activations  long-running: print the frontmost pid now and then the
+//                      pid of every app activation, one per line, as it happens
 // Never fall back to another screen: if the built-in display is absent, primary
 // or mirrored, refuse.
 
@@ -36,7 +39,7 @@ func secondaryBuiltinBounds() -> CGRect? {
 
 let args = Array(CommandLine.arguments.dropFirst())
 guard let command = args.first else {
-    fail("usage: macos-window.swift display | launch APP ARGS… | unhide PID | windows PID | frontmost")
+    fail("usage: macos-window.swift display | launch APP ARGS… | unhide PID | windows PID | frontmost | policy PID | watch-activations")
 }
 
 switch command {
@@ -101,6 +104,35 @@ case "unhide":
 
 case "frontmost":
     print(NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1)
+
+case "policy":
+    guard args.count == 2, let pid = Int32(args[1]),
+          let app = NSRunningApplication(processIdentifier: pid) else { fail("usage: policy PID") }
+    switch app.activationPolicy {
+    case .regular: print("regular")
+    case .accessory: print("accessory")
+    case .prohibited: print("prohibited")
+    @unknown default: print("unknown")
+    }
+
+case "watch-activations":
+    // Event-driven, so even a brief activation is reported (a polling sampler
+    // can miss one between samples).
+    setvbuf(stdout, nil, _IOLBF, 0)
+    // Exit when the parent goes away (its end of our stdin closes), even if it
+    // was killed outright, so no watcher is ever orphaned.
+    Thread.detachNewThread {
+        _ = FileHandle.standardInput.readDataToEndOfFile()
+        exit(0)
+    }
+    print(NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1)
+    NSWorkspace.shared.notificationCenter.addObserver(
+        forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+    ) { note in
+        let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+        print(app?.processIdentifier ?? -1)
+    }
+    RunLoop.main.run()
 
 default:
     fail("unknown command \(command)")

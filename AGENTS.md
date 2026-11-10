@@ -95,9 +95,24 @@ settings, extensions and running sync are never touched. It:
   is present, non-primary and unmirrored, and never falls back to another
   screen. The window position is seeded into the throwaway profile, and the
   run aborts if the window lands anywhere else.
-- **Launches without activation.** It uses `NSWorkspace` with
-  `activates = false` and starts hidden, via
-  `scripts/background-vscode/macos-window.swift`.
+- **Never activates.** It launches hidden through `NSWorkspace` with
+  `activates = false` (`scripts/background-vscode/macos-window.swift`).
+  That alone is not enough: VS Code activates itself from native code when its
+  window opens. So the main process starts with `--inspect-brk` (Electron's
+  `EnableNodeCliInspectArguments` fuse is on in release builds), and on the
+  first-line pause, before any window exists, the script:
+  - checks that the inspector belongs to the launched pid;
+  - sets the activation policy to `prohibited` and pins it, so macOS can
+    neither activate the app nor show its windows; the workbench still renders
+    and CDP still captures it;
+  - turns `app.focus` and window `focus` into no-ops, and makes `show` call
+    `showInactive`.
+
+  If the guard fails, the process is SIGKILLed while still paused, never
+  resumed. After the window appears, and again at the end, the script reads
+  the policy back and aborts unless it is still `prohibited`.
+  `BG_VSCODE_SELFTEST_GUARD_FAIL=1` forces a guard failure, to test that kill
+  path.
 - **Drives and captures without your input devices.** It never touches the
   real pointer, keyboard or `screencapture`. Instead:
   - it drives and screenshots the workbench over CDP
@@ -105,20 +120,42 @@ settings, extensions and running sync are never touched. It:
     `Page.captureScreenshot`;
   - a generated harness extension runs commands, changes settings and occupies
     ports inside the extension host.
-- **Checks focus and cleans up.** It samples the frontmost app every 500 ms
-  and fails if the test instance ever becomes frontmost. It kills only the pid
-  it launched and deletes its temp profile, even on failure.
+- **Watches focus.** A long-running watcher reports every app activation as
+  it happens, so even a brief one is caught. The run starts only after the
+  watcher is subscribed, and fails if the watcher dies early or never
+  reported anything, so a dead watcher can never pass as "never activated". If the test instance is ever
+  activated, the run reports `FOCUS STEAL` before any other error and fails.
+- **Cleans up.** It kills only processes it launched (matched by its own
+  profile path) and deletes its temp profile:
+  - on success and on failure;
+  - on Ctrl-C, SIGTERM or SIGHUP;
+  - for a runner killed outright, at the start of the next run. That instance
+    has no Dock icon or window, so the user could not quit it themselves.
+    Reaping matches by command line, so it also catches a runner killed
+    mid-launch, and only kills processes that name that run's own profile.
+
+  The watcher exits when its parent dies.
 
 Add a scenario to `run.js` for new UI rather than ad-hoc launches, and read
 the screenshots it writes; DOM state alone has passed on visibly wrong UI
 (an empty status bar item rendered as nothing).
 
-**Known limit (2026-11-10, VS Code 1.145):** VS Code activates itself when
-its window opens, even when launched non-activating and hidden. The script
-detects this and fails the run, but cannot prevent it yet. Until it can, a
-run takes the user's focus for a moment, so do not start one on your own.
-Ask the user first, and say it will briefly take focus. CDP screenshots work
-whether or not the app is hidden (`--no-unhide` keeps it hidden).
+`--allow-visible` skips the guard's `prohibited` policy and shows the window,
+so it can take focus. Use it only when the user explicitly asks for a visible
+run. `--keep-open` leaves the instance running after a successful run: with no
+Dock icon or window, stop it with the `kill -9` command the script prints. The
+next run kills it and removes its profile anyway.
+
+**What it cannot check.** The window is never shown, so the run can't verify
+behavior that needs a real on-screen window and real input: native context
+menus (such as hiding a status bar item), real hover and keyboard focus, OS
+notifications, or drag and drop. Record those as gaps; do not switch to a
+visible or activating launch to cover them unless the user explicitly asks.
+
+**Re-verify the guard.** If the script reports a focus steal, stop and report
+it. Do not retry in a loop. The guard depends on Electron's inspect fuse and
+`process._linkedBinding`, so re-verify it after a VS Code upgrade. It was
+verified on 2026-11-10 with VS Code 1.145.2 on macOS 15.8.1.
 
 ### UX bar
 

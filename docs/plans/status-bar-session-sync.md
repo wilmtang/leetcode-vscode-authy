@@ -221,8 +221,10 @@ Not covered: observer and vacant (they need a second window), `stopped`
 (needs a non-port-in-use listen error), the just-synced check (needs a real
 browser push), hiding items from the status bar context menu (needs a real
 right-click), screen readers, Windows, and `warningBackground` rendering. The
-runs did take focus: VS Code activated itself when its window opened (see
-AGENTS.md "Background VS Code checks").
+first runs briefly took focus because VS Code activated itself when its window
+opened. With the main-process focus guard added afterwards (see AGENTS.md
+"Background VS Code checks"), later runs never became frontmost and produced
+the same results.
 
 ## Out of scope
 

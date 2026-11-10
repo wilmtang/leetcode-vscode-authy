@@ -8,14 +8,20 @@
 // pointer or keyboard. See AGENTS.md "Background VS Code checks".
 //
 //   npm run bundle && node scripts/background-vscode/run.js [--scenario status-bar] [--out DIR] [--keep-open]
+//       [--allow-visible]   (debugging only, with the user's explicit OK: skips the
+//                            prohibited policy and unhides the window, so it can
+//                            take focus)
 //
 // Guarantees: refuses unless macOS has a non-primary, unmirrored built-in
-// display; launches with activation disabled into an isolated user-data and
+// display; launches hidden with activation disabled, then pauses the main
+// process and sets a "prohibited" activation policy before any window exists,
+// so macOS cannot activate it; runs in an isolated user-data and
 // extensions dir (the user's real profile, extensions and settings are never
 // read or written); uses its own auth-sync port so the user's running VS Code
 // keeps its sync; aborts if the window does not land on that display or if the
-// frontmost app changes; always terminates only the PID it launched and
-// removes its temp dirs, even on failure.
+// launched instance ever activates; terminates only the PID it launched and
+// removes its temp dirs on failure, on Ctrl-C/SIGTERM/SIGHUP, and (for a run
+// killed outright) at the start of the next run.
 
 "use strict";
 
@@ -31,12 +37,12 @@ const CODE_APP = process.env.VSCODE_APP || "/Applications/Visual Studio Code.app
 const EXTENSION_ID = "wilmtang.vscode-leetcode-auth-sync";
 
 function parseArgs(argv) {
-    const options = { scenario: "status-bar", out: undefined, keepOpen: false, unhide: true };
+    const options = { scenario: "status-bar", out: undefined, keepOpen: false, allowVisible: false };
     for (let i = 0; i < argv.length; i++) {
         if (argv[i] === "--scenario") { options.scenario = argv[++i]; }
         else if (argv[i] === "--out") { options.out = path.resolve(argv[++i]); }
         else if (argv[i] === "--keep-open") { options.keepOpen = true; }
-        else if (argv[i] === "--no-unhide") { options.unhide = false; }
+        else if (argv[i] === "--allow-visible") { options.allowVisible = true; }
         else { throw new Error(`Unknown argument: ${argv[i]}`); }
     }
     return options;
@@ -51,6 +57,20 @@ function helper(...args) {
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchJson(url) {
+    const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    return response.json();
+}
+
+function openSocket(url, timeoutMs = 10000) {
+    const ws = new WebSocket(url);
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => { try { ws.close(); } catch (_) { /* ignore */ } reject(new Error(`WebSocket ${url} did not open in ${timeoutMs} ms`)); }, timeoutMs);
+        ws.onopen = () => { clearTimeout(timer); resolve(ws); };
+        ws.onerror = () => { clearTimeout(timer); reject(new Error(`WebSocket ${url} failed to open`)); };
+    });
+}
 
 async function waitFor(what, probe, timeoutMs, intervalMs = 250) {
     const deadline = Date.now() + timeoutMs;
@@ -216,12 +236,10 @@ async function harness(ipc, request, timeoutMs = 15000) {
 class Cdp {
     static async connect(port) {
         const target = await waitFor("workbench CDP target", async () => {
-            const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+            const list = await fetchJson(`http://127.0.0.1:${port}/json/list`);
             return list.find((t) => t.type === "page" && /workbench/.test(t.url));
         }, 60000, 500);
-        const cdp = new Cdp(new WebSocket(target.webSocketDebuggerUrl));
-        await new Promise((resolve, reject) => { cdp.ws.onopen = resolve; cdp.ws.onerror = reject; });
-        return cdp;
+        return new Cdp(await openSocket(target.webSocketDebuggerUrl));
     }
 
     constructor(ws) {
@@ -229,7 +247,9 @@ class Cdp {
         this.seq = 0;
         this.pending = new Map();
         ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
+            let message;
+            try { message = JSON.parse(event.data); } catch (_) { return; }
+            if (message.method === "Debugger.paused" && this.onPaused) { this.onPaused(message.params); }
             const waiter = this.pending.get(message.id);
             if (waiter) {
                 this.pending.delete(message.id);
@@ -238,15 +258,27 @@ class Cdp {
         };
     }
 
-    send(method, params = {}) {
+    send(method, params = {}, timeoutMs = 20000) {
         const id = ++this.seq;
         this.ws.send(JSON.stringify({ id, method, params }));
-        return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject }));
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                this.pending.delete(id);
+                reject(new Error(`CDP ${method} timed out after ${timeoutMs} ms`));
+            }, timeoutMs);
+            this.pending.set(id, {
+                resolve: (value) => { clearTimeout(timer); resolve(value); },
+                reject: (error) => { clearTimeout(timer); reject(error); },
+            });
+        });
     }
 
     async evaluate(expression) {
         const result = await this.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
-        if (result.exceptionDetails) { throw new Error(result.exceptionDetails.text); }
+        if (result.exceptionDetails) {
+            const detail = result.exceptionDetails.exception && result.exceptionDetails.exception.description;
+            throw new Error(detail || result.exceptionDetails.text);
+        }
         return result.result.value;
     }
 
@@ -259,6 +291,112 @@ class Cdp {
     }
 
     close() { try { this.ws.close(); } catch (_) { /* ignore */ } }
+}
+
+// ---- Main-process focus guard ----------------------------------------------------
+//
+// VS Code (Electron) activates itself when its window opens, from native code,
+// which overrides a non-activating launch; patching the JS focus/show calls
+// alone did not stop it. The release build keeps Electron's
+// EnableNodeCliInspectArguments fuse on, so the main process starts with
+// --inspect-brk. Once Node pauses on the first line of the main script (before
+// any window exists) the guard runs on that paused frame and:
+//   - sets the activation policy (default "prohibited": macOS then refuses to
+//     activate the app or show its windows; the workbench still renders and CDP
+//     still captures it),
+//   - makes app.focus and window focus/moveTop no-ops and window show() inactive.
+// Evaluating before the pause hangs (no execution context yet). The guard also
+// checks that the inspector belongs to the launched pid. If anything fails the
+// process is SIGKILLed while still paused and attached: detaching the last
+// inspector session resumes a paused process, so it must die first.
+
+const FOCUS_GUARD_JS = (policy) => `(() => {
+    const binding = process._linkedBinding;
+    const app = binding("electron_browser_app").app;
+    const BaseWindow = binding("electron_browser_base_window").BaseWindow;
+    const noop = function () { return undefined; };
+    app.focus = noop;
+    BaseWindow.prototype.focus = noop;
+    BaseWindow.prototype.moveTop = noop;
+    BaseWindow.prototype.show = function () { return this.showInactive(); };
+    if (${JSON.stringify(policy)} !== "none") {
+        app.setActivationPolicy(${JSON.stringify(policy)});
+        // Pin it: later code must not switch back to a regular, activatable app.
+        app.setActivationPolicy = noop;
+    }
+    return { patched: true };
+})()`;
+
+async function guardMainProcess(inspectPort, policy, pid) {
+    const step = (name) => process.env.BG_VSCODE_DEBUG && console.log(`  guard: ${name}`);
+    let inspector;
+    try {
+        const target = await waitFor("main-process inspector", async () => {
+            const list = await fetchJson(`http://127.0.0.1:${inspectPort}/json/list`);
+            return list.find((t) => t.webSocketDebuggerUrl);
+        }, 30000, 200);
+        inspector = new Cdp(await openSocket(target.webSocketDebuggerUrl));
+        // Release the --inspect-brk wait; Node then pauses on the first line of
+        // the main script, before any window exists. Patch while paused.
+        let pausedResolve;
+        const pausedEvent = new Promise((resolve) => { pausedResolve = resolve; });
+        inspector.onPaused = (params) => pausedResolve(params);
+        step("Runtime.enable");
+        await inspector.send("Runtime.enable");
+        step("Debugger.enable");
+        await inspector.send("Debugger.enable");
+        step("runIfWaitingForDebugger");
+        await inspector.send("Runtime.runIfWaitingForDebugger");
+        let pauseTimer;
+        const paused = await Promise.race([
+            pausedEvent,
+            new Promise((resolve) => { pauseTimer = setTimeout(() => resolve(undefined), 20000); }),
+        ]);
+        clearTimeout(pauseTimer);
+        if (!paused) { throw new Error("main process never paused on its first line"); }
+        // Identify the process before changing anything: a port race could have
+        // connected us to someone else's debuggable process, which must be left
+        // exactly as it was.
+        step("check pid on paused frame");
+        const identity = await inspector.send("Debugger.evaluateOnCallFrame", {
+            callFrameId: paused.callFrames[0].callFrameId,
+            expression: "process.pid",
+            returnByValue: true,
+        });
+        const inspectedPid = identity.result && identity.result.value;
+        if (inspectedPid !== pid) {
+            throw new Error(`inspector on port ${inspectPort} belongs to pid ${inspectedPid}, not the launched pid ${pid}; left it untouched`);
+        }
+        step("evaluate patch on paused frame");
+        const evaluation = await inspector.send("Debugger.evaluateOnCallFrame", {
+            callFrameId: paused.callFrames[0].callFrameId,
+            expression: FOCUS_GUARD_JS(policy),
+            returnByValue: true,
+        });
+        const value = evaluation.result && evaluation.result.value;
+        if (evaluation.exceptionDetails || !value || value.patched !== true) {
+            const detail = evaluation.exceptionDetails && evaluation.exceptionDetails.exception && evaluation.exceptionDetails.exception.description;
+            throw new Error(`focus guard failed: ${detail || JSON.stringify(evaluation.result)}`);
+        }
+        if (process.env.BG_VSCODE_SELFTEST_GUARD_FAIL) {
+            // Self-test for the failure path: the process must die while paused.
+            throw new Error("self-test: forced guard failure");
+        }
+        inspector.onPaused = () => { void inspector.send("Debugger.resume", {}, 3000).catch(() => undefined); };
+        step("resume");
+        await inspector.send("Debugger.resume");
+        await inspector.send("Debugger.disable", {}, 3000).catch(() => undefined);
+        step("done");
+    } catch (error) {
+        killNow(pid);
+        throw error;
+    } finally {
+        if (inspector) { inspector.close(); }
+    }
+}
+
+function killNow(pid) {
+    try { process.kill(pid, "SIGKILL"); } catch (_) { /* already gone */ }
 }
 
 // ---- Status bar scenario --------------------------------------------------------
@@ -347,10 +485,13 @@ async function runStatusBarScenario(ctx) {
     await harness(ipc, { op: "unblock", port: blocked });
     const seen = [];
     const recorder = setInterval(async () => { try { const i = await syncItem(); if (i) { seen.push(i.text || i.icons.join(",")); } } catch (_) { /* ignore */ } }, 50);
-    await harness(ipc, { op: "command", id: "leetcode.authSync.restart", wait: false });
-    await waitFor("local after restart", async () => { const i = await syncItem(); return i && i.icons.some((c) => /codicon-sync\b/.test(c)) && !i.text && i; }, 20000);
-    await sleep(300);
-    clearInterval(recorder);
+    try {
+        await harness(ipc, { op: "command", id: "leetcode.authSync.restart", wait: false });
+        await waitFor("local after restart", async () => { const i = await syncItem(); return i && i.icons.some((c) => /codicon-sync\b/.test(c)) && !i.text && i; }, 20000);
+        await sleep(300);
+    } finally {
+        clearInterval(recorder);
+    }
     results.push({ step: "06-restart-trace", seen });
     console.log("[06-restart-trace]", JSON.stringify([...new Set(seen)]));
     if (seen.some((s) => /stopped/i.test(s))) { throw new Error(`restart showed a stopped state: ${JSON.stringify(seen)}`); }
@@ -365,38 +506,136 @@ async function runStatusBarScenario(ctx) {
 
 // ---- Main -------------------------------------------------------------------------
 
+const ROOT_PREFIX = "lc-bg-vscode-";
+
+// A run killed outright (SIGKILL, closed terminal) cannot clean up after
+// itself, and its prohibited instance has no Dock icon or window for the user to
+// quit. Reap such leftovers: only a process whose command line still names that
+// run's own profile directory is killed.
+function reapStaleRuns() {
+    const processes = (childProcess.spawnSync("ps", ["-axo", "pid=,command="], { encoding: "utf8" }).stdout || "").split("\n");
+    for (const name of fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith(ROOT_PREFIX))) {
+        const dir = path.join(os.tmpdir(), name);
+        const owner = path.join(dir, "runner.pid");
+        const runner = fs.existsSync(owner) ? Number(fs.readFileSync(owner, "utf8")) : undefined;
+        let runnerAlive = false;
+        if (runner) { try { process.kill(runner, 0); runnerAlive = true; } catch (_) { /* gone */ } }
+        if (runnerAlive) { continue; }
+        // A concurrent run may not have written runner.pid yet.
+        if (!runner && Date.now() - fs.statSync(dir).mtimeMs < 10000) { continue; }
+        // Match by command line rather than a pid file, which a runner killed
+        // during launch may never have written.
+        const profileDir = path.join(dir, "user-data");
+        const stale = processes.filter((line) => line.includes(profileDir)).map((line) => Number(line.trim().split(/\s+/)[0]));
+        for (const stalePid of stale) {
+            console.log(`Reaping stale background VS Code process ${stalePid} from ${dir}`);
+            killNow(stalePid);
+        }
+        if (stale.length > 0) { killAndWait(undefined, profileDir); }
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+}
+
+// Long-running, event-driven activation watcher (one Swift process for the
+// whole run, so it never blocks Node and cannot miss a brief activation).
+// Resolves only once the watcher has printed its first line (it is then
+// subscribed); an early exit is recorded so a dead watcher can never turn
+// into a vacuous "never activated".
+function watchActivations(timeoutMs = 30000) {
+    // stdin is a pipe the watcher reads to EOF: if this process dies, even by
+    // SIGKILL, the pipe closes and the watcher exits.
+    const child = childProcess.spawn("swift", [HELPER, "watch-activations"], { stdio: ["pipe", "pipe", "ignore"] });
+    const watcher = { events: [], exitedEarly: undefined, stopping: false, stop() { this.stopping = true; child.kill("SIGKILL"); } };
+    let buffer = "";
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => { watcher.stop(); reject(new Error(`activation watcher did not start within ${timeoutMs} ms`)); }, timeoutMs);
+        child.stdout.on("data", (chunk) => {
+            buffer += chunk;
+            const lines = buffer.split("\n");
+            buffer = lines.pop();
+            for (const line of lines) {
+                if (!line.trim()) { continue; }
+                watcher.events.push({ pid: Number(line), at: Date.now() });
+                if (watcher.events.length === 1) { clearTimeout(timer); resolve(watcher); }
+            }
+        });
+        child.on("exit", (code, signal) => {
+            if (!watcher.stopping) { watcher.exitedEarly = `exit ${code === null ? signal : code}`; }
+            if (watcher.events.length === 0) { clearTimeout(timer); reject(new Error(`activation watcher exited before starting (${watcher.exitedEarly})`)); }
+        });
+    });
+}
+
+// SIGKILL the launched instance and wait (up to 5 s) until it and every helper
+// still naming its profile are gone, so nothing writes into the profile after
+// it is removed. Synchronous so the signal handler can use it too.
+function killAndWait(pid, profileDir) {
+    if (pid) { killNow(pid); }
+    const deadline = Date.now() + 5000;
+    const pause = new Int32Array(new SharedArrayBuffer(4));
+    while (Date.now() < deadline) {
+        let alive = false;
+        if (pid) { try { process.kill(pid, 0); alive = true; } catch (_) { /* gone */ } }
+        const helpers = childProcess.spawnSync("pgrep", ["-f", profileDir], { encoding: "utf8" }).stdout.trim();
+        if (!alive && !helpers) { return; }
+        for (const helperPid of helpers.split("\n").filter(Boolean)) { killNow(Number(helperPid)); }
+        Atomics.wait(pause, 0, 0, 100);
+    }
+}
+
 async function main() {
     const options = parseArgs(process.argv.slice(2));
     if (process.platform !== "darwin") { throw new Error("Background VS Code checks need macOS with a secondary built-in display."); }
     if (!fs.existsSync(path.join(REPO, "out", "extension.js"))) { throw new Error("Run `npm run bundle` first."); }
     if (typeof WebSocket !== "function") { throw new Error("Node with a global WebSocket (22+) is required."); }
+    reapStaleRuns();
 
+    const policy = options.allowVisible ? "none" : "prohibited";
     const [x, y, width, height] = helper("display").split(/\s+/).map(Number);
     const display = { x, y, width, height };
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "lc-bg-vscode-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), ROOT_PREFIX));
+    fs.writeFileSync(path.join(root, "runner.pid"), String(process.pid));
     const out = options.out || path.join(root, "evidence");
-    fs.mkdirSync(out, { recursive: true });
-    const syncPort = await freePort();
-    const cdpPort = await freePort();
-    const profile = prepareProfile(root, display, syncPort);
     let pid;
-    // Sample the frontmost app for the whole run. Another app becoming
-    // frontmost is the user working; the launched instance becoming frontmost
-    // is a focus steal and fails the run.
-    const frontmostSamples = new Set();
-    let stealDetected = false;
-    let phase = "launch";
-    const stealPhases = new Set();
-    const focusWatch = setInterval(() => {
-        try {
-            const front = helper("frontmost");
-            frontmostSamples.add(front);
-            if (pid && front === String(pid)) { stealDetected = true; stealPhases.add(phase); }
-        } catch (_) { /* ignore a failed sample */ }
-    }, 500);
+    let keptOpen = false;
+    // Default evidence lives inside the temp profile; keep it only after a
+    // successful run (the next run removes it).
+    let keepDefaultEvidence = false;
     let cdp;
+    let watcher;
     const results = [];
+    let phase = "launch";
+
+    const cleanup = () => {
+        // Always reap by profile, even with no pid yet: an interrupt during the
+        // launch helper can leave a started instance whose pid we never saw.
+        if (!keptOpen) { killAndWait(pid, path.join(root, "user-data")); }
+        if (!keptOpen) {
+            const keep = !options.out && keepDefaultEvidence ? out : undefined;
+            for (const entry of fs.existsSync(root) ? fs.readdirSync(root) : []) {
+                if (path.join(root, entry) !== keep) { fs.rmSync(path.join(root, entry), { recursive: true, force: true }); }
+            }
+            if (!keep) { fs.rmSync(root, { recursive: true, force: true }); }
+        }
+    };
+    const onSignal = (signal) => {
+        if (watcher) { watcher.stop(); }
+        cleanup();
+        console.error(`Interrupted by ${signal}; killed the test instance and removed its profile.`);
+        process.exit({ SIGINT: 130, SIGTERM: 143, SIGHUP: 129 }[signal] || 1);
+    };
+    for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) { process.once(signal, onSignal); }
+
+    let failure;
+    let stealPids = [];
     try {
+        fs.mkdirSync(out, { recursive: true });
+        const syncPort = await freePort();
+        const cdpPort = await freePort();
+        const inspectPort = await freePort();
+        const profile = prepareProfile(root, display, syncPort);
+        watcher = await watchActivations();
+
         pid = Number(helper("launch", CODE_APP,
             `--user-data-dir=${profile.userData}`,
             `--extensions-dir=${profile.extensions}`,
@@ -407,9 +646,14 @@ async function main() {
             `--extensionDevelopmentPath=${REPO}`,
             `--extensionDevelopmentPath=${profile.harness}`,
             `--remote-debugging-port=${cdpPort}`,
+            `--inspect-brk=${inspectPort}`,
             profile.workspace));
-        console.log(`Launched VS Code pid ${pid} (CDP ${cdpPort}, sync port ${syncPort}) into ${root}`);
+        console.log(`Launched VS Code pid ${pid} paused (CDP ${cdpPort}, sync port ${syncPort}) into ${root}`);
+        phase = "guard";
+        await guardMainProcess(inspectPort, policy, pid);
+        console.log(`Focus guard applied (activation policy ${policy}); main process resumed.`);
 
+        phase = "window";
         const window = await waitFor("VS Code window", () => {
             const line = helper("windows", String(pid)).split("\n").find(Boolean);
             if (!line) { return undefined; }
@@ -421,50 +665,63 @@ async function main() {
         if (cx < display.x || cx > display.x + display.width || cy < display.y || cy > display.y + display.height) {
             throw new Error(`Window opened at ${JSON.stringify(window)}, not on the test display ${JSON.stringify(display)}; aborted.`);
         }
-        console.log(`Window ${window.id} on the test display at ${window.x},${window.y} ${window.width}x${window.height}`);
-        phase = "unhide";
-        if (options.unhide) {
-            console.log(`unhide: ${helper("unhide", String(pid))}`);
+        if (policy === "prohibited") {
+            const actual = helper("policy", String(pid));
+            if (actual !== "prohibited") { throw new Error(`activation policy is ${actual}, not prohibited; aborted.`); }
         }
-        await sleep(1500);
-        phase = "scenario";
+        console.log(`Window ${window.id} placed on the test display at ${window.x},${window.y} ${window.width}x${window.height}${policy === "prohibited" ? " (never shown: prohibited policy)" : ""}`);
+        if (options.allowVisible) {
+            phase = "unhide";
+            console.log(`--allow-visible: unhide: ${helper("unhide", String(pid))}`);
+            await sleep(1500);
+        }
 
+        phase = "scenario";
         cdp = await Cdp.connect(cdpPort);
         await waitFor("harness", () => harness(profile.ipc, { op: "ping" }, 2000).then((r) => r.extension && r), 60000, 500);
         await harness(profile.ipc, { op: "activate" }, 60000);
-
         if (options.scenario === "status-bar") {
             await runStatusBarScenario({ cdp, ipc: profile.ipc, out, results });
         } else {
             throw new Error(`Unknown scenario ${options.scenario}`);
         }
-
-        fs.writeFileSync(path.join(out, "results.json"), JSON.stringify({ display, window, frontmostSamples: [...frontmostSamples], results }, null, 2));
-        if (stealDetected) {
-            throw new Error(`Focus steal: the test instance (pid ${pid}) became the frontmost app during: ${[...stealPhases].join(", ")}.`);
+        if (policy === "prohibited") {
+            const actual = helper("policy", String(pid));
+            if (actual !== "prohibited") { throw new Error(`activation policy changed to ${actual} during the run.`); }
         }
-        console.log(`Focus: the test instance never became frontmost (sampled every 500 ms; frontmost pids seen: ${[...frontmostSamples].join(", ")}).`);
-        console.log(`Evidence: ${out}`);
-        if (options.keepOpen) {
-            console.log(`--keep-open: leaving pid ${pid} running. Stop it with: kill ${pid}`);
-            pid = undefined;
-        }
-    } finally {
-        clearInterval(focusWatch);
-        if (cdp) { cdp.close(); }
-        if (pid) {
-            try { process.kill(pid, "SIGTERM"); } catch (_) { /* already gone */ }
-            await waitFor("VS Code exit", () => { try { process.kill(pid, 0); return false; } catch (_) { return true; } }, 15000, 200)
-                .catch(() => { try { process.kill(pid, "SIGKILL"); } catch (_) { /* ignore */ } });
-        }
-        if (!options.keepOpen) {
-            const keep = options.out ? undefined : out;
-            for (const entry of fs.readdirSync(root)) {
-                if (path.join(root, entry) !== keep) { fs.rmSync(path.join(root, entry), { recursive: true, force: true }); }
-            }
-            if (!keep) { fs.rmdirSync(root); }
-        }
+    } catch (error) {
+        failure = error;
     }
+
+    // Report a focus steal first, even when the scenario failed too: it must
+    // never be hidden behind another error and invite a retry.
+    if (watcher) { watcher.stop(); }
+    const events = watcher ? watcher.events : [];
+    stealPids = pid ? events.filter((e) => e.pid === pid) : [];
+    try {
+        fs.writeFileSync(path.join(out, "results.json"), JSON.stringify({
+            display, phase, activationEvents: events.length, frontmostPids: [...new Set(events.map((e) => e.pid))], steals: stealPids.length, results,
+        }, null, 2));
+    } catch (_) { /* out may not exist */ }
+    if (stealPids.length > 0) {
+        console.error(`FOCUS STEAL: the test instance (pid ${pid}) was activated ${stealPids.length} time(s) (last phase: ${phase}). Stop and report this; do not retry.`);
+    }
+
+    if (cdp) { cdp.close(); }
+    if (!failure && options.keepOpen && pid) {
+        keptOpen = true;
+        console.log(`--keep-open: pid ${pid} keeps running${policy === "prohibited" ? " with no Dock icon or window" : ""}. Stop it with: kill -9 ${pid}; the next run also kills it and removes ${root}`);
+    }
+    keepDefaultEvidence = !failure && stealPids.length === 0;
+    cleanup();
+
+    if (failure) { throw failure; }
+    if (stealPids.length > 0) { throw new Error("focus steal detected"); }
+    if (!watcher || watcher.exitedEarly || events.length < 1) {
+        throw new Error(`activation watcher was not running for the whole run (${watcher ? watcher.exitedEarly || "no events" : "never started"}); focus was not verified.`);
+    }
+    console.log(`Focus: the test instance was never activated (${events.length - 1} other activation(s) observed after the initial frontmost sample).`);
+    console.log(`Evidence: ${out}${options.out ? "" : " (temporary; removed by the next run)"}`);
 }
 
 main().catch((error) => {
