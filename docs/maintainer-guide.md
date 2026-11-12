@@ -182,7 +182,11 @@ An HTTP 429 that is not a challenge page is LeetCode's own rate limit. Both
 transports throw `RateLimitedError`, whose message is user-facing:
 `reportCommandError` shows it instead of the generic failure toast. A 429 is a
 definite refusal, like the 200 `{"error": "...too soon..."}` body, so the request
-never reached the judge. A 429 from result polling is rewrapped to say the
+never reached the judge. `enqueueWithBackoff` paces and re-sends an enqueue
+on either refusal (up to 5 attempts, 1s, 2s, ... apart) and then throws
+`RateLimitedError`; anything else is never re-sent. Submit also refuses a
+second run while one is in flight, since superseding a run whose POST already
+left would submit twice. A 429 from result polling is rewrapped to say the
 solution was already sent. Whether LeetCode sends `Retry-After` is unverified;
 the curl path cannot read headers, so it is not used.
 

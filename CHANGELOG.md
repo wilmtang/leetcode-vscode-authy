@@ -29,6 +29,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   rate limited. The second request is ignored with a short note; cancel the
   running submission first to resubmit. When a Test run takes over a submit, the
   output channel now says so.
+- A submit or test that LeetCode rate limits (HTTP 429) is now paused and sent
+  again, the same way a "submitted too soon" reply already was, before the
+  rate-limit message is shown.
 - A background sync check that finished after sync was turned off or its port
   changed could bring back a stale "blocked" or "another window" state.
 - A force start whose release timed out could leave sync stopped with no retry;

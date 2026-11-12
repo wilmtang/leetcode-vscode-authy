@@ -1,12 +1,12 @@
 import { IAuthSessionSnapshot } from "../globalState";
 import { leetCodeChannel } from "../leetCodeChannel";
 import { captureAuthRequest, isSameAccountCurrent } from "./authRequest";
-import { sleep } from "../utils/toolUtils";
 import { normalizeTestcase } from "../utils/testcaseUtils";
 import {
     createHeaders,
     DirectApiUnsupportedError,
     isCloudflareChallengeError,
+    enqueueWithBackoff,
     withChallengeBackoff,
     getQuestionDetail,
     ICheckResult,
@@ -18,7 +18,6 @@ import {
     RateLimitedError,
     requestJson,
     verifyResult,
-    throwIfCancelled,
 } from "./leetcode-http";
 
 // Re-export for backward compatibility with any other importers.
@@ -145,14 +144,12 @@ async function runCode(
     isCancelled?: () => boolean,
 ): Promise<IRunCodeTask> {
     const url: string = `${new URL(referer).origin}/problems/${meta.slug}/interpret_solution/`;
-    let delaySeconds: number = 1;
-
-    for (let attempt: number = 0; attempt < 5; attempt++) {
-        throwIfCancelled(isCancelled);
+    // Re-sent only when the run provably never reached the judge: a detected
+    // Cloudflare challenge (withChallengeBackoff), or LeetCode refusing it as
+    // too soon / HTTP 429 (enqueueWithBackoff).
+    const task: IRunCodeTask = await enqueueWithBackoff("run-code enqueue", "test", () => {
         assertCurrentAuth(auth);
-        // Only a detected Cloudflare challenge is re-sent: the edge served it, so
-        // the run never reached the judge.
-        const task: IRunCodeTask = await withChallengeBackoff("run-code enqueue", () => requestJson<IRunCodeTask>({
+        return withChallengeBackoff("run-code enqueue", () => requestJson<IRunCodeTask>({
             method: "POST",
             url,
             headers: createHeaders(cookie, referer, headerOverrides),
@@ -163,24 +160,16 @@ async function runCode(
                 typed_code: meta.code,
             },
         }, { label: "run-code enqueue", logMode: true, isCancelled }), isCancelled);
+    }, isCancelled);
 
-        if (!task.error) {
-            return task;
-        }
-        if (/session expired/i.test(task.error)) {
-            leetCodeChannel.appendLine(`[test] Failure cause: LeetCode run-code response error: ${task.error}`);
-            throw new DirectApiUnsupportedError("Direct LeetCode run-code request returned: session expired.", false);
-        }
-        if (task.error.indexOf("too soon") < 0) {
-            leetCodeChannel.appendLine(`[test] Failure cause: LeetCode run-code response error: ${task.error}`);
-            throw new Error(task.error);
-        }
-
-        await sleep(delaySeconds * 1000, isCancelled);
-        delaySeconds++;
+    if (!task.error) {
+        return task;
     }
-
-    throw new RateLimitedError("run-code enqueue");
+    leetCodeChannel.appendLine(`[test] Failure cause: LeetCode run-code response error: ${task.error}`);
+    if (/session expired/i.test(task.error)) {
+        throw new DirectApiUnsupportedError("Direct LeetCode run-code request returned: session expired.", false);
+    }
+    throw new Error(task.error);
 }
 
 function assertCurrentAuth(auth: IAuthSessionSnapshot): void {

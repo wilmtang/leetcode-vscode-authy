@@ -96,6 +96,45 @@ export async function withChallengeBackoff<T>(
     }
 }
 
+const MAX_ENQUEUE_ATTEMPTS: number = 5;
+
+/**
+ * Send a judge enqueue, pausing and re-sending while LeetCode refuses it as too
+ * soon: either a 200 `{"error": "...too soon..."}` body or an HTTP 429. Both are
+ * definite refusals, so the request never reached the judge. Any other error or
+ * error body is returned or thrown to the caller untouched, and never re-sent.
+ */
+export async function enqueueWithBackoff<T extends { error?: string }>(
+    label: string,
+    logTag: string,
+    send: () => Promise<T>,
+    isCancelled?: () => boolean,
+    delayMs: (attempt: number) => number = (attempt: number) => (attempt + 1) * 1000,
+    maxAttempts: number = MAX_ENQUEUE_ATTEMPTS,
+): Promise<T> {
+    for (let attempt: number = 0; attempt < maxAttempts; attempt++) {
+        throwIfCancelled(isCancelled);
+        try {
+            const task: T = await send();
+            if (!task.error || task.error.indexOf("too soon") < 0) {
+                return task;
+            }
+        } catch (error) {
+            if (!isRateLimitedError(error)) {
+                throw error;
+            }
+        }
+        if (attempt + 1 >= maxAttempts) {
+            break;
+        }
+        const wait: number = delayMs(attempt);
+        leetCodeChannel.appendLine(`[${logTag}] LeetCode is rate limiting requests; retrying in ${(wait / 1000).toFixed(1)}s.`);
+        await sleep(wait, isCancelled);
+    }
+    leetCodeChannel.appendLine(`[${logTag}] Failure cause: LeetCode kept rate limiting ${label} after ${maxAttempts} attempts.`);
+    throw new RateLimitedError(label);
+}
+
 // ---------------------------------------------------------------------------
 // Shared interfaces
 // ---------------------------------------------------------------------------
