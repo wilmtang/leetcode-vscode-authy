@@ -14,6 +14,8 @@ import {
     IHeaderOverrides,
     ISolutionFileMeta,
     parseSolutionFile,
+    isRateLimitedError,
+    RateLimitedError,
     requestJson,
     verifyResult,
     throwIfCancelled,
@@ -121,6 +123,10 @@ export async function testSolutionWithSyncedCookie(filePath: string, testString?
             ? await verifyResult(pending.interpretExpectedId, cookie, referer, headerOverrides, isCancelled, owner.base)
             : undefined;
     } catch (error) {
+        if (isRateLimitedError(error)) {
+            leetCodeChannel.appendLine("[test] The test run was sent, but the result check was rate limited.");
+            throw new RateLimitedError(error.label, "LeetCode rate-limited the result check. Your test run was sent; try again in a moment.");
+        }
         throw tagChallenge(error, pending);
     }
 
@@ -174,7 +180,7 @@ async function runCode(
         delaySeconds++;
     }
 
-    throw new Error("LeetCode rejected the run because requests were sent too quickly.");
+    throw new RateLimitedError("run-code enqueue");
 }
 
 function assertCurrentAuth(auth: IAuthSessionSnapshot): void {

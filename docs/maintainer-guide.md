@@ -178,6 +178,14 @@ even with a fresh cookie. Judge workflows therefore escalate in three steps:
 3. If the challenge happened after enqueue, the error carries `resume` state and
    the retry re-polls the same submission/interpret ids rather than re-enqueueing.
 
+An HTTP 429 that is not a challenge page is LeetCode's own rate limit. Both
+transports throw `RateLimitedError`, whose message is user-facing:
+`reportCommandError` shows it instead of the generic failure toast. A 429 is a
+definite refusal, like the 200 `{"error": "...too soon..."}` body, so the request
+never reached the judge. A 429 from result polling is rewrapped to say the
+solution was already sent. Whether LeetCode sends `Retry-After` is unverified;
+the curl path cannot read headers, so it is not used.
+
 Judge workflows capture auth with `captureAuthRequest(..., { sameAccount: true })`:
 a same-account sync bumps the auth revision but must not drop an in-flight result.
 Other workflows stay revision-bound. Known gap: no unit test drives `verifyResult`

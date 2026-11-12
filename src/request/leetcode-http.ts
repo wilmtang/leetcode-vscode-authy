@@ -48,6 +48,26 @@ export function isCloudflareChallengeError(error: unknown): error is CloudflareC
     return error instanceof CloudflareChallengeError;
 }
 
+export const RATE_LIMITED_MESSAGE: string = "LeetCode is rate limiting requests from your account. Wait a moment, then try again.";
+
+/**
+ * LeetCode answered HTTP 429 (not a Cloudflare challenge page). The request was
+ * refused outright, so it never reached the judge: like the 200 "too soon"
+ * body, an enqueue that gets this is safe to send again after a pause.
+ * The message is user-facing; reportCommandError shows it as is.
+ */
+// tslint:disable-next-line:max-classes-per-file
+export class RateLimitedError extends Error {
+    constructor(public readonly label: string, message: string = RATE_LIMITED_MESSAGE) {
+        super(message);
+        this.name = "RateLimitedError";
+    }
+}
+
+export function isRateLimitedError(error: unknown): error is RateLimitedError {
+    return error instanceof RateLimitedError;
+}
+
 const CHALLENGE_BACKOFF_MIN_MS: number = 4000;
 const CHALLENGE_BACKOFF_JITTER_MS: number = 3000;
 const MAX_POLL_CHALLENGES: number = 2;
@@ -337,6 +357,10 @@ export async function requestJson<T>(config: AxiosRequestConfig, context: IReque
         leetCodeChannel.appendLine(`[http] Failure cause: LeetCode rejected node/axios request (${context.label}, HTTP ${response.status}).`);
         throw new DirectApiUnsupportedError(`Direct LeetCode request was rejected by node/axios (${context.label}): HTTP ${response.status}${summarizeResponseData(response.data)}.`, false);
     }
+    if (response.status === 429) {
+        leetCodeChannel.appendLine(`[http] Failure cause: LeetCode rate limit (${context.label}, HTTP 429).`);
+        throw new RateLimitedError(context.label);
+    }
     if (response.status !== 200) {
         leetCodeChannel.appendLine(`[http] Failure cause: unexpected node/axios HTTP status (${context.label}, HTTP ${response.status}).`);
         throw new Error(`node/axios http error (${context.label}) [code=${response.status}]`);
@@ -379,6 +403,10 @@ async function requestJsonWithCurl<T>(config: AxiosRequestConfig, context: IRequ
     if (response.status === 401 || response.status === 403) {
         leetCodeChannel.appendLine(`[http] Failure cause: LeetCode rejected curl request (${context.label}, HTTP ${response.status}).`);
         throw new DirectApiUnsupportedError(`Direct LeetCode curl request was rejected (${context.label}): HTTP ${response.status}${summarizeResponseData(response.body)}.`, false);
+    }
+    if (response.status === 429) {
+        leetCodeChannel.appendLine(`[http] Failure cause: LeetCode rate limit (${context.label}, HTTP 429).`);
+        throw new RateLimitedError(context.label);
     }
     if (response.status !== 200) {
         leetCodeChannel.appendLine(`[http] Failure cause: unexpected curl HTTP status (${context.label}, HTTP ${response.status}).`);

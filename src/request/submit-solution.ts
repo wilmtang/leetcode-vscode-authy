@@ -5,6 +5,8 @@ import { sleep } from "../utils/toolUtils";
 import {
     createHeaders,
     isCloudflareChallengeError,
+    isRateLimitedError,
+    RateLimitedError,
     withChallengeBackoff,
     DirectApiUnsupportedError,
     ICheckResult,
@@ -83,6 +85,10 @@ export async function submitSolutionWithSyncedCookie(filePath: string, isCancell
         if (isCloudflareChallengeError(error)) {
             leetCodeChannel.appendLine(`[submit] Submission ${submissionId} was accepted by LeetCode, but its result could not be read.`);
         }
+        if (isRateLimitedError(error)) {
+            leetCodeChannel.appendLine(`[submit] Submission ${submissionId} was accepted by LeetCode, but the result check was rate limited.`);
+            throw new RateLimitedError(error.label, "LeetCode rate-limited the result check. Your submission was already sent; check its result on LeetCode before submitting again.");
+        }
         throw tagChallenge(error, { kind: "submit", filePath, submissionId });
     }
     owner.assertCurrent();
@@ -134,7 +140,7 @@ async function submitCode(
         delaySeconds++;
     }
 
-    throw new Error("LeetCode rejected the submission because requests were sent too quickly.");
+    throw new RateLimitedError("submit enqueue");
 }
 
 function assertCurrentAuth(auth: IAuthSessionSnapshot): void {

@@ -51,6 +51,11 @@ export async function reportCommandError(operation: string, error: unknown, user
         return;
     }
     leetCodeChannel.appendLine(`[${operation}] ${redactDiagnostic(error)}`);
+    // A rate limit carries its own user-facing explanation; a generic
+    // "failed, see the output channel" hides that the fix is simply to wait.
+    if (error instanceof Error && error.name === "RateLimitedError") {
+        userMessage = error.message;
+    }
     await promptForOpenOutputChannel(
         userMessage || `${operation} failed. Please open the output channel for details.`,
         DialogType.error,

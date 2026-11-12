@@ -20,6 +20,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   sync. A port conflict found by the background check now names the program.
 
 ### Fixed
+- When LeetCode rate limits a submit or test (HTTP 429), the error now says so
+  and tells you to wait a moment, instead of a generic "Failed to submit"
+  message. If the limit hits while reading the result, it says the solution was
+  already sent so you can check it on LeetCode before sending it again.
 - A background sync check that finished after sync was turned off or its port
   changed could bring back a stale "blocked" or "another window" state.
 - A force start whose release timed out could leave sync stopped with no retry;
