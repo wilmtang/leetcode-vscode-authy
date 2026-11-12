@@ -130,14 +130,16 @@ describe("LeetCode rate limit handling", () => {
 
     it("re-sends a 200 too-soon body and stops after the attempt limit with a rate limit", async () => {
         let sends: number = 0;
+        const delays: number[] = [];
         await assert.rejects(
             enqueueWithBackoff("run-code enqueue", "test", () => {
                 sends++;
                 return Promise.resolve({ error: "You have submitted too soon" });
-            }, undefined, () => 1, 3),
+            }, undefined, (attempt: number) => { delays.push(attempt); return 1; }, 3),
             (error: unknown) => isRateLimitedError(error) && (error as RateLimitedError).label === "run-code enqueue",
         );
         assert.strictEqual(sends, 3);
+        assert.deepStrictEqual(delays, [0, 1], "no pause after the last attempt");
     });
 
     it("returns any other error body to the caller without re-sending", async () => {
@@ -173,16 +175,20 @@ describe("LeetCode rate limit handling", () => {
 
     it("stops re-sending when cancelled during the back-off", async () => {
         let sends: number = 0;
+        let backingOff: boolean = false;
         let cancelled: boolean = false;
-        await assert.rejects(
-            enqueueWithBackoff("submit enqueue", "submit", () => {
-                sends++;
-                cancelled = true;
-                return Promise.reject(new RateLimitedError("submit enqueue"));
-            }, () => cancelled, () => 5000),
-            (error: unknown) => (error as Error).name === "OperationCancelledError",
-        );
+        const started: number = Date.now();
+        const run: Promise<unknown> = enqueueWithBackoff("submit enqueue", "submit", () => {
+            sends++;
+            return Promise.reject(new RateLimitedError("submit enqueue"));
+        }, () => cancelled, () => { backingOff = true; return 5000; });
+        // Cancel only once the back-off sleep has begun.
+        await waitFor(() => backingOff);
+        await new Promise<void>((resolve) => setTimeout(resolve, 20));
+        cancelled = true;
+        await assert.rejects(run, (error: unknown) => (error as Error).name === "OperationCancelledError");
         assert.strictEqual(sends, 1);
+        assert.ok(Date.now() - started < 2000, "cancellation must cut the 5s back-off short");
     });
 
     it("logs a rate limit with its name and without request data", () => {
@@ -190,6 +196,16 @@ describe("LeetCode rate limit handling", () => {
         assert.ok(diagnostic.startsWith(`RateLimitedError: ${RATE_LIMITED_MESSAGE}`), diagnostic);
     });
 });
+
+async function waitFor(condition: () => boolean, timeoutMs: number = 2000): Promise<void> {
+    const deadline: number = Date.now() + timeoutMs;
+    while (!condition()) {
+        if (Date.now() > deadline) {
+            throw new Error("Timed out waiting for the condition.");
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, 5));
+    }
+}
 
 function origin(server: http.Server): string {
     return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

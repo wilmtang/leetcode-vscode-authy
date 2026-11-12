@@ -27,11 +27,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Submitting again while a submission is still running no longer cancels the
   first one (whose solution may already have reached LeetCode) and gets
   rate limited. The second request is ignored with a short note; cancel the
-  running submission first to resubmit. When a Test run takes over a submit, the
-  output channel now says so.
-- A submit or test that LeetCode rate limits (HTTP 429) is now paused and sent
-  again, the same way a "submitted too soon" reply already was, before the
-  rate-limit message is shown.
+  running submission first to resubmit. Opening Test and backing out of its
+  input no longer cancels a running submission; a Test that does run still
+  takes over, and the output channel now says so.
+- When LeetCode rate limits the request that sends your code (HTTP 429), it is
+  now paused and sent again, the same way a "submitted too soon" reply already
+  was, before the rate-limit message is shown.
 - A background sync check that finished after sync was turned off or its port
   changed could bring back a stale "blocked" or "another window" state.
 - A force start whose release timed out could leave sync stopped with no retry;

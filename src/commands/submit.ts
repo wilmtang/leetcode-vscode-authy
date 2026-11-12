@@ -35,7 +35,7 @@ export async function submitSolution(uri?: vscode.Uri): Promise<void> {
         }
         // Refuse before begin(): begin() would supersede the running submit.
         if (!submitInFlight.tryEnter()) {
-            void vscode.window.showInformationMessage("A submission is already in progress. Wait for its result or cancel it first.");
+            void vscode.window.showInformationMessage("A submission is already in progress. Wait for its result, or cancel it from its notification first.");
             return;
         }
         const id: number = judgeOperationCoordinator.begin();
@@ -80,7 +80,7 @@ export async function submitSolution(uri?: vscode.Uri): Promise<void> {
         }
     } catch (error) {
         if (operationId !== undefined && !judgeOperationCoordinator.isCurrent(operationId)) {
-            logSuperseded();
+            logSuperseded(error instanceof Error ? error.name : undefined);
             return;
         }
         await reportCommandError("Submit solution", error, "Failed to submit the solution. Please open the output channel for details.");
@@ -90,6 +90,7 @@ export async function submitSolution(uri?: vscode.Uri): Promise<void> {
     leetCodeTreeDataProvider.refresh();
 }
 
-function logSuperseded(): void {
-    leetCodeChannel.appendLine("[submit] Superseded by a newer judge request; if the solution already reached LeetCode, its result is in your submission history.");
+function logSuperseded(endedWith?: string): void {
+    const ended: string = endedWith ? ` (the earlier run ended with ${endedWith})` : "";
+    leetCodeChannel.appendLine(`[submit] Superseded by a newer judge request${ended}; if the solution already reached LeetCode, its result is in your submission history.`);
 }

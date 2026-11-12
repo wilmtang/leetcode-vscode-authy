@@ -180,13 +180,17 @@ even with a fresh cookie. Judge workflows therefore escalate in three steps:
 
 An HTTP 429 that is not a challenge page is LeetCode's own rate limit. Both
 transports throw `RateLimitedError`, whose message is user-facing:
-`reportCommandError` shows it instead of the generic failure toast. A 429 is a
-definite refusal, like the 200 `{"error": "...too soon..."}` body, so the request
-never reached the judge. `enqueueWithBackoff` paces and re-sends an enqueue
+`reportCommandError` shows it instead of the generic failure toast. A 429 is
+treated as a refusal that never reached the judge, like the 200
+`{"error": "...too soon..."}` body. That is an assumption: no live 429 has been
+captured, and the re-send below relies on it, so revisit it if duplicate
+submissions are ever reported. `enqueueWithBackoff` paces and re-sends an enqueue
 on either refusal (up to 5 attempts, 1s, 2s, ... apart) and then throws
 `RateLimitedError`; anything else is never re-sent. Submit also refuses a
 second run while one is in flight, since superseding a run whose POST already
-left would submit twice. A 429 from result polling is rewrapped to say the
+left would submit twice; Test collects its input before it supersedes anything.
+The guard is held through Cloudflare recovery, so a second Submit is refused
+for up to 3 minutes while the browser check is pending. A 429 from result polling is rewrapped to say the
 solution was already sent. Whether LeetCode sends `Retry-After` is unverified;
 the curl path cannot read headers, so it is not used.
 

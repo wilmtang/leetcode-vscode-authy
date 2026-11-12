@@ -48,12 +48,13 @@ export function isCloudflareChallengeError(error: unknown): error is CloudflareC
     return error instanceof CloudflareChallengeError;
 }
 
-export const RATE_LIMITED_MESSAGE: string = "LeetCode is rate limiting requests from your account. Wait a moment, then try again.";
+export const RATE_LIMITED_MESSAGE: string = "LeetCode is limiting how often requests can be sent. Wait a moment, then try again.";
 
 /**
- * LeetCode answered HTTP 429 (not a Cloudflare challenge page). The request was
- * refused outright, so it never reached the judge: like the 200 "too soon"
- * body, an enqueue that gets this is safe to send again after a pause.
+ * LeetCode answered HTTP 429 (not a Cloudflare challenge page). We assume the
+ * request was refused outright and never reached the judge, like the 200 "too
+ * soon" body, so an enqueue that gets this is re-sent after a pause. That
+ * assumption is unverified against live LeetCode.
  * The message is user-facing; reportCommandError shows it as is.
  */
 // tslint:disable-next-line:max-classes-per-file
@@ -101,7 +102,7 @@ const MAX_ENQUEUE_ATTEMPTS: number = 5;
 /**
  * Send a judge enqueue, pausing and re-sending while LeetCode refuses it as too
  * soon: either a 200 `{"error": "...too soon..."}` body or an HTTP 429. Both are
- * definite refusals, so the request never reached the judge. Any other error or
+ * treated as refusals that never reached the judge (unverified live for 429). Any other error or
  * error body is returned or thrown to the caller untouched, and never re-sent.
  */
 export async function enqueueWithBackoff<T extends { error?: string }>(
