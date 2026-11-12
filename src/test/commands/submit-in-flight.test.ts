@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
+import { submitInFlight } from "../../commands/judgeOperationCoordinator";
 import { submitSolution } from "../../commands/submit";
 import { leetCodeTreeDataProvider } from "../../explorer/LeetCodeTreeDataProvider";
 import { leetCodeManager } from "../../leetCodeManager";
@@ -52,6 +53,9 @@ describe("submit in-flight guard wiring", () => {
         while (restore.length) {
             restore.pop()!();
         }
+        // The guard is module state: a test that fails mid-run must not leave
+        // it held and fail the next test for an unrelated reason.
+        submitInFlight.leave();
     });
 
     it("refuses a second submit without cancelling the first, then admits the next one", async () => {
