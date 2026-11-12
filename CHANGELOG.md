@@ -24,6 +24,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   and tells you to wait a moment, instead of a generic "Failed to submit"
   message. If the limit hits while reading the result, it says the solution was
   already sent so you can check it on LeetCode before sending it again.
+- Submitting again while a submission is still running no longer cancels the
+  first one (whose solution may already have reached LeetCode) and gets
+  rate limited. The second request is ignored with a short note; cancel the
+  running submission first to resubmit. When a Test run takes over a submit, the
+  output channel now says so.
 - A background sync check that finished after sync was turned off or its port
   changed could bring back a stale "blocked" or "another window" state.
 - A force start whose release timed out could leave sync stopped with no retry;
