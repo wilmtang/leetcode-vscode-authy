@@ -71,43 +71,46 @@ export async function testSolution(uri?: vscode.Uri): Promise<void> {
             return;
         }
 
-        let result: string | undefined;
-        const operationId: number = judgeOperationCoordinator.begin();
         const owner = captureAuthRequest(undefined, { sameAccount: true });
         const username: string | undefined = owner.auth.identity && owner.auth.identity.username;
         if (!username) {
             await promptForSignIn();
             return;
         }
+        // Collect the test input before begin(): begin() supersedes a running
+        // submit, and a test the user then abandons must not cost them that.
+        let testString: string | undefined;
         switch (choice.value) {
             case ":default":
-                result = await runTest(filePath, operationId, username);
                 break;
             case ":direct":
-                const testString: string | undefined = await vscode.window.showInputBox({
+                const typed: string | undefined = await vscode.window.showInputBox({
                     prompt: "Enter the test cases.",
                     validateInput: (s: string): string | undefined => s && s.trim() ? undefined : "Test case must not be empty.",
                     placeHolder: "Example: [1,2,3]\\n4",
                     ignoreFocusOut: true,
                 });
-                if (testString) {
-                    result = await runTest(filePath, operationId, username, decodeInlineTestcase(testString));
+                if (!typed) {
+                    return;
                 }
+                testString = decodeInlineTestcase(typed);
                 break;
             case ":file":
                 const testFile: vscode.Uri[] | undefined = await showFileSelectDialog(filePath);
-                if (testFile && testFile.length) {
-                    const input: string = (await fse.readFile(testFile[0].fsPath, "utf-8")).trim();
-                    if (input) {
-                        result = await runTest(filePath, operationId, username, input);
-                    } else {
-                        vscode.window.showErrorMessage("The selected test file must not be empty.");
-                    }
+                if (!testFile || !testFile.length) {
+                    return;
+                }
+                testString = (await fse.readFile(testFile[0].fsPath, "utf-8")).trim();
+                if (!testString) {
+                    vscode.window.showErrorMessage("The selected test file must not be empty.");
+                    return;
                 }
                 break;
             default:
-                break;
+                return;
         }
+        const operationId: number = judgeOperationCoordinator.begin();
+        const result: string | undefined = await runTest(filePath, operationId, username, testString);
         if (!result) {
             return;
         }
