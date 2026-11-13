@@ -3,6 +3,18 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.21.1]
+### Changed
+- Clarify at the top of `README.md`, `package.json`, and browser extension store
+  metadata that users must install **both** the VS Code extension and the
+  companion browser extension on the same machine for it to work properly.
+- Companion browser extension updated to `0.1.9` (submits `AGPL-3.0-or-later`
+  as a Firefox Add-ons `custom_license` and clarifies the store listing intro).
+
+### Fixed
+- Run `npm run test:skill` with `"test/project/*.test.mjs"` so `node --test`
+  discovers the skill test files on Node 22 across Linux and Windows CI.
+
 ## [0.21.0]
 ### Added
 - **Session sync status bar item**: a second item beside `LeetCode: <user>` shows

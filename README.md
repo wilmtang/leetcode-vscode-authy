@@ -8,7 +8,13 @@
 
 **Chrome extension:** [![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-open-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck) [![Chrome Web Store Version](https://img.shields.io/chrome-web-store/v/elbnajbjhllgodibfhbfiigfmcfpbnck?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck) [![Chrome Web Store Downloads](https://img.shields.io/badge/downloads-unavailable-lightgrey?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck) [![Chrome Web Store Users](https://img.shields.io/badge/users-unavailable-lightgrey?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck)
 
-Solve LeetCode problems in VS Code with a companion browser extension that syncs your signed-in `leetcode.com` session to a local VS Code listener.
+Solve LeetCode problems in VS Code using your signed-in `leetcode.com` browser session.
+
+> **Important — Install Both Extensions:** To work properly, you must install **both** on the same machine:
+> 1. **This VS Code extension** ([VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=wilmtang.vscode-leetcode-auth-sync) / [Open VSX](https://open-vsx.org/extension/wilmtang/vscode-leetcode-auth-sync))
+> 2. **The companion browser extension** ([Chrome Web Store](https://chromewebstore.google.com/detail/leetcode-vs-code-auth-syn/elbnajbjhllgodibfhbfiigfmcfpbnck) / [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/leetcode-vs-code-auth-sync/))
+>
+> Neither extension works fully on its own: the browser extension captures your authenticated `leetcode.com` session and request headers and syncs them locally to the VS Code extension.
 
 This independent project is maintained by `wilmtang` at [wilmtang/leetcode-vscode-authy](https://github.com/wilmtang/leetcode-vscode-authy). It is not affiliated with, endorsed by, sponsored by, or published by LeetCode. This project is licensed under the [GNU Affero General Public License v3.0](LICENSE). The original MIT license and copyright notices are preserved in [LICENSE-MIT](LICENSE-MIT), with source attribution in [NOTICE.md](NOTICE.md).
 
