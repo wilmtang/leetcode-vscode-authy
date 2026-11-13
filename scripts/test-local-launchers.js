@@ -44,7 +44,7 @@ if (process.platform === "win32") {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "launcher check "));
     try {
         const shimPath = path.join(dir, "echo args.cmd");
-        fs.writeFileSync(shimPath, `@"${process.execPath}" -e "console.log(JSON.stringify(process.argv.slice(1)))" %*\r\n`);
+        fs.writeFileSync(shimPath, `@"${process.execPath}" -e "console.log(JSON.stringify(process.argv.slice(1)))" -- %*\r\n`);
         const args = ["--user-data-dir=C:\\x\\User Data", "a&b|c", "plain", "", "C:\\Jane Doe\\dir\\"];
         const plan = planSpawn(shimPath, args);
         const echoed = spawnSync(plan.command, plan.args, { shell: plan.shell, encoding: "utf8" });
