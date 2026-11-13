@@ -1,5 +1,8 @@
 name: Chrome Extension
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches: [main]
@@ -84,6 +87,9 @@ jobs:
     timeout-minutes: 20
     if: startsWith(github.ref, 'refs/tags/browser-extension-v') || github.event.inputs.publish == 'true'
     environment: chrome-web-store
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v6
 
@@ -109,8 +115,20 @@ jobs:
       - name: Build Chrome extension artifact
         run: npm run auth-sync:build:chrome
 
+      - name: Authenticate to Google Cloud
+        id: google-auth
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          create_credentials_file: false
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
       - name: Upload and publish Chrome extension
         env:
+          CHROME_WEBSTORE_TOKEN: ${{ steps.google-auth.outputs.access_token }}
           CHROME_WEBSTORE_CLIENT_ID: ${{ secrets.CHROME_WEBSTORE_CLIENT_ID }}
           CHROME_WEBSTORE_CLIENT_SECRET: ${{ secrets.CHROME_WEBSTORE_CLIENT_SECRET }}
           CHROME_WEBSTORE_REFRESH_TOKEN: ${{ secrets.CHROME_WEBSTORE_REFRESH_TOKEN }}

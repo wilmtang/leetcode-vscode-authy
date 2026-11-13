@@ -781,7 +781,7 @@
         "test:skill": "node --test \"test/project/*.test.mjs\"",
         "test:launchers": "node scripts/test-local-launchers.js",
         "check:vscode-background": "node scripts/background-vscode/run.js",
-        "test:browser": "node --check browser-extension/background.js && node --check browser-extension/options.js && node --check browser-extension/popup.js && node scripts/test-browser-ui.js",
+        "test:browser": "node --check browser-extension/background.js && node --check browser-extension/options.js && node --check browser-extension/popup.js && node --check scripts/publish-chrome-web-store.js && node scripts/test-browser-ui.js && node scripts/test-publish-chrome-web-store.js",
         "test:package": "npm run bundle && node scripts/verify-vscode-package.js",
         "test:integration": "tsc -p ./tsconfig.test.json && mocha --config .mocharc.integration.json",
         "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",

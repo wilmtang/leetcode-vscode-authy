@@ -1,38 +1,54 @@
 const fs = require("fs");
 
-const config = {
-    clientId: getRequiredEnv("CHROME_WEBSTORE_CLIENT_ID"),
-    clientSecret: getRequiredEnv("CHROME_WEBSTORE_CLIENT_SECRET"),
-    refreshToken: getRequiredEnv("CHROME_WEBSTORE_REFRESH_TOKEN"),
-    publisherId: getRequiredEnv("CHROME_WEBSTORE_PUBLISHER_ID"),
-    extensionId: getRequiredEnv("CHROME_WEBSTORE_EXTENSION_ID"),
-    zipPath: getRequiredEnv("CHROME_WEBSTORE_ZIP"),
-};
-
-main().catch((error) => {
-    console.error(error.message || error);
-    process.exit(1);
-});
-
-async function main() {
-    const accessToken = await getAccessToken();
-
-    const uploadResult = await uploadPackage(accessToken);
-    console.log(`Chrome Web Store upload state: ${uploadResult.uploadState || "unknown"}`);
-
-    if (uploadResult.itemError && uploadResult.itemError.length) {
-        console.error(JSON.stringify(uploadResult.itemError, null, 2));
+if (require.main === module) {
+    main().catch((error) => {
+        console.error(error.message || error);
         process.exit(1);
-    }
-
-    console.log("Waiting 10 seconds for the Web Store to process the uploaded package before publishing...");
-    await new Promise((resolve) => setTimeout(resolve, 10000));
-
-    const publishResult = await publishItem(accessToken);
-    console.log(`Chrome Web Store publish response: ${JSON.stringify(publishResult)}`);
+    });
 }
 
-async function getAccessToken() {
+function readConfig(env = process.env) {
+    const accessToken = (env.CHROME_WEBSTORE_TOKEN || "").trim();
+    return {
+        accessToken,
+        clientId: accessToken ? "" : getRequiredEnv("CHROME_WEBSTORE_CLIENT_ID", env),
+        clientSecret: accessToken ? "" : getRequiredEnv("CHROME_WEBSTORE_CLIENT_SECRET", env),
+        refreshToken: accessToken ? "" : getRequiredEnv("CHROME_WEBSTORE_REFRESH_TOKEN", env),
+        publisherId: getRequiredEnv("CHROME_WEBSTORE_PUBLISHER_ID", env),
+        extensionId: getRequiredEnv("CHROME_WEBSTORE_EXTENSION_ID", env),
+        zipPath: getRequiredEnv("CHROME_WEBSTORE_ZIP", env),
+    };
+}
+
+async function main(env = process.env, fetchImpl = fetch, waitMs = 10000) {
+    const config = readConfig(env);
+    const accessToken = await getAccessToken(config, fetchImpl);
+
+    const uploadResult = await uploadPackage(accessToken, config, fetchImpl);
+    console.log(`Chrome Web Store upload state: ${uploadResult.uploadState || "unknown"}`);
+
+    if (uploadResult.uploadState === "FAILED" || (uploadResult.itemError && uploadResult.itemError.length)) {
+        const failureDetail = (uploadResult.itemError && uploadResult.itemError.length)
+            ? uploadResult.itemError
+            : uploadResult;
+        throw new Error(`Chrome Web Store upload failed: ${JSON.stringify(failureDetail, null, 2)}`);
+    }
+
+    if (waitMs > 0) {
+        console.log(`Waiting ${waitMs / 1000} seconds for the Web Store to process the uploaded package before publishing...`);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+
+    const publishResult = await publishItem(accessToken, config, fetchImpl);
+    console.log(`Chrome Web Store publish response: ${JSON.stringify(publishResult)}`);
+    return { uploadResult, publishResult };
+}
+
+async function getAccessToken(config, fetchImpl = fetch) {
+    if (config.accessToken) {
+        return config.accessToken;
+    }
+
     const params = new URLSearchParams({
         client_id: config.clientId,
         client_secret: config.clientSecret,
@@ -40,7 +56,7 @@ async function getAccessToken() {
         grant_type: "refresh_token",
     });
 
-    const response = await fetch("https://oauth2.googleapis.com/token", {
+    const response = await fetchImpl("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -48,18 +64,18 @@ async function getAccessToken() {
         body: params,
     });
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
 
     if (!response.ok || !data.access_token) {
-        throw new Error(`Failed to refresh Chrome Web Store access token: ${JSON.stringify(data)}`);
+        throw new Error(`Failed to refresh Chrome Web Store access token (HTTP ${response.status}): ${JSON.stringify(data)}`);
     }
 
     return data.access_token;
 }
 
-async function uploadPackage(accessToken) {
+async function uploadPackage(accessToken, config, fetchImpl = fetch) {
     const zip = fs.readFileSync(config.zipPath);
-    const response = await fetch(
+    const response = await fetchImpl(
         `https://chromewebstore.googleapis.com/upload/v2/publishers/${config.publisherId}/items/${config.extensionId}:upload`,
         {
             method: "POST",
@@ -74,8 +90,8 @@ async function uploadPackage(accessToken) {
     return parseApiResponse(response, "upload Chrome Web Store package");
 }
 
-async function publishItem(accessToken) {
-    const response = await fetch(
+async function publishItem(accessToken, config, fetchImpl = fetch) {
+    const response = await fetchImpl(
         `https://chromewebstore.googleapis.com/v2/publishers/${config.publisherId}/items/${config.extensionId}:publish`,
         {
             method: "POST",
@@ -88,19 +104,30 @@ async function publishItem(accessToken) {
     return parseApiResponse(response, "publish Chrome Web Store item");
 }
 
-async function parseApiResponse(response, action) {
+async function parseResponseBody(response) {
     const text = await response.text();
-    const data = text ? JSON.parse(text) : {};
+    if (!text) {
+        return {};
+    }
+    try {
+        return JSON.parse(text);
+    } catch {
+        return { raw: text };
+    }
+}
+
+async function parseApiResponse(response, action) {
+    const data = await parseResponseBody(response);
 
     if (!response.ok) {
-        throw new Error(`Failed to ${action}: ${JSON.stringify(data)}`);
+        throw new Error(`Failed to ${action} (HTTP ${response.status}): ${JSON.stringify(data)}`);
     }
 
     return data;
 }
 
-function getRequiredEnv(name) {
-    const value = process.env[name];
+function getRequiredEnv(name, env = process.env) {
+    const value = (env[name] || "").trim();
 
     if (!value) {
         throw new Error(`Missing required environment variable: ${name}`);
@@ -108,3 +135,12 @@ function getRequiredEnv(name) {
 
     return value;
 }
+
+module.exports = {
+    readConfig,
+    getAccessToken,
+    uploadPackage,
+    publishItem,
+    parseApiResponse,
+    main,
+};

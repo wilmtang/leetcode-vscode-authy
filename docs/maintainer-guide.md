@@ -282,13 +282,21 @@ Firefox uses `.github/workflows/firefox-extension.yml` and needs:
 - `AMO_JWT_ISSUER`
 - `AMO_JWT_SECRET`
 
-Chrome uses `.github/workflows/chrome-extension.yml` and needs:
+Chrome uses `.github/workflows/chrome-extension.yml` (`chrome-web-store`
+environment) and prefers Google Cloud Workload Identity Federation via environment
+variables and environment secrets:
+
+- `GCP_WORKLOAD_IDENTITY_PROVIDER` (environment variable)
+- `GCP_SERVICE_ACCOUNT` (environment variable)
+- `CHROME_WEBSTORE_PUBLISHER_ID` (environment secret)
+- `CHROME_WEBSTORE_EXTENSION_ID` (environment secret)
+
+If `GCP_WORKLOAD_IDENTITY_PROVIDER` / `GCP_SERVICE_ACCOUNT` are unset,
+`scripts/publish-chrome-web-store.js` falls back to OAuth refresh credentials:
 
 - `CHROME_WEBSTORE_CLIENT_ID`
 - `CHROME_WEBSTORE_CLIENT_SECRET`
 - `CHROME_WEBSTORE_REFRESH_TOKEN`
-- `CHROME_WEBSTORE_PUBLISHER_ID`
-- `CHROME_WEBSTORE_EXTENSION_ID`
 
 Local packaging helpers:
 
