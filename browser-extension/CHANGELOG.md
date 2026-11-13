@@ -3,6 +3,11 @@ All notable changes to the "LeetCode VS Code Auth Sync" browser extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.8]
+### Fixed
+- Specify `AGPL-3.0-or-later` as a `custom_license` in `amo-metadata.json`
+  because Firefox Add-ons does not provide a built-in `AGPL-3.0-or-later` slug.
+
 ## [0.1.7]
 ### Changed
 - Rename the extension to **LeetCode VS Code Authy** and adopt the
