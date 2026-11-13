@@ -11,7 +11,7 @@
     "version": {
         "license": "AGPL-3.0-or-later",
         "release_notes": {
-            "en-US": "Adds cookie-only sync, an expire-now action, and browser request-header syncing so VS Code can replay LeetCode test requests more reliably."
+            "en-US": "Renames the add-on to LeetCode VS Code Authy under AGPL-3.0-or-later, immediately syncs fresh cf_clearance cookies after Cloudflare challenges, queues sync requests in order, adds a 45s sync timeout and reply/capture validation, surfaces storage errors, and improves button contrast and reduced-motion accessibility."
         }
     },
     "categories": {

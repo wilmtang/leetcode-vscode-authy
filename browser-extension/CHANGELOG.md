@@ -3,7 +3,13 @@ All notable changes to the "LeetCode VS Code Auth Sync" browser extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.1.7]
+### Changed
+- Rename the extension to **LeetCode VS Code Authy** and adopt the
+  `AGPL-3.0-or-later` license.
+- Improve accessibility with WCAG AA primary button contrast and
+  `prefers-reduced-motion` support.
+
 ### Security
 - Reject hop-by-hop browser headers instead of replaying them to LeetCode.
 
@@ -13,8 +19,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Queue auth-sync requests in arrival order so a newer login is not discarded
   while an earlier session is being verified.
 - Abort a loopback sync after 45 seconds and report a distinct timeout result.
-- Propagate Chrome storage/cookie callback failures instead of treating them as
-  successful operations.
+- Serialize Developer mode capture cleanup and reject malformed HTTP-200 sync
+  responses from the local listener.
+- Propagate Chrome storage/cookie callback failures, surface save/clear errors
+  in the options and popup UI, and disable controls while saving.
 - Prefer URL-scoped LeetCode cookies so unrelated path cookies cannot produce
   duplicate session-cookie names.
 

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "LeetCode VS Code Authy",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "description": "Syncs your signed-in leetcode.com browser session to the LeetCode VS Code Authy extension on localhost.",
     "permissions": [
         "cookies",
