@@ -3,7 +3,7 @@ All notable changes to the "leetcode" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.21.0]
 ### Added
 - **Session sync status bar item**: a second item beside `LeetCode: <user>` shows
   browser session sync health (icon only while healthy; `Not syncing`,
@@ -14,31 +14,33 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   may reappear once and can be hidden again.
 
 ### Changed
+- Rename the extension and project to **LeetCode VS Code Authy** and adopt the
+  `AGPL-3.0-or-later` license.
+- Companion browser extension updated to `0.1.7` (with immediate `cf_clearance`
+  sync after Cloudflare challenges, ordered sync queuing, 45s timeout handling,
+  capture/reply validation, and storage error surfacing).
 - Restarting session sync no longer passes through a visible "stopped" state,
   reports where sync ended up, and force start asks in plain language that
   matches the current state. "Paused" is now "stopped", since nothing pauses
   sync. A port conflict found by the background check now names the program.
-
-### Fixed
-- When LeetCode rate limits a submit or test (HTTP 429), the error now says so
-  and tells you to wait a moment, instead of a generic "Failed to submit"
-  message. If the limit hits while reading the result, it says the solution was
-  already sent so you can check it on LeetCode before sending it again.
-- Submitting again while a submission is still running no longer cancels the
-  first one (whose solution may already have reached LeetCode) and gets
-  rate limited. The second request is ignored with a short note; cancel the
-  running submission first to resubmit. Opening Test and backing out of its
-  input no longer cancels a running submission; a Test that does run still
-  takes over, and the output channel now says so.
-- When LeetCode rate limits the request that sends your code (HTTP 429), it is
-  now paused and sent again, the same way a "submitted too soon" reply already
-  was, before the rate-limit message is shown.
-- A background sync check that finished after sync was turned off or its port
-  changed could bring back a stale "blocked" or "another window" state.
-- A force start whose release timed out could leave sync stopped with no retry;
-  it now claims the freed port or reports the conflict and keeps checking.
-- Looking up which program holds the sync port no longer opens a console
-  window on Windows, and runs once per new conflict instead of every check.
+- Defer catalog loading until the explorer or a catalog consumer first needs it,
+  use selective Highlight.js/Lodash imports, and enforce a 3 MiB runtime-bundle
+  ceiling (2.24 MiB in the remediation verification build).
+- Removed the obsolete `leetcode.useWsl` direct-file-I/O setting; Remote WSL uses
+  its host-native paths and native Windows hosts keep Windows paths.
+- Bundle the VS Code runtime with esbuild and package only the KaTeX stylesheet
+  and fonts as external webview assets. The verified VSIX is now 82 files / 1.35
+  MB, down from 3,721 files / 5.93 MB.
+- Extend `npm test` with a package-content contract that rejects bundled
+  external npm imports, packaged `node_modules` or per-module compiler output,
+  missing KaTeX assets, and unexpected file-count growth.
+- CI and VS Code release validation now run the offline suite before packaging.
+  `npm test` also syntax-checks the browser extension JavaScript.
+- Added regression coverage for markup sanitization, redirect/header security,
+  explorer refresh races, workspace containment, and testcase normalization.
+- Documented the 2026-07-30 full-code audit and its remaining live/browser,
+  multi-window, Windows/WSL, `leetcode.cn`, and development-tool proof
+  gaps.
 
 ### Security
 - Patched newly published production advisories: sanitize-html 2.18.1 (drops
@@ -80,9 +82,33 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   vulnerabilities.
 
 ### Fixed
+- When LeetCode rate limits a submit or test (HTTP 429), the error now says so
+  and tells you to wait a moment, instead of a generic "Failed to submit"
+  message. If the limit hits while reading the result, it says the solution was
+  already sent so you can check it on LeetCode before sending it again.
+- Submitting again while a submission is still running no longer cancels the
+  first one (whose solution may already have reached LeetCode) and gets
+  rate limited. The second request is ignored with a short note; cancel the
+  running submission first to resubmit. Opening Test and backing out of its
+  input no longer cancels a running submission; a Test that does run still
+  takes over, and the output channel now says so.
+- When LeetCode rate limits the request that sends your code (HTTP 429), it is
+  now paused and sent again, the same way a "submitted too soon" reply already
+  was, before the rate-limit message is shown.
+- A background sync check that finished after sync was turned off or its port
+  changed could bring back a stale "blocked" or "another window" state.
+- A force start whose release timed out could leave sync stopped with no retry;
+  it now claims the freed port or reports the conflict and keeps checking.
+- Looking up which program holds the sync port no longer opens a console
+  window on Windows, and runs once per new conflict instead of every check.
+- Label the signed-out status bar item as `LeetCode: Sign In` on startup
+  instead of leaving it blank, and decode printable `\xNN` escapes (keeping
+  control bytes escaped) in `lsof` port-owner names.
 - Problem descriptions and results use the `markdown.preview.fontFamily` list
   again instead of falling back to the default serif font: the CSS-injection
-  escaping had turned list separators into literal name characters.
+  escaping had turned list separators into literal name characters. CSS-wide
+  keywords (`inherit`, `initial`, `unset`, `revert`, `revert-layer`, `default`)
+  in the font list are now quoted so they do not invalidate the declaration.
 - Windows: opening a problem description no longer throws when the built-in
   Markdown extension's `preview.fontFamily` setting is unavailable.
 - Recover judge requests from Cloudflare challenges: classify challenge pages at
@@ -127,26 +153,6 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Treat tag/company picker cancellation as file-generation cancellation, open
   profile links with a VS Code `Uri`, and align the `showDescription` setting
   descriptions with its four values.
-
-### Changed
-- Defer catalog loading until the explorer or a catalog consumer first needs it,
-  use selective Highlight.js/Lodash imports, and enforce a 3 MiB runtime-bundle
-  ceiling (2.24 MiB in the remediation verification build).
-- Removed the obsolete `leetcode.useWsl` direct-file-I/O setting; Remote WSL uses
-  its host-native paths and native Windows hosts keep Windows paths.
-- Bundle the VS Code runtime with esbuild and package only the KaTeX stylesheet
-  and fonts as external webview assets. The verified VSIX is now 82 files / 1.35
-  MB, down from 3,721 files / 5.93 MB.
-- Extend `npm test` with a package-content contract that rejects bundled
-  external npm imports, packaged `node_modules` or per-module compiler output,
-  missing KaTeX assets, and unexpected file-count growth.
-- CI and VS Code release validation now run the offline suite before packaging.
-  `npm test` also syntax-checks the browser extension JavaScript.
-- Added regression coverage for markup sanitization, redirect/header security,
-  explorer refresh races, workspace containment, and testcase normalization.
-- Documented the 2026-07-30 full-code audit and its remaining live/browser,
-  multi-window, Windows/WSL, `leetcode.cn`, and development-tool proof
-  gaps.
 
 ## [0.20.0]
 ### Fixed
